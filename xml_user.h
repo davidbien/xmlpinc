@@ -13,12 +13,12 @@
 #include "_l_ns.h"
 #include "_l_types.h"
 
-__LEXOBJ_BEGIN_NAMESPACE
+__XMLP_BEGIN_NAMESPACE
 
 template < class t_TyChar >
-class _l_default_user_obj
+class xml_user_obj
 {
-  typedef _l_default_user_obj _TyThis;
+  typedef xml_user_obj _TyThis;
 public:
   typedef t_TyChar _TyChar;
   typedef _l_data< _TyChar > _TyData;
@@ -367,4 +367,4 @@ public:
 
 };
 
-__LEXOBJ_END_NAMESPACE
+__XMLP_END_NAMESPACE
