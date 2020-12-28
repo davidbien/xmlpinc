@@ -23,7 +23,7 @@ public:
   typedef t_TyChar _TyChar;
   typedef _l_data< _TyChar > _TyData;
   typedef _l_value< _TyChar > _TyValue;
-  typedef _l_transport_fd_ctxt< _TyChar > _TyTransportCtxtFd;
+  typedef _l_transport_backed_ctxt< _TyChar > _TyTransportCtxtFd;
   typedef _l_transport_fixedmem_ctxt< t_TyChar > _TyTransportCtxtFixedMem;
 
   // These are the default GetString*() impls. They just concatenates segmented strings regardless of the m_nType value.
