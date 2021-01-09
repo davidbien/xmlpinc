@@ -28,6 +28,8 @@ public:
   typedef xml_user_obj< _TyChar > _TyUserObj;
   typedef _l_user_context< _TyTransport, _TyUserObj > _TyUserContext;
   typedef _l_token< _TyUserContext > _TyToken;
+  typedef _l_data< _TyChar > _TyData;
+  typedef _l_value< _TyChar > _TyValue;
 
   ~xml_token() = default;
   xml_token( _TyToken const & _rtok )
@@ -44,6 +46,26 @@ public:
   xml_token( xml_token && ) = default;
   xml_token & operator=( xml_token && ) = default;
 
+  bool FIsTag() const
+  {
+    vtyTokenIdent tid = m_tokToken.GetTokenId();
+    return ( s_knTokenSTag == tid ) || ( s_knTokenEmptyElemTag == tid );
+  }
+  bool FIsComment() const
+  {
+    return s_knTokenComment == m_tokToken.GetTokenId();
+  }
+
+  // This must be a tag-token.
+  template < class t_FObj >
+  void PeruseAttributes( t_FObj && _rrf )
+  {
+    VerifyThrowSz( FIsTag(), "Not a tag." );
+
+    _TyValue & valAttr = _RGetRgAttrs();
+    
+    
+  }
 
 protected:
   _TyToken m_tokToken;

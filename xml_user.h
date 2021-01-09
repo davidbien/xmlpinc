@@ -222,24 +222,22 @@ public:
 
   template < class t_TyStringView, class t_TyToken, class t_TyTransportCtxt >
   static void GetStringView( t_TyStringView & _rsvDest, t_TyTransportCtxt & _rcxt, t_TyToken & _rtok, _TyValue & _rval )
-    requires ( !is_same_v< typename t_TyStringView::value_type, _TyChar > )
+    requires ( sizeof( typename t_TyStringView::value_type ) != sizeof( _TyChar ) )
   {
-    typedef typename t_TyStringView::value_type _TyCharConvertTo;
-    typedef typename _TyValue::template get_string_type< _TyCharConvertTo > _TyStrConvertTo;
+    typedef typename _TyValue::template get_string_type< typename t_TyStringView::value_type > _TyStrConvertTo;
     _TyStrConvertTo strConverted;
     GetString( strConverted, _rcxt, _rtok, _rval );
     _rsvDest = _rval.emplaceVal( std::move( strConverted ) );
   }
   template < class t_TyStringView, class t_TyString, class t_TyToken, class t_TyTransportCtxt >
   static bool FGetStringViewOrString( t_TyStringView & _rsvDest, t_TyString & _rstrDest, t_TyTransportCtxt & _rcxt, t_TyToken & _rtok, _TyValue const & _rval )
-    requires ( !is_same_v< typename t_TyStringView::value_type, _TyChar > )
+    requires ( sizeof( typename t_TyStringView::value_type ) != sizeof( _TyChar ) )
   {
+    static_assert( sizeof( typename t_TyStringView::value_type ) == sizeof( typename t_TyString::value_type ) );
     Assert( _rsvDest.empty() );
     Assert( _rstrDest.empty() );
-    t_TyString strConverted;
-    GetString( strConverted, _rcxt, _rtok, _rval );
-    _rstrDest = std::move( strConverted );
-    return true;
+    GetString( _rstrDest, _rcxt, _rtok, _rval );
+    return false;
   }
 // var transport:
   template < class t_TyStringView, class t_TyToken, class t_TyTransportCtxt >
@@ -278,7 +276,7 @@ public:
 // Non-converting GetString*.
   template < class t_TyStringView, class t_TyToken, class t_TyTransportCtxt >
   static void GetStringView( t_TyStringView & _rsvDest, t_TyTransportCtxt & _rcxt, t_TyToken & _rtok, _TyValue & _rval )
-    requires ( is_same_v< typename t_TyStringView::value_type, _TyChar > && !TFIsTransportVarCtxt_v< t_TyTransportCtxt > )
+    requires ( ( sizeof( typename t_TyStringView::value_type ) == sizeof( _TyChar ) ) && !TFIsTransportVarCtxt_v< t_TyTransportCtxt > )
   {
     Assert( _rsvDest.empty() );
     Assert( _rval.FHasTypedData() ); // We are converting the _TyData object that is in _rval.
@@ -286,21 +284,24 @@ public:
     _rcxt.AssertValidDataRange( kdtr );
     if ( !kdtr.FContainsSingleDataRange(s_kdtPlainText) ) // Is translation necessary?
     {
-      typename _TyValue::template get_string_type< _TyChar > strBacking;
+      typedef typename _TyValue::template get_string_type< _TyChar > _TyStringNorm;
+      _TyStringNorm strBacking;
       GetString( strBacking, _rcxt, _rtok, _rval );
-      _rsvDest = _rval.emplaceVal( std::move( strBacking ) );
+      _TyStringNorm & rstr = _rval.emplaceVal( std::move( strBacking ) );
+      _rsvDest = t_TyStringView( (const typename t_TyStringView::value_type*)&rstr[0], rstr.length() );
     }
     else
     {
       // We could set the stringview into the object since it doesn't really hurt:
-      _rcxt.GetTokenBuffer().GetStringView( _rsvDest, kdtr.begin() - _rcxt.PosTokenStart(), kdtr.end() );
+      _rcxt.GetStringView( _rsvDest, kdtr );
       _rval.SetVal( _rsvDest );
     }
   }
   template < class t_TyStringView, class t_TyString, class t_TyToken, class t_TyTransportCtxt >
   static bool FGetStringViewOrString( t_TyStringView & _rsvDest, t_TyString & _rstrDest, t_TyTransportCtxt & _rcxt, t_TyToken & _rtok, const _TyValue & _rval )
-    requires ( is_same_v< typename t_TyStringView::value_type, _TyChar > && !TFIsTransportVarCtxt_v< t_TyTransportCtxt > )
+    requires ( ( sizeof( typename t_TyStringView::value_type ) == sizeof( _TyChar ) ) && !TFIsTransportVarCtxt_v< t_TyTransportCtxt > )
   {
+    static_assert( sizeof( typename t_TyStringView::value_type ) == sizeof( typename t_TyString::value_type ) );
     Assert( _rsvDest.empty() );
     Assert( _rstrDest.empty() );
     Assert( _rval.FHasTypedData() ); // We are converting the _TyData object that is in _rval.
@@ -313,13 +314,13 @@ public:
     }
     else
     {
-      _rcxt.GetTokenBuffer().GetStringView( _rsvDest, kdtr.begin() - _rcxt.PosTokenStart(), kdtr.end() );
+      _rcxt.GetStringView( _rsvDest, kdtr );
       return true;
     }
   }
   template < class t_TyString, class t_TyToken, class t_TyTransportCtxt >
   static void GetString( t_TyString & _rstrDest, t_TyTransportCtxt & _rcxt, t_TyToken & _rtok, const _TyValue & _rval )
-    requires ( is_same_v< typename t_TyString::value_type, _TyChar > && !TFIsTransportVarCtxt_v< t_TyTransportCtxt > )
+    requires ( ( sizeof( typename t_TyString::value_type ) == sizeof( _TyChar ) ) && !TFIsTransportVarCtxt_v< t_TyTransportCtxt > )
   {
     Assert( _rstrDest.empty() );
     Assert( _rval.FHasTypedData() ); // We are converting the _TyData object that is in _rval.
@@ -338,7 +339,7 @@ public:
     }
     else
     {
-      t_TyChar * pcCur = &strBacking[0]; // Current output pointer.
+      t_TyChar * pcCur = (t_TyChar*)&strBacking[0]; // Current output pointer.
       kdtr.GetSegArrayDataRanges().ApplyContiguous( 0, kdtr.GetSegArrayDataRanges().NElements(), 
         [&pcCur,&nCharsRemaining,&_rcxt]( const _l_data_typed_range * _pdtrBegin, const _l_data_typed_range * _pdtrEnd )
         {
@@ -373,7 +374,7 @@ public:
 // Converting GetString*.
   template < class t_TyString, class t_TyToken, class t_TyTransportCtxt >
   static void GetString( t_TyString & _rstrDest, t_TyTransportCtxt & _rcxt, t_TyToken & _rtok, _TyValue const & _rval )
-    requires ( !is_same_v< typename t_TyString::value_type, _TyChar > && !TFIsTransportVarCtxt_v< t_TyTransportCtxt > )
+    requires ( ( sizeof( typename t_TyString::value_type ) != sizeof( _TyChar ) ) && !TFIsTransportVarCtxt_v< t_TyTransportCtxt > )
   {
     Assert( _rstrDest.empty() );
     typedef typename t_TyString::value_type _TyCharConvertTo;
@@ -397,6 +398,7 @@ public:
       pcBuf = (_TyChar*)alloca( nCharsCount * sizeof( _TyChar ) );
     if ( kdtr.FContainsSingleDataRange() )
     {
+      // REVIEW: Could just use a string view here instead and not copy to the stack.
       memcpy( pcBuf, _rcxt.GetTokenBuffer().begin() + kdtr.DataRangeGetSingle().begin() - _rcxt.PosTokenStart(), nCharsRemaining * sizeof( _TyChar ) );
       nCharsRemaining = 0;
     }
