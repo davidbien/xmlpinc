@@ -15,12 +15,123 @@
 
 __XMLP_BEGIN_NAMESPACE
 
-// _xml_user_obj_base:
+// _xml_namespace_uri:
+// This holds the current URI associated with the key which maps to this.
+// It may hold a list of previous URIs declared in containing tags.
+template < class t_TyChar >
+class _xml_namespace_uri
+{
+  typedef _xml_namespace_uri _TyThis;
+public:
+  typedef t_TyChar _TyChar;
+  typedef unique_ptr< _TyThis > _TyPtrThis;
+  typedef basic_string< _TyChar > _TyStdStr;
+
+  ~_xml_namespace_uri() = default;
+  _xml_namespace_uri( _TyStdStr && _rrstrUri )
+    : m_strUri( std::move( _rrstrUri ) )
+  {
+  }
+  _xml_namespace_uri( const _TyChar * _pcUri )
+    : m_strUri( _pcUri )
+  {
+  }
+  _xml_namespace_uri() = default;
+  _xml_namespace_uri( _xml_namespace_uri const & ) = default;
+  _xml_namespace_uri & operator =( _xml_namespace_uri const & ) = default;
+  _xml_namespace_uri( _xml_namespace_uri && ) = default;
+  _xml_namespace_uri & operator =( _xml_namespace_uri && ) = default;
+  void swap( _TyThis & _r )
+  {
+    m_upThisNext.swap( _r.m_upThisNext );
+    m_strUri.swap( _r.m_strUri );
+  }
+  _TyStdStr const & RStrUri() const
+  {
+    return m_strUri;
+  }
+  // If there is a m_upThisNext then we exchange its values with this.
+  bool FPopUri()
+  {
+    if ( !!m_upThisNext )
+    {
+      _TyPtrThis upRemove;
+      m_upThisNext->m_upThisNext.swap( upRemove );
+      m_upThisNext->swap( m_upRemove );
+    }
+    return false;
+  }
+protected:
+  _TyPtrThis m_upThisNext; // just a simple destructed list using unique_ptr is all that is necessary.
+  _TyStdStr m_strUri;
+};
+
+// _xml_user_obj_base_namespace:
+// Contains some infrastructure to support the Namespace if desired.
+template < class t_TyChar, bool t_kfSupportNamespaces >
+class _xml_user_obj_base_namespace
+{
+  typedef _xml_user_obj_base_namespace _TyThis;
+public:
+  typedef t_TyChar _TyChar;
+  typedef basic_string< _TyChar > _TyStdStr;
+  typedef basic_string_view< _TyChar > _TyStrView;
+  static constexpr bool s_kfSupportNamespaces = true;
+  typedef StringTransparentHash< _TyChar > _TyStringTransparentHash; // Allow lookup by string_view without creating a string.
+  typedef unordered_map< _TyStdStr, _xml_namespace_uri, _TyStringTransparentHash, std::equal_to<void> > _TyNamespaceMap;
+
+  // The prefix xml is by definition bound to the namespace name http://www.w3.org/XML/1998/namespace
+  _TyNamespaceMap m_mapNamespaces{ { str_array_cast<_TyChar>("xml"), str_array_cast<_TyChar>("http://www.w3.org/XML/1998/namespace") } };
+
+  ~_xml_user_obj_base_namespace() = default;
+  _xml_user_obj_base_namespace() = default;
+  _xml_user_obj_base_namespace( _xml_user_obj_base_namespace const & ) = delete;
+  _xml_user_obj_base_namespace & operator =( _xml_user_obj_base_namespace const & ) = delete;
+  _xml_user_obj_base_namespace( _xml_user_obj_base_namespace && ) = default;
+  _xml_user_obj_base_namespace & operator =( _xml_user_obj_base_namespace && ) = default;
+  void swap( _TyThis & _r )
+  {
+    m_mapNamespaces.swap( _r.m_mapNamespaces );
+  }
+
+  template < class t_TyTransportCtxt >
+  const _TyStdStr & _RLookupNamespacePrefix( _l_data_typed_range const & _rdr, t_TyTransportCtxt const & _rcxt )
+  {
+    _TyStrView sv;
+    _rcxt.GetStringView( sv, _rdr );
+    _TyEntityMap::const_iterator cit = m_mapParameterEntities.find( sv );
+    if ( m_mapParameterEntities.end() == cit )
+    {
+      _TyStdStr str( sv );
+      THROWXMLPARSEEXCEPTION("Can't find parameter entity [%s].", str.c_str() );
+    }
+    return cit->second;
+  }
+
+};
+// Non-Namespace base.
+template < class t_TyChar >
+class _xml_user_obj_base_namespace< t_TyChar, false >
+{
+  typedef _xml_user_obj_base_namespace _TyThis;
+public:
+  typedef t_TyChar _TyChar;
+  static constexpr bool s_kfSupportNamespaces = false;
+  typedef basic_string< _TyChar > _TyStdStr;
+  typedef basic_string_view< _TyChar > _TyStrView;
+  typedef StringTransparentHash< _TyChar > _TyStringTransparentHash; // Allow lookup by string_view without creating a string.
+  typedef unordered_map< _TyStdStr, _TyStdStr, _TyStringTransparentHash, std::equal_to<void> > _TyEntityMap;
+  void swap( _TyThis & _r )
+  {
+  }
+};
+
+// _xml_user_obj_base_dtd:
 // Contains some infrastructure to support the DTD if desired.
 template < class t_TyChar, bool t_kfSupportDTD >
-class _xml_user_obj_base
+class _xml_user_obj_base_dtd
 {
-  typedef _xml_user_obj_base _TyThis;
+  typedef _xml_user_obj_base_dtd _TyThis;
 public:
   typedef t_TyChar _TyChar;
   typedef basic_string< _TyChar > _TyStdStr;
@@ -31,12 +142,12 @@ public:
 
   _TyEntityMap m_mapParameterEntities{};
 
-  ~_xml_user_obj_base() = default;
-  _xml_user_obj_base() = default;
-  _xml_user_obj_base( _xml_user_obj_base const & ) = delete;
-  _xml_user_obj_base & operator =( _xml_user_obj_base const & ) = delete;
-  _xml_user_obj_base( _xml_user_obj_base && ) = default;
-  _xml_user_obj_base & operator =( _xml_user_obj_base && ) = default;
+  ~_xml_user_obj_base_dtd() = default;
+  _xml_user_obj_base_dtd() = default;
+  _xml_user_obj_base_dtd( _xml_user_obj_base_dtd const & ) = delete;
+  _xml_user_obj_base_dtd & operator =( _xml_user_obj_base_dtd const & ) = delete;
+  _xml_user_obj_base_dtd( _xml_user_obj_base_dtd && ) = default;
+  _xml_user_obj_base_dtd & operator =( _xml_user_obj_base_dtd && ) = default;
   void swap( _TyThis & _r )
   {
     m_mapParameterEntities.swap( _r.m_mapParameterEntities );
@@ -59,9 +170,9 @@ public:
 };
 // Non-DTD base.
 template < class t_TyChar >
-class _xml_user_obj_base< t_TyChar, false >
+class _xml_user_obj_base_dtd< t_TyChar, false >
 {
-  typedef _xml_user_obj_base _TyThis;
+  typedef _xml_user_obj_base_dtd _TyThis;
 public:
   typedef t_TyChar _TyChar;
   static constexpr bool s_kfSupportDTD = false;
@@ -75,18 +186,22 @@ public:
 };
 
 // The !t_kfSupportDTD version is a bit ligher weight.
-template < class t_TyChar, bool t_kfSupportDTD = false >
-class xml_user_obj : public _xml_user_obj_base< t_TyChar, t_kfSupportDTD >
+template < class t_TyChar, class t_TyXmlTraits >
+class xml_user_obj 
+  : public _xml_user_obj_base_dtd< t_TyChar, t_TyXmlTraits::s_kfSupportDTD >,
+    public _xml_user_obj_base_namespace< t_TyChar, t_TyXmlTraits::t_kfSupportNamespaces >
 {
   typedef xml_user_obj _TyThis;
-  typedef _xml_user_obj_base< t_TyChar, t_kfSupportDTD > _TyBase;
+  typedef _xml_user_obj_base_dtd< t_TyChar, t_kfSupportDTD > _TyBaseDtd;
+  typedef _xml_user_obj_base_namespace< t_TyChar, t_TyXmlTraits::t_kfSupportNamespaces > _TyBaseNamespaces;
 public:
-  using typename _TyBase::_TyChar;
-  using _TyBase::t_kfSupportDTD;
-  using _TyBase::_TyStringTransparentHash; // Allow lookup by string_view without creating a string.
-  using _TyBase::_TyEntityMap;
-  using _TyBase::_TyStdStr;
-  using _TyBase::_TyStrView;
+  typedef t_TyXmlTraits _TyXmlTraits;
+  using typename _TyBaseDtd::_TyChar;
+  using _TyBaseDtd::t_kfSupportDTD;
+  using _TyBaseDtd::_TyStringTransparentHash; // Allow lookup by string_view without creating a string.
+  using _TyBaseDtd::_TyEntityMap;
+  using _TyBaseDtd::_TyStdStr;
+  using _TyBaseDtd::_TyStrView;
   typedef _l_data< _TyChar > _TyData;
   typedef _l_value< _TyChar > _TyValue;
   typedef _l_transport_backed_ctxt< _TyChar > _TyTransportCtxtBacked;
@@ -94,11 +209,11 @@ public:
 
   // Entity reference lookup:
   // To keep things simple (at least for now) we insert the standard entity references in the constructor.
-  _TyEntityMap m_mapEntities{ { str_array_cast< _TyChar >("quot"), str_array_cast< _TyChar >("\"") }, 
-                              { str_array_cast< _TyChar >("amp"), str_array_cast< _TyChar >("&") }, 
-                              { str_array_cast< _TyChar >("apos"), str_array_cast< _TyChar >("\'") }, 
-                              { str_array_cast< _TyChar >("lt"), str_array_cast< _TyChar >("<") }, 
-                              { str_array_cast< _TyChar >("gt"), str_array_cast< _TyChar >(">") } };
+  _TyEntityMap m_mapEntities{ { str_array_cast<_TyChar>("quot"), str_array_cast<_TyChar>("\"") }, 
+                              { str_array_cast<_TyChar>("amp"), str_array_cast<_TyChar>("&") }, 
+                              { str_array_cast<_TyChar>("apos"), str_array_cast<_TyChar>("\'") }, 
+                              { str_array_cast<_TyChar>("lt"), str_array_cast<_TyChar>("<") }, 
+                              { str_array_cast<_TyChar>("gt"), str_array_cast<_TyChar>(">") } };
 
   xml_user_obj() = default;
   xml_user_obj( xml_user_obj const & _r ) = delete;
@@ -107,7 +222,7 @@ public:
   xml_user_obj & operator =( xml_user_obj && ) = default;
   void swap( _TyThis & _r )
   {
-    _TyBase::swap( _r );
+    _TyBaseDtd::swap( _r );
     m_mapEntities.swap( _r.m_mapEntities );
   }
   template < class t_TyTransportCtxt >

@@ -18,18 +18,20 @@ __XMLP_BEGIN_NAMESPACE
 // Allow attribute perusal through lambda only - this simplifies the interface quite nicely.
 // Member functions access the methods of all types of tokens - throw if erroneous method called - ie. asking for the comment text from a non-comment token.
 
-template < class t_TyTransport >
+template < class t_TyXmlTraits >
 class xml_token
 {
   typedef xml_token _TyThis;
 public:
-  typedef t_TyTransport _TyTransport;
-  typedef typename _TyTransport::_TyChar _TyChar;
-  typedef xml_user_obj< _TyChar > _TyUserObj;
-  typedef _l_user_context< _TyTransport, _TyUserObj > _TyUserContext;
-  typedef _l_token< _TyUserContext > _TyToken;
+  typedef t_TyXmlTraits _TyXmlTraits;
+  typedef typename _TyXmlTraits::_TyLexTraits _TyLexTraits;
+  static constexpr bool s_kfSupportDTD = t_kfSupportDTD;
+  typedef typename _TyXmlTraits::_TyChar _TyChar;
+  typedef basic_string_view< _TyChar > _TyStrView;
+  typedef pair< _TyStrView, _TyStrView > _TyPrSvTagPrefix; // note that the prefix is second, not first.
+  typedef _l_token< _TyLexTraits > _TyToken;
   typedef _l_data< _TyChar > _TyData;
-  typedef _l_value< _TyChar > _TyValue;
+  typedef _l_value< _TyLexTraits > _TyValue;
 
   ~xml_token() = default;
   xml_token( _TyToken const & _rtok )
@@ -56,15 +58,35 @@ public:
     return s_knTokenComment == m_tokToken.GetTokenId();
   }
 
+// Tag methods:
+  // Return a view on the tag. If the caller requests it then return the namespace prefix.
+  // If the caller wants the URI associated with that namespace then that must be looked up.
+  _TyStrView SvGetTag( _TyStrView * _svGetNamespacePrefix ) const
+  {
+    VerifyThrowSz( FIsTag(), "Not a tag." );
+
+
+  }
+  // This returns the tag and the prefix.
+  _TyPrSvTagPrefix PrSvGetTag() const
+  {
+    _TyPrSvTagPrefix prsv;
+    prsv.first = SvGetTag( &prsv.second );
+    return prsv;
+  }
+  // This will return the full qualified tag name with URI prefixed onto the front of the tag.
+  _TyPrSvTagPrefix PrSvGetFullyQualifiedTag() const
   // This must be a tag-token.
+  // This method doesn't validate the uniqueness of attribute names.
+  // I figure that if we aren't going to validate everything then there is no
+  //  reason to validate attr name uniqueness either.
   template < class t_FObj >
   void PeruseAttributes( t_FObj && _rrf )
   {
     VerifyThrowSz( FIsTag(), "Not a tag." );
-
     _TyValue & valAttr = _RGetRgAttrs();
-    
-    
+    typename _TyValue::_TySegArrayValues & rsaAttrs = valAttr.GetValueArray();
+    rsaAttrs.NApplyContiguous( 0, rsaAttrs.NElements(), std::forward<t_FObj>(_rrf) );
   }
 
 protected:
