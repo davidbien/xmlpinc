@@ -18,9 +18,14 @@ static const vtyDataType s_kdtFirstDTDRef = 3;
 static const vtyDataType s_kdtEntityRef = 3;
 static const vtyDataType s_kdtPEReference = 4;
 
-template < class t_TyChar, bool t_kfSupportDTD >
-class _xml_user_obj_base;
-template < class t_TyChar, bool t_kfSupportDTD = false >
+// xml_user.h:
+template < class t_TyChar >
+class _xml_namespace_uri;
+template < class t_TyXmlTraits, bool t_kfSupportNamespaces >
+class _xml_user_obj_base_namespace;
+template < class t_TyXmlTraits, bool t_kfSupportDTD >
+class _xml_user_obj_base_dtd;
+template < class t_TyXmlTraits >
 class xml_user_obj;
 
 // Declare all the various types of the triggers and tokens for the XML lexical analyzer.
