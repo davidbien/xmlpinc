@@ -15,7 +15,6 @@ __XMLP_BEGIN_NAMESPACE
 
 // _xml_namespace_uri:
 // This holds the current URI associated with the key which maps to this.
-// It may hold a list of previous URIs declared in containing tags.
 template < class t_TyChar >
 class _xml_namespace_uri
 {
@@ -44,53 +43,11 @@ public:
     m_upThisNext.swap( _r.m_upThisNext );
     m_strUri.swap( _r.m_strUri );
   }
-  _TyPtrThis & RPtrNext()
-  {
-    return m_upThisNext;
-  }
-  const _TyPtrThis & RPtrNext() const
-  {
-    return m_upThisNext;
-  }
   _TyStdStr const & RStrUri() const
   {
     return m_strUri;
   }
-  // Return the count of the Uris in the stack including the current object.
-  size_t NUrisInStack() const
-  {
-    size_t nUris = 1;
-    for ( const _TyThis * pCur = &*m_upThisNext; !!pCur; ++nUris, pCur = &*pCur->m_upThisNext )
-      ;
-    return nUris;
-  }
-  bool FFindNamespaceUri( const _TyThis * _ptr ) const
-  {
-    const _TyThis * pCur = this;
-    for ( ; !!pCur && ( pCur != _ptr ); pCur = &*pCur->m_upThisNext )
-      ;
-    return !!pCur;
-  }
-  // If there is a m_upThisNext then we exchange its values with this.
-  bool FPopUri()
-  {
-    if ( !!m_upThisNext )
-    {
-      _TyPtrThis upRemove;
-      m_upThisNext->m_upThisNext.swap( upRemove );
-      m_upThisNext->swap( m_upRemove );
-    }
-    return false;
-  }
-  template < class t_TyApply >
-  void ApplyUri( t_TyApply && _rrApply )
-  {
-    std::foward< t_TyApply >( _rrApply )( m_strUri );
-    for ( const _TyThis * pCur = &*m_upThisNext; !!pCur; pCur = &*pCur->m_upThisNext )
-      std::foward< t_TyApply >( _rrApply )( pCur->m_strUri );
-  }
 protected:
-  _TyPtrThis m_upThisNext; // just a simple destructed list using unique_ptr is all that is necessary.
   _TyStdStr m_strUri;
 };
 
@@ -103,14 +60,16 @@ public:
   typedef t_TyNamespaceMap _TyNamespaceMap;
   typedef typename _TyNamespaceMap::key_type _TyKey;
   typedef typename _TyKey::value_type _TyChar;
-  typedef typename _TyNamespaceMap::mapped_type _TyMapped;
-  typedef typename _TyMapped::_TyStdStr _TyStdStr;
+  typedef typename _TyNamespaceMap::mapped_type _TyMapped; // UniquePtrSList< _xml_namespace_uri<t_TyChar> >
+  typedef typename _TyMapped::value_type _TyMappedValueType; // _xml_namespace_uri<t_TyChar>
+  typedef typename _TyMapped::_TyListEl _TyNamespaceListEl;
+  typedef typename _TyMappedValueType::_TyStdStr _TyStdStr;
   typedef typename _TyNamespaceMap::value_type _TyMapValue;
 
   xml_namespace_value_wrap() = default;
   xml_namespace_value_wrap(  _TyMapValue const & _rvt )
     : m_pvt( &_rvt ),
-      m_pxnuUri( &_rvt.second.RPtrNext() )
+      m_pnleUri( _rvt.second.PListElFront() )
   {
   }
   xml_namespace_value_wrap( xml_namespace_value_wrap const & ) = default;
@@ -120,12 +79,12 @@ public:
   void swap( _TyThis & _r )
   {
     std::swap( m_pvt, _r.m_pvt );
-    std::swap( m_pxnuUri, _r.m_pxnuUri );
+    std::swap( m_pnleUri, _r.m_pnleUri );
   }
   void AssertValid() const
   {
 #if ASSERTSENABLED
-    Assert( m_pvt->second.FFindNamespaceUri( m_pxnuUri ) );
+    Assert( m_pvt->second.FFind( m_pnleUri ) );
 #endif //ASSERTSENABLED
   }
 
@@ -139,7 +98,7 @@ public:
     Assert( _rsv.empty() );
     if ( !m_pvt )
       return;
-    _rsv = t_TyStringView( (const typename t_TyStringView::value_type*)&m_pxnuUri->RStrUri()[0], m_pxnuUri->RStrUri().length() );;
+    _rsv = t_TyStringView( (const typename t_TyStringView::value_type*)&(*m_pnleUri)->RStrUri()[0], (*m_pnleUri)->RStrUri().length() );;
   }
   template < class t_TyString, class t_TyToken >
   void GetString( t_TyString & _rstr, t_TyToken & /* _rtok */ ) const
@@ -149,7 +108,7 @@ public:
     if ( !m_pvt )
       return;
     // Allow conversion to any character type - or just copy:
-    ConvertString( _rstr, m_pxnuUri->RStrUri() );
+    ConvertString( _rstr, (*m_pnleUri)->RStrUri() );
   }
   template < class t_TyStringView, class t_TyString, class t_TyToken >
   bool FGetStringViewOrString( t_TyStringView & _rsv, t_TyString & _rstr, t_TyToken & /* _rtok */ ) const
@@ -160,7 +119,7 @@ public:
     Assert( _rstr.empty() );
     if ( !m_pvt )
       return true;
-    _rsv = t_TyStringView( (const typename t_TyStringView::value_type*)&m_pxnuUri->RStrUri()[0], m_pxnuUri->RStrUri().length() );;
+    _rsv = t_TyStringView( (const typename t_TyStringView::value_type*)&(*m_pnleUri)->RStrUri()[0], (*m_pnleUri)->RStrUri().length() );;
     return true;
   }
   template < class t_TyStringView, class t_TyString, class t_TyToken >
@@ -173,7 +132,7 @@ public:
     if ( !m_pvt )
       return true;
     // Allow conversion to any character type:
-    ConvertString( _rstr, m_pxnuUri->RStrUri() );
+    ConvertString( _rstr, (*m_pnleUri)->RStrUri() );
     return false;
   }
   template < class t_TyJsoValue >
@@ -187,7 +146,7 @@ public:
     }
     _rjv.SetArrayCapacity( 3 ); // preallocate
     _rjv[0].SetStringValue( m_pvt->first );
-    _rjv[1].SetStringValue( m_pxnuUri->RStrUri() );
+    _rjv[1].SetStringValue( (*m_pnleUri)->RStrUri() );
     const size_t knUris = m_pvt->second.NUrisInStack();
     t_TyJsoValue & rrgjvUris = _rjv[2];
     rrgjvUris.SetArrayCapacity( knUris );
@@ -206,7 +165,7 @@ public:
   }
 protected:
   const _TyMapValue * m_pvt{nullptr};
-  const _xml_namespace_uri * m_pxnuUri; // Invariant: m_pxnuUri is contained in m_pvt->second's list of _xml_namespace_uri's.
+  const _TyNamespaceListEl * m_pnleUri; // Invariant: m_pnleUri is contained in m_pvt->second's list.
 };
 
 __XMLP_END_NAMESPACE

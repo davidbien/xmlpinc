@@ -36,9 +36,9 @@ public:
 
 // namespace hash:
   typedef _xml_namespace_uri< _TyChar > _TyNamespaceUri;
-  typedef unique_ptr< _TyNamespaceUri > _TyPtrNamespaceUri; // always map a ptr since then we can always refer to it without it going away.
+  typedef UniquePtrSList< _TyNamespaceUri > _TyUpListNamespaceUris;
   typedef StringTransparentHash< _TyChar > _TyStringTransparentHash; // Allow lookup by string_view without creating a string.
-  typedef unordered_map< _TyStdStr, _TyPtrNamespaceUri, _TyStringTransparentHash, std::equal_to<void> > _TyNamespaceMap;
+  typedef unordered_map< _TyStdStr, _TyUpListNamespaceUris, _TyStringTransparentHash, std::equal_to<void> > _TyNamespaceMap;
 
 // entity hash and parameter entity hash:
   typedef unordered_map< _TyStdStr, _TyStdStr, _TyStringTransparentHash, std::equal_to<void> > _TyEntityMap;

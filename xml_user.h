@@ -15,60 +15,6 @@
 
 __XMLP_BEGIN_NAMESPACE
 
-// _xml_user_obj_base_namespace:
-// Contains some infrastructure to support the Namespace if desired.
-template < class t_TyXmlTraits, bool t_kfSupportNamespaces >
-class _xml_user_obj_base_namespace
-{
-  typedef _xml_user_obj_base_namespace _TyThis;
-public:
-  static constexpr bool s_kfSupportNamespaces = true;
-  typedef t_TyXmlTraits _TyXmlTraits;
-  typedef typename _TyXmlTraits::_TyChar _TyChar;
-  typedef typename _TyXmlTraits::_TyStdStr _TyStdStr;
-  typedef typename _TyXmlTraits::_TyStrView _TyStrView;
-  typedef typename _TyXmlTraits::_TyNamespaceMap _TyNamespaceMap;
-
-  // The prefix xml is by definition bound to the namespace name http://www.w3.org/XML/1998/namespace
-  _TyNamespaceMap m_mapNamespaces{ { str_array_cast<_TyChar>("xml"), str_array_cast<_TyChar>("http://www.w3.org/XML/1998/namespace") } };
-
-  ~_xml_user_obj_base_namespace() = default;
-  _xml_user_obj_base_namespace() = default;
-  _xml_user_obj_base_namespace( _xml_user_obj_base_namespace const & ) = delete;
-  _xml_user_obj_base_namespace & operator =( _xml_user_obj_base_namespace const & ) = delete;
-  _xml_user_obj_base_namespace( _xml_user_obj_base_namespace && ) = default;
-  _xml_user_obj_base_namespace & operator =( _xml_user_obj_base_namespace && ) = default;
-  void swap( _TyThis & _r )
-  {
-    m_mapNamespaces.swap( _r.m_mapNamespaces );
-  }
-  template < class t_TyTransportCtxt >
-  _xml_namespace_uri & _RLookupNamespacePrefix( _l_data_typed_range const & _rdr, t_TyTransportCtxt const & _rcxt )
-  {
-    _TyStrView sv;
-    _rcxt.GetStringView( sv, _rdr );
-    _TyEntityMap::const_iterator cit = m_mapNamespaces.find( sv );
-    if ( m_mapNamespaces.end() == cit )
-    {
-      _TyStdStr str( sv );
-      THROWXMLPARSEEXCEPTION("Can't find namespace prefix [%s].", str.c_str() );
-    }
-    return cit->second;
-  }
-};
-// Non-Namespace base.
-template < class t_TyXmlTraits >
-class _xml_user_obj_base_namespace< t_TyXmlTraits, false >
-{
-  typedef _xml_user_obj_base_namespace _TyThis;
-public:
-  static constexpr bool s_kfSupportNamespaces = false;
-  typedef t_TyXmlTraits _TyXmlTraits;
-  void swap( _TyThis & _r )
-  {
-  }
-};
-
 // _xml_user_obj_base_dtd:
 // Contains some infrastructure to support the DTD if desired.
 template < class t_TyXmlTraits, bool t_kfSupportDTD >

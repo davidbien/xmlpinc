@@ -27,7 +27,9 @@ public:
   typedef typename t_TyXmlTraits::_TyLexTraits _TyLexTraits;
   typedef _lexical_analyzer< _TyLexTraits > _TyLexicalAnalyzer;
 
-
+  // Emplacing the transport will read the byte order mark from the source file.
+  // If that byte order mark isn't compatible with the character type we are using
+  //  to read that file then it will throw a parse exception.
   template < class... t_TysArgs >
   void emplaceTransport( t_TysArgs&&... _args )
   {
@@ -40,8 +42,12 @@ public:
     m_lexXml.template emplaceVarTransport< t_TyTransport >( std::forward< t_TysArgs >( _args )... );
   }
 
-  void AttachReadCursor( _TyReadCursor 
+  // Attaching a read cursor starts the parsing process - the first token is parsed when a read cursor is attached.
+  // The read cursor will then be pointing at that first-parsed token.
+  void AttachReadCursor( _TyReadCursor & _xrc )
+  {
 
+  }
 protected:
   _TyLexicalAnalyzer m_lexXml;
 };
