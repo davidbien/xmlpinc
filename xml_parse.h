@@ -48,7 +48,15 @@ public:
   {
 
   }
+
 protected:
+  // Accessed by xml_read_cursor<>:
+  void _SetFilterWhitespaceCharData( bool _fFilterWhitespaceCharData )
+  {
+    // We set this filter into the user object since it can short-circuit token creation and then we
+    //  won't create a token for the whitespace.
+    m_lexXml.RGetUserObj().SetFilterWhitespaceCharData( _fFilterWhitespaceCharData );
+  }
   _TyLexicalAnalyzer m_lexXml;
 };
 

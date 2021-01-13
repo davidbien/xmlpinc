@@ -87,6 +87,9 @@ public:
   typedef typename _TyXmlTraits::_TyEntityMap _TyEntityMap;
   typedef typename _TyXmlTraits::_TyData _TyData;
   typedef typename _TyXmlTraits::_TyValue _TyValue;
+  typedef typename _TyXmlTraits::_TyLexTraits _TyLexTraits;
+  typedef _l_action_object_value_base< _TyLexTraits, false > _TyAxnObjBase;
+  typedef _l_stream< _TyLexTraits > _TyStream;
 
   // Entity reference lookup:
   // To keep things simple (at least for now) we insert the standard entity references in the constructor.
@@ -95,6 +98,10 @@ public:
                               { str_array_cast<_TyChar>("apos"), str_array_cast<_TyChar>("\'") }, 
                               { str_array_cast<_TyChar>("lt"), str_array_cast<_TyChar>("<") }, 
                               { str_array_cast<_TyChar>("gt"), str_array_cast<_TyChar>(">") } };
+  
+  // Then this is true then when s_knTokenCharData is received it is check for be entirely composed of whitespace
+  // and if so it is ignored entirely and not retunred to the xml parser.
+  bool m_fFilterWhitespaceCharData{false};
 
   xml_user_obj() = default;
   xml_user_obj( xml_user_obj const & _r ) = delete;
@@ -106,6 +113,26 @@ public:
     _TyBaseDtd::swap( _r );
     _TyBaseNamespaces::swap( _r );
     m_mapEntities.swap( _r.m_mapEntities );
+  }
+  void SetFilterWhitespaceCharData( bool _fFilterWhitespaceCharData )
+  {
+    m_fFilterWhitespaceCharData = _fFilterWhitespaceCharData;
+  }
+  bool FFilterToken( const _TyAxnObjBase * _paobCurToken, _TyStream const & _rstrm ) const
+  {
+    if ( !m_fFilterWhitespaceCharData )
+      return false;
+    // We know the ultimate type of this token so we can cast:
+    typedef TyGetTokenCharData< _TyLexTraits, false > _TyTokenCharData;
+    const _TyTokenCharData * ptcd = static_cast< _TyTokenCharData * >( _paobCurToken );
+    // First of all, if we have more than one data_typed_range_el or the one we have it not Plain text
+    //  then we don't filter.
+    const _TyData & krdt = ptcd->RDataGet();
+    if ( !krdt.FContainsSingleDataRange() || ( s_kdtPlainText != krdt.DataRangeGetSingle().type() ) )
+      return false;
+    // The data must still be present in the stream when this method is called, but since the engine is calling it we assume that it is:
+    // These are the same as the S production from the XML specification. XML 1.1 might actually allow some other space characters but we aren't going to worry about that now.
+    return _rstrm.FSpanChars( krdt, str_array_cast<_TyChar>("\n\r\x20\t") );
   }
   template < class t_TyTransportCtxt >
   size_t _NChars( _TyData const & _rd, t_TyTransportCtxt const & _rcxt ) const

@@ -67,15 +67,13 @@ public:
   typedef typename _TyNamespaceMap::value_type _TyMapValue;
 
   xml_namespace_value_wrap() = default;
-  xml_namespace_value_wrap(  _TyMapValue const & _rvt )
+  xml_namespace_value_wrap(  _TyMapValue const & _rvt, bool _fDoubleQuotes )
     : m_pvt( &_rvt ),
       m_pnleUri( _rvt.second.PListElFront() )
   {
   }
   xml_namespace_value_wrap( xml_namespace_value_wrap const & ) = default;
   xml_namespace_value_wrap & operator =( xml_namespace_value_wrap const & ) = default;
-  xml_namespace_value_wrap( xml_namespace_value_wrap && ) = default;
-  xml_namespace_value_wrap & operator =( xml_namespace_value_wrap && ) = default;
   void swap( _TyThis & _r )
   {
     std::swap( m_pvt, _r.m_pvt );
