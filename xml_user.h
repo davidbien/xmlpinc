@@ -321,6 +321,17 @@ public:
       _rval.SetVal( _rsvDest );
     }
   }
+  template < class t_TyStringView, class t_TyToken, class t_TyTransportCtxt >
+  static void KGetStringView( t_TyStringView & _rsvDest, t_TyTransportCtxt & _rcxt, t_TyToken & _rtok, _TyValue const & _rval )
+    requires ( ( sizeof( typename t_TyStringView::value_type ) == sizeof( _TyChar ) ) && !TFIsTransportVarCtxt_v< t_TyTransportCtxt > )
+  {
+    Assert( _rsvDest.empty() );
+    Assert( _rval.FHasTypedData() ); // We are converting the _TyData object that is in _rval.
+    const _TyData kdtr = _rval.template GetVal< _TyData >();
+    _rcxt.AssertValidDataRange( kdtr );
+    VerifyThrowSz( kdtr.FContainsSingleDataRange(s_kdtPlainText), "KGetStringView() is only valid for single data ranges." );
+    _rcxt.GetStringView( _rsvDest, kdtr );
+  }
   template < class t_TyStringView, class t_TyString, class t_TyToken, class t_TyTransportCtxt >
   static bool FGetStringViewOrString( t_TyStringView & _rsvDest, t_TyString & _rstrDest, t_TyTransportCtxt & _rcxt, t_TyToken & _rtok, const _TyValue & _rval )
     requires ( ( sizeof( typename t_TyStringView::value_type ) == sizeof( _TyChar ) ) && !TFIsTransportVarCtxt_v< t_TyTransportCtxt > )
