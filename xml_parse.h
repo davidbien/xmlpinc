@@ -24,8 +24,11 @@ class xml_parser
   typedef xml_parser _TyThis;
 public:
   typedef t_TyXmlTraits _TyXmlTraits;
-  typedef typename t_TyXmlTraits::_TyLexTraits _TyLexTraits;
+  typedef typename _TyXmlTraits::_TyLexTraits _TyLexTraits;
   typedef _lexical_analyzer< _TyLexTraits > _TyLexicalAnalyzer;
+  typedef typename _TyXmlTraits::_TyUriMap _TyUriMap;
+  typedef typename _TyXmlTraits::_TyStdStr _TyStdStr;
+  typedef typename _TyXmlTraits::_TyStrView _TyStrView;
 
   // Emplacing the transport will read the byte order mark from the source file.
   // If that byte order mark isn't compatible with the character type we are using
@@ -37,7 +40,7 @@ public:
   }
   // Open a given transport object. This constructor is for variant transport
   template < class t_TyTransport, class ... t_TysArgs >
-  void emplaceVarTransport( t_TysArgs ... _args )
+  void emplaceVarTransport( t_TysArgs&& ... _args )
   {
     m_lexXml.template emplaceVarTransport< t_TyTransport >( std::forward< t_TysArgs >( _args )... );
   }
@@ -49,6 +52,16 @@ public:
 
   }
 
+  _TyUriMap::value_type const & RStrAddUri( _tyStrView const & _rsv )
+  {
+    _TyUriMap::const_iterator cit = m_mapUris.find( _rsv );
+    if ( m_mapUris.end() != cit )
+      return *cit;
+    pair< _TyUriMap::iterator, bool > pib = m_mapUris.insert( _rsv );
+    Assert( pib.second );
+    return *pib.first;
+  }
+
 protected:
   // Accessed by xml_read_cursor<>:
   void _SetFilterWhitespaceCharData( bool _fFilterWhitespaceCharData )
@@ -58,6 +71,7 @@ protected:
     m_lexXml.RGetUserObj().SetFilterWhitespaceCharData( _fFilterWhitespaceCharData );
   }
   _TyLexicalAnalyzer m_lexXml;
+  _TyUriMap m_mapUris;
 };
 
 __XMLP_END_NAMESPACE

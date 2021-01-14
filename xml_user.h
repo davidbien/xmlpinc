@@ -76,11 +76,9 @@ class xml_user_obj
 {
   typedef xml_user_obj _TyThis;
   typedef _xml_user_obj_base_dtd< t_TyXmlTraits, t_TyXmlTraits::s_kfSupportDTD > _TyBaseDtd;
-  typedef _xml_user_obj_base_namespace< t_TyXmlTraits, t_TyXmlTraits::s_kfSupportNamespaces > _TyBaseNamespaces;
 public:
   typedef t_TyXmlTraits _TyXmlTraits;
   using _TyBaseDtd::s_kfSupportDTD;
-  using _TyBaseDtd::s_kfSupportNamespaces;
   typedef typename _TyXmlTraits::_TyChar _TyChar;
   typedef typename _TyXmlTraits::_TyStdStr _TyStdStr;
   typedef typename _TyXmlTraits::_TyStrView _TyStrView;

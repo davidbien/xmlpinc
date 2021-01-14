@@ -15,40 +15,37 @@ __XMLP_BEGIN_NAMESPACE
 
 // _xml_namespace_uri:
 // This holds the current URI associated with the key which maps to this.
-template < class t_TyChar >
+template < class t_TyUriMap >
 class _xml_namespace_uri
 {
   typedef _xml_namespace_uri _TyThis;
 public:
-  typedef t_TyChar _TyChar;
-  typedef unique_ptr< _TyThis > _TyPtrThis;
-  typedef basic_string< _TyChar > _TyStdStr;
+  typedef t_TyUriMap _TyUriMap;
+  typedef typename _TyUriMap::key_type _TyUriKey;
+  typedef typename _TyUriMap::value_type _TyUriValue;
+  typedef _TyUriKey _TyStdStr;
+  typedef typename _TyUriKey::value_type _TyChar;
+  typedef basic_string_view< _TyChar > _TyStdStrView;
 
   ~_xml_namespace_uri() = default;
-  _xml_namespace_uri( _TyStdStr && _rrstrUri )
-    : m_strUri( std::move( _rrstrUri ) )
-  {
-  }
-  _xml_namespace_uri( const _TyChar * _pcUri )
-    : m_strUri( _pcUri )
+  _xml_namespace_uri( const _TyUriValue * _pvtUriMap )
+    : m_pvtUriMap( _pvtUriMap )
   {
   }
   _xml_namespace_uri() = default;
   _xml_namespace_uri( _xml_namespace_uri const & ) = default;
   _xml_namespace_uri & operator =( _xml_namespace_uri const & ) = default;
-  _xml_namespace_uri( _xml_namespace_uri && ) = default;
-  _xml_namespace_uri & operator =( _xml_namespace_uri && ) = default;
   void swap( _TyThis & _r )
   {
-    m_upThisNext.swap( _r.m_upThisNext );
-    m_strUri.swap( _r.m_strUri );
+    std::swap( m_pvtUriMap, _r.m_pvtUriMap );
   }
   _TyStdStr const & RStrUri() const
   {
-    return m_strUri;
+    Assert( !!m_pvtUriMap );
+    return *m_pvtUriMap;
   }
 protected:
-  _TyStdStr m_strUri;
+  const _TyUriValue * m_pvtUriMap{nullptr};
 };
 
 // Define a wrapper for namespace map value of some type.
@@ -66,10 +63,27 @@ public:
   typedef typename _TyMappedValueType::_TyStdStr _TyStdStr;
   typedef typename _TyNamespaceMap::value_type _TyMapValue;
 
+  ~xml_namespace_value_wrap()
+  {
+    if ( m_pmapReleaseOnDestruct )
+    {
+      Assert( m_pnleUri == _rvt.second.PListElFront() ); // Invariant.
+      if ( m_pnleUri == _rvt.second.PListElFront() )
+      {
+        _rvt.second.pop();
+        if ( _rvt.second.empty() ) // If the list of Uris became empty...
+        {
+          size_t stErased = m_pmapReleaseOnDestruct->erase( m_pvt->first );
+          Assert( 1 == stErased );
+        }
+      }
+    }
+  }
   xml_namespace_value_wrap() = default;
-  xml_namespace_value_wrap(  _TyMapValue const & _rvt, bool _fDoubleQuotes )
+  xml_namespace_value_wrap(  _TyMapValue const & _rvt, _TyNamespaceMap * _pmapReleaseOnDestruct )
     : m_pvt( &_rvt ),
-      m_pnleUri( _rvt.second.PListElFront() )
+      m_pnleUri( _rvt.second.PListElFront() ),
+      m_pmapReleaseOnDestruct( _pmapReleaseOnDestruct )
   {
   }
   xml_namespace_value_wrap( xml_namespace_value_wrap const & ) = default;
@@ -78,11 +92,13 @@ public:
   {
     std::swap( m_pvt, _r.m_pvt );
     std::swap( m_pnleUri, _r.m_pnleUri );
+    std::swap( m_pmapReleaseOnDestruct, _r.m_pmapReleaseOnDestruct );
   }
   void AssertValid() const
   {
 #if ASSERTSENABLED
     Assert( m_pvt->second.FFind( m_pnleUri ) );
+    Assert( !m_pmapReleaseOnDestruct || ( m_pmapReleaseOnDestruct->end() != m_pmapReleaseOnDestruct->find( m_pvt->first ) ) );
 #endif //ASSERTSENABLED
   }
 
@@ -164,6 +180,8 @@ public:
 protected:
   const _TyMapValue * m_pvt{nullptr};
   const _TyNamespaceListEl * m_pnleUri; // Invariant: m_pnleUri is contained in m_pvt->second's list.
+  // If non-null then destruction of this object will remove m_pnleUri from the top of m_pvt->second's list.
+  _TyNamespaceMap * m_pmapReleaseOnDestruct{nullptr};
 };
 
 __XMLP_END_NAMESPACE
