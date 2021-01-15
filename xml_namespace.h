@@ -67,11 +67,11 @@ public:
   {
     if ( m_pmapReleaseOnDestruct )
     {
-      Assert( m_pnleUri == _rvt.second.PListElFront() ); // Invariant.
-      if ( m_pnleUri == _rvt.second.PListElFront() )
+      Assert( m_pnleUri == m_pvt->second.PListElFront() ); // Invariant.
+      if ( m_pnleUri == m_pvt->second.PListElFront() )
       {
-        _rvt.second.pop();
-        if ( _rvt.second.empty() ) // If the list of Uris became empty...
+        m_pvt->second.pop();
+        if ( m_pvt->second.empty() ) // If the list of Uris became empty...
         {
           size_t stErased = m_pmapReleaseOnDestruct->erase( m_pvt->first );
           Assert( 1 == stErased );
@@ -100,6 +100,51 @@ public:
     Assert( m_pvt->second.FFind( m_pnleUri ) );
     Assert( !m_pmapReleaseOnDestruct || ( m_pmapReleaseOnDestruct->end() != m_pmapReleaseOnDestruct->find( m_pvt->first ) ) );
 #endif //ASSERTSENABLED
+  }
+
+  bool FIsNamespaceDeclaration() const
+  {
+    return !!m_pmapReleaseOnDestruct;
+  }
+  const _TyMapValue * PVtNamespaceMapValue() const
+  {
+    return m_pvt;
+  }
+  const _TyStdStr & RStringUri() const
+  {
+    return m_pnleUri->RStrUri();
+  }
+  // This doesn't do a full compare - only the correct thing for comparing unique attributes.
+  std::strong_ordering ICompareForUniqueAttr( const _TyThis & _r ) const
+  {
+    std::strong_ordering iComp = FIsNamespaceDeclaration() <=> _r.FIsNamespaceDeclaration();
+    if ( !iComp )
+    {
+      if ( FIsNamespaceDeclaration() )
+      {
+        // Compare prefix - no two declarations should have the same prefix.
+        iComp = m_pvt.first <=> _r.m_pvt.first;
+      }
+      else
+      {
+        // Compare URI - no two same attribute names should have the same URI reference.
+        // The URI is a pointer - we don't need to compare the strings - just the pointer - the strings may not have the same comparison sign and that is ok.
+        iComp = &m_pnleUri->RStrUri() <=> &_r.m_pnleUri->RStrUri();
+      }
+    }
+    return iComp;
+  }
+  // Full compare.
+  std::strong_ordering ICompare( const _TyThis & _r ) const
+  {
+    std::strong_ordering iComp = FIsNamespaceDeclaration() <=> _r.FIsNamespaceDeclaration();
+    if ( !iComp )
+    {
+      iComp = m_pvt.first <=> _r.m_pvt.first;
+      if ( !iComp )
+        iComp = &m_pnleUri->RStrUri() <=> &_r.m_pnleUri->RStrUri();
+    }
+    return iComp;
   }
 
 // _l_value boilerplate methods: must support these even if they don't mean much to us.
