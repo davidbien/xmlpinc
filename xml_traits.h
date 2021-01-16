@@ -9,9 +9,13 @@
 #include <string_view>
 #include <unordered_map>
 #include "_strutil.h"
+#include "upslist.h"
+#include "_l_traits.h"
+#include "_l_transport.h"
 #include "xml_ns.h"
 #include "xml_types.h"
 #include "xml_namespace.h"
+#include "xml_user.h"
 
 __XMLP_BEGIN_NAMESPACE
 
@@ -23,7 +27,6 @@ private:
 public:
   typedef t_TyTransport _TyTransport;
   typedef typename t_TyTransport::_TyChar _TyChar;
-  typedef xml_user_obj< _TyThis > _TyLexUserObj;
   typedef basic_string< _TyChar > _TyStdStr;
   typedef basic_string_view< _TyChar > _TyStrView;
 
@@ -32,21 +35,22 @@ public:
 
 // Centralize the declaration of some types - which also allows us to form the types we want for
 // extension of the _l_value<>'s variant with our desired implementation types.
-
-// URI hash:
-// We hash every URI associated with every prefix and use the value_type from the hash as the key for that URI. It much less unwieldy and allows constant time comparisons, etc.
-// All URIs are active for the lifetime of the XML parser.
-// This also allows xml_tokens to be copied and squirreled away. (Processing occurs on copy.) As long as the xml_parser object is around the xml_tokens will be valid for use.
   typedef StringTransparentHash< _TyChar > _TyStringTransparentHash; // Allow lookup by string_view without creating a string.
+
+  // entity hash and parameter entity hash:
+  typedef unordered_map< _TyStdStr, _TyStdStr, _TyStringTransparentHash, std::equal_to<void> > _TyEntityMap;
+  typedef xml_user_obj< _TyEntityMap, s_kfSupportDTD > _TyLexUserObj;
+
+  // URI hash:
+  // We hash every URI associated with every prefix and use the value_type from the hash as the key for that URI. It much less unwieldy and allows constant time comparisons, etc.
+  // All URIs are active for the lifetime of the XML parser.
+  // This also allows xml_tokens to be copied and squirreled away. (Processing occurs on copy.) As long as the xml_parser object is around the xml_tokens will be valid for use.
   typedef unordered_set< _TyStdStr, _TyStringTransparentHash, std::equal_to<void> > _TyUriMap;
 
-// namespace hash:
+  // namespace hash:
   typedef _xml_namespace_uri< _TyUriMap > _TyNamespaceUri;
   typedef UniquePtrSList< _TyNamespaceUri > _TyUpListNamespaceUris;
   typedef unordered_map< _TyStdStr, _TyUpListNamespaceUris, _TyStringTransparentHash, std::equal_to<void> > _TyNamespaceMap;
-
-// entity hash and parameter entity hash:
-  typedef unordered_map< _TyStdStr, _TyStdStr, _TyStringTransparentHash, std::equal_to<void> > _TyEntityMap;
 
 // Declare our lexical analyzer traits:
   typedef xml_namespace_value_wrap< _TyNamespaceMap > _TyXmlNamespaceValueWrap;

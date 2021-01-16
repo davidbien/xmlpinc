@@ -209,7 +209,7 @@ public:
     const size_t knUris = m_pvt->second.NUrisInStack();
     t_TyJsoValue & rrgjvUris = _rjv[2];
     rrgjvUris.SetArrayCapacity( knUris );
-    size_type nUri = 0;
+    size_t nUri = 0;
     m_pvt->second.ApplyUri( 
       [&nUri,&rrgjvUris]( _TyStdStr const & _rstr )
       {

@@ -19,22 +19,22 @@ static const vtyDataType s_kdtEntityRef = 3;
 static const vtyDataType s_kdtPEReference = 4;
 
 // xml_user.h:
-template < class t_TyChar >
-class _xml_namespace_uri;
-template < class t_TyXmlTraits, bool t_kfSupportNamespaces >
-class _xml_user_obj_base_namespace;
-template < class t_TyXmlTraits, bool t_kfSupportDTD >
+template < class t_TyEntityMap, bool t_kfSupportDTD >
 class _xml_user_obj_base_dtd;
-template < class t_TyXmlTraits >
+template < class t_TyEntityMap, bool t_kfSupportDTD >
 class xml_user_obj;
+
+// xml_namespace.h
+template < class t_TyUriMap >
+class _xml_namespace_uri;
+template < class t_TyNamespaceMap >
+class xml_namespace_value_wrap;
 
 // Declare all the various types of the triggers and tokens for the XML lexical analyzer.
 static const vtyActionIdent s_knTriggerPITargetStart = 1;
 static const vtyActionIdent s_knTriggerPITargetEnd = 2;
 template < class t_TyLexTraits, bool t_fInLexGen = true >
 using TyGetTriggerPITargetStart = _l_trigger_position< t_TyLexTraits, s_knTriggerPITargetStart, t_fInLexGen >;
-template < class t_TyLexTraits, bool t_fInLexGen = true >
-using TyGetTriggerPITargetStart = _l_trigger_string< t_TyLexTraits, s_knTriggerPITargetEnd, s_knTriggerPITargetStart, t_fInLexGen >;
 template < class t_TyLexTraits, bool t_fInLexGen = true >
 using TyGetTriggerPITargetEnd = _l_trigger_string< t_TyLexTraits, s_knTriggerPITargetEnd, s_knTriggerPITargetStart, t_fInLexGen >;
 static const vtyActionIdent s_knTriggerPITargetMeatBegin = 3;
@@ -93,7 +93,7 @@ using TyGetTriggerCharHexRefEnd = _l_trigger_string_typed_range< s_kdtCharHexRef
 
 static const vtyActionIdent s_knTriggerAttValueDoubleQuote = 17;
 template < class t_TyLexTraits, bool t_fInLexGen = true >
-TyGetTriggerAttValueDoubleQuote _l_trigger_bool< t_TyLexTraits, s_knTriggerAttValueDoubleQuote, t_fInLexGen >;
+using TyGetTriggerAttValueDoubleQuote  = _l_trigger_bool< t_TyLexTraits, s_knTriggerAttValueDoubleQuote, t_fInLexGen >;
 
 static const vtyActionIdent s_knTriggerPrefixBegin = 18;
 static const vtyActionIdent s_knTriggerPrefixEnd = 19;
