@@ -38,11 +38,8 @@ using TyGetTriggerPITargetStart = _l_trigger_position< t_TyLexTraits, s_knTrigge
 template < class t_TyLexTraits, bool t_fInLexGen = true >
 using TyGetTriggerPITargetEnd = _l_trigger_string< t_TyLexTraits, s_knTriggerPITargetEnd, s_knTriggerPITargetStart, t_fInLexGen >;
 static const vtyActionIdent s_knTriggerPITargetMeatBegin = 3;
-static const vtyActionIdent s_knTriggerPITargetMeatEnd = 4;
 template < class t_TyLexTraits, bool t_fInLexGen = true >
 using TyGetTriggerPITargetMeatBegin = _l_trigger_position< t_TyLexTraits, s_knTriggerPITargetMeatBegin, t_fInLexGen >;
-template < class t_TyLexTraits, bool t_fInLexGen = true >
-using TyGetTriggerPITargetMeatEnd = _l_trigger_string< t_TyLexTraits, s_knTriggerPITargetMeatEnd, s_knTriggerPITargetMeatBegin, t_fInLexGen >;
 
 static const vtyActionIdent s_knTriggerMixedNameBegin = 5;
 static const vtyActionIdent s_knTriggerMixedNameEnd = 6;
@@ -198,6 +195,12 @@ template < class t_TyLexTraits, bool t_fInLexGen = true >
 using TyGetTriggerPubidLiteralSingleQuoteEnd = _l_trigger_string_typed_range< s_kdtPlainText, 
   TyGetTriggerPubidLiteralDoubleQuoteEnd<t_TyLexTraits,t_fInLexGen>, s_knTriggerPubidLiteralSingleQuoteEnd, s_knTriggerPubidLiteralBegin >;
 
+// For CharData (in between tags) we can only use a single position since a trigger at the beginning of a production is completely useless and screws things up.
+// The parser will immediately "fix up" the positions to make them correct (unless it is skipping data in which case it won't).
+static const vtyActionIdent s_knTriggerCharDataEndpoint = 43;
+template < class t_TyLexTraits, bool t_fInLexGen = true >
+using TyGetTriggerCharDataEndpoint = _l_trigger_string_typed_endpoint< s_kdtPlainText, TyGetTriggerCharDataEnd<t_TyLexTraits,t_fInLexGen>, s_knTriggerCharDataEndpoint >;
+
 // Tokens:
 static const vtyActionIdent s_knTokenSTag = 1000;
 template < class t_TyLexTraits, bool t_fInLexGen = true >
@@ -226,6 +229,10 @@ using TyGetTokenCDataSection = _l_action_token< _l_trigger_noop< t_TyLexTraits, 
 
 static const vtyActionIdent s_knTokenCharData = 1006;
 template < class t_TyLexTraits, bool t_fInLexGen = true >
-using TyGetTokenCharData = _l_action_token< _l_trigger_noop< t_TyLexTraits, s_knTokenCharData, t_fInLexGen > >;
+using TyGetTokenCharData = _l_action_token< _l_action_save_data_single< s_knTokenCharData, TyGetTriggerCharDataEnd<t_TyLexTraits,t_fInLexGen> > >;
+
+static const vtyActionIdent s_knTokenProcessingInstruction = 1007;
+template < class t_TyLexTraits, bool t_fInLexGen = true >
+using TyGetTokenProcessingInstruction = _l_action_token< _l_action_save_data_single< s_knTokenCharData, TyGetTriggerPITargetEnd<t_TyLexTraits,t_fInLexGen>, TyGetTriggerPITargetMeatBegin<t_TyLexTraits,t_fInLexGen> > >;
 
 __XMLP_END_NAMESPACE
