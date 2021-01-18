@@ -25,7 +25,6 @@ class xml_token
 public:
   typedef t_TyXmlTraits _TyXmlTraits;
   typedef typename _TyXmlTraits::_TyLexTraits _TyLexTraits;
-  static constexpr bool s_kfSupportDTD = t_kfSupportDTD;
   typedef typename _TyXmlTraits::_TyChar _TyChar;
   typedef basic_string_view< _TyChar > _TyStrView;
   typedef pair< _TyStrView, _TyStrView > _TyPrSvTagPrefix; // note that the prefix is second, not first.

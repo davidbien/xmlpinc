@@ -70,23 +70,23 @@ using TyGetTriggerCharDataSingleQuoteEnd = _l_trigger_string_typed_range< s_kdtP
 static const vtyActionIdent s_knTriggerEntityRefBegin = 11;
 static const vtyActionIdent s_knTriggerEntityRefEnd = 12;
 template < class t_TyLexTraits, bool t_fInLexGen = true >
-using TyGetTriggerEntityRefBegin = _l_trigger_position< t_TyLexTraits, s_knTriggerEntityRefBegin, t_fInLexGen >;
+using TyGetTriggerEntityRefBegin = _l_trigger_string_typed_beginpoint< s_kdtEntityRef, TyGetTriggerCharDataEnd<t_TyLexTraits,t_fInLexGen>, s_knTriggerEntityRefBegin >;
 template < class t_TyLexTraits, bool t_fInLexGen = true >
-using TyGetTriggerEntityRefEnd = _l_trigger_string_typed_range< s_kdtEntityRef, TyGetTriggerCharDataEnd<t_TyLexTraits,t_fInLexGen>, s_knTriggerEntityRefEnd, s_knTriggerEntityRefBegin >;
+using TyGetTriggerEntityRefEnd = _l_trigger_string_typed_endpoint< s_kdtEntityRef, TyGetTriggerCharDataEnd<t_TyLexTraits,t_fInLexGen>, s_knTriggerEntityRefEnd, s_knTriggerEntityRefBegin >;
 
 static const vtyActionIdent s_knTriggerCharDecRefBegin = 13;
 static const vtyActionIdent s_knTriggerCharDecRefEnd = 14;
 template < class t_TyLexTraits, bool t_fInLexGen = true >
-using TyGetTriggerCharDecRefBegin = _l_trigger_position< t_TyLexTraits, s_knTriggerCharDecRefBegin, t_fInLexGen >;
+using TyGetTriggerCharDecRefBegin = _l_trigger_string_typed_beginpoint< s_kdtCharDecRef, TyGetTriggerCharDataEnd<t_TyLexTraits, t_fInLexGen>, s_knTriggerCharDecRefBegin >;
 template < class t_TyLexTraits, bool t_fInLexGen = true >
-using TyGetTriggerCharDecRefEnd = _l_trigger_string_typed_range< s_kdtCharDecRef, TyGetTriggerCharDataEnd<t_TyLexTraits, t_fInLexGen>, s_knTriggerCharDecRefEnd, s_knTriggerCharDecRefBegin >;
+using TyGetTriggerCharDecRefEnd = _l_trigger_string_typed_endpoint< s_kdtCharDecRef, TyGetTriggerCharDataEnd<t_TyLexTraits, t_fInLexGen>, s_knTriggerCharDecRefEnd, s_knTriggerCharDecRefBegin >;
 
 static const vtyActionIdent s_knTriggerCharHexRefBegin = 15;
 static const vtyActionIdent s_knTriggerCharHexRefEnd = 16;
 template < class t_TyLexTraits, bool t_fInLexGen = true >
-using TyGetTriggerCharHexRefBegin = _l_trigger_position< t_TyLexTraits, s_knTriggerCharHexRefBegin, t_fInLexGen >;
+using TyGetTriggerCharHexRefBegin = _l_trigger_string_typed_beginpoint< s_kdtCharHexRef, TyGetTriggerCharDataEnd<t_TyLexTraits,t_fInLexGen>, s_knTriggerCharHexRefBegin >;
 template < class t_TyLexTraits, bool t_fInLexGen = true >
-using TyGetTriggerCharHexRefEnd = _l_trigger_string_typed_range< s_kdtCharHexRef, TyGetTriggerCharDataEnd<t_TyLexTraits,t_fInLexGen>, s_knTriggerCharHexRefEnd, s_knTriggerCharHexRefBegin >;
+using TyGetTriggerCharHexRefEnd = _l_trigger_string_typed_endpoint< s_kdtCharHexRef, TyGetTriggerCharDataEnd<t_TyLexTraits,t_fInLexGen>, s_knTriggerCharHexRefEnd, s_knTriggerCharHexRefBegin >;
 
 static const vtyActionIdent s_knTriggerAttValueDoubleQuote = 17;
 template < class t_TyLexTraits, bool t_fInLexGen = true >
@@ -233,6 +233,6 @@ using TyGetTokenCharData = _l_action_token< _l_action_save_data_single< s_knToke
 
 static const vtyActionIdent s_knTokenProcessingInstruction = 1007;
 template < class t_TyLexTraits, bool t_fInLexGen = true >
-using TyGetTokenProcessingInstruction = _l_action_token< _l_action_save_data_single< s_knTokenCharData, TyGetTriggerPITargetEnd<t_TyLexTraits,t_fInLexGen>, TyGetTriggerPITargetMeatBegin<t_TyLexTraits,t_fInLexGen> > >;
+using TyGetTokenProcessingInstruction = _l_action_token< _l_action_save_data_single< s_knTokenProcessingInstruction, TyGetTriggerPITargetEnd<t_TyLexTraits,t_fInLexGen>, TyGetTriggerPITargetMeatBegin<t_TyLexTraits,t_fInLexGen> > >;
 
 __XMLP_END_NAMESPACE

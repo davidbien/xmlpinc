@@ -12,6 +12,7 @@
 
 #include "xml_ns.h"
 #include "xml_types.h"
+#include "xml_exc.h"
 
 __XMLP_BEGIN_NAMESPACE
 
@@ -42,16 +43,13 @@ public:
   }
 
   template < class t_TyTransportCtxt >
-  const _TyStdStr & _RLookupParameterEntity( _l_data_typed_range const & _rdr, t_TyTransportCtxt const & _rcxt )
+  const _TyStdStr & _RLookupParameterEntity( _l_data_typed_range const & _rdr, t_TyTransportCtxt const & _rcxt ) const
   {
     _TyStrView sv;
     _rcxt.GetStringView( sv, _rdr );
     typename _TyEntityMap::const_iterator cit = m_mapParameterEntities.find( sv );
     if ( m_mapParameterEntities.end() == cit )
-    {
-      _TyStdStr str( sv );
-      THROWXMLPARSEEXCEPTION("Can't find parameter entity [%s].", str.c_str() );
-    }
+      THROWXMLPARSEEXCEPTION("Can't find parameter entity [%s].", StrConvertString< char >( sv ).c_str() );
     return cit->second;
   }
 };
@@ -70,7 +68,7 @@ public:
   {
   }
   template < class t_TyTransportCtxt >
-  const _TyStdStr& _RLookupParameterEntity(_l_data_typed_range const& _rdr, t_TyTransportCtxt const& _rcxt)
+  const _TyStdStr& _RLookupParameterEntity(_l_data_typed_range const& _rdr, t_TyTransportCtxt const& _rcxt) const
   {
     // no-op - just here so that things compile.
     return *(_TyStdStr*)0;
@@ -95,11 +93,11 @@ public:
 
   // Entity reference lookup:
   // To keep things simple (at least for now) we insert the standard entity references in the constructor.
-  _TyEntityMap m_mapEntities{ { str_array_cast<_TyChar>("quot"), str_array_cast<_TyChar>("\"") }, 
-                              { str_array_cast<_TyChar>("amp"), str_array_cast<_TyChar>("&") }, 
-                              { str_array_cast<_TyChar>("apos"), str_array_cast<_TyChar>("\'") }, 
-                              { str_array_cast<_TyChar>("lt"), str_array_cast<_TyChar>("<") }, 
-                              { str_array_cast<_TyChar>("gt"), str_array_cast<_TyChar>(">") } };
+  _TyEntityMap m_mapEntities{ { _TyStdStr( str_array_cast<_TyChar>("quot") ), _TyStdStr( str_array_cast<_TyChar>("\"") ) }, 
+                              { _TyStdStr( str_array_cast<_TyChar>("amp") ), _TyStdStr( str_array_cast<_TyChar>("&") ) }, 
+                              { _TyStdStr( str_array_cast<_TyChar>("apos") ), _TyStdStr( str_array_cast<_TyChar>("\'") ) }, 
+                              { _TyStdStr( str_array_cast<_TyChar>("lt") ), _TyStdStr( str_array_cast<_TyChar>("<") ) }, 
+                              { _TyStdStr( str_array_cast<_TyChar>("gt") ), _TyStdStr( str_array_cast<_TyChar>(">") ) } };
   
   // Then this is true then when s_knTokenCharData is received it is check for be entirely composed of whitespace
   // and if so it is ignored entirely and not retunred to the xml parser.
@@ -119,33 +117,78 @@ public:
   {
     m_fFilterWhitespaceCharData = _fFilterWhitespaceCharData;
   }
+  using _TyBase::_RLookupParameterEntity;
   
   template < class t_TyStream >
-  bool FFilterToken( const _TyAxnObjBase * _paobCurToken, t_TyStream const & _rstrm ) const
+  bool FProcessAndFilterToken( _TyAxnObjBase * _paobCurToken, t_TyStream const & _rstrm, const vtyDataPosition _kposEndToken ) const
   {
-    typedef typename t_TyStream::_TyLexTraits _TyLexTraits;
-    if ( !m_fFilterWhitespaceCharData )
+    // We only process CharData tokens because they require special processing.
+    // As well we only potentially filter CharData tokens in this manner.
+    if ( s_knTokenCharData != _paobCurToken->VGetTokenId() )
       return false;
+    // Move through and fix up the CharData endpoints since we had to do things this way:
     // We know the ultimate type of this token so we can cast:
+    typedef typename t_TyStream::_TyTraits _TyLexTraits;
     typedef TyGetTokenCharData< _TyLexTraits, false > _TyTokenCharData;
-    const _TyTokenCharData * ptcd = static_cast< _TyTokenCharData * >( _paobCurToken );
+    typedef TyGetTriggerCharDataEnd< _TyLexTraits, false > _TyTriggerCharDataEnd;
+    _TyTokenCharData * ptcd = static_cast< _TyTokenCharData * >( _paobCurToken );
+    _TyTriggerCharDataEnd & rtgCharDataEnd = ptcd->GetConstituentTriggerObj< _TyTriggerCharDataEnd >();
     // First of all, if we have more than one data_typed_range_el or the one we have it not Plain text
     //  then we don't filter.
-    const _TyData & krdt = ptcd->RDataGet();
-    if ( !krdt.FContainsSingleDataRange() || ( s_kdtPlainText != krdt.DataRangeGetSingle().type() ) )
+    _TyData & rdt = rtgCharDataEnd.RDataGet();
+    vtyDataPosition posCur = _rstrm.PosTokenStart();
+    auto lambdaProcessCharData = [_kposEndToken,&posCur]( _l_data_typed_range * _pdtrBegin, _l_data_typed_range * _pdtrEnd ) -> size_t
+    {
+      _l_data_typed_range * pdtrCur = _pdtrBegin;
+      for ( ; pdtrCur != _pdtrEnd; ++pdtrCur )
+      {
+        if ( ( pdtrCur->m_posBegin - ( vkdpNullDataPosition == pdtrCur->m_posEnd ) ) >= _kposEndToken ) // yes! -"=="! sneaky but correct.
+        {
+          // Then we received some triggers after the end of the current token - likely we will fail but not until the next token is processed.
+          // Don't process any further:
+          return pdtrCur - _pdtrBegin;
+        }
+        if ( vkdpNullDataPosition == pdtrCur->m_posEnd )
+        {
+          Assert( s_kdtPlainText == pdtrCur->type() );
+          Assert( vkdpNullDataPosition != pdtrCur->m_posBegin );
+          pdtrCur->m_posEnd = pdtrCur->m_posBegin;
+          pdtrCur->m_posBegin = posCur;
+          posCur = pdtrCur->m_posEnd;
+        }
+        else
+        {
+          Assert( s_kdtPlainText != pdtrCur->type() ); // This must be a reference of some sort.
+          posCur = pdtrCur->m_posEnd + 1; // We know that all references end with a ";".
+        }
+      }
+      return _pdtrEnd - _pdtrBegin;
+    };
+    if ( rdt.FContainsSingleDataRange() )
+      Verify( 1 == lambdaProcessCharData( &rdt.DataRangeGetSingle(), &rdt.DataRangeGetSingle() + 1 ) );
+    else
+    {
+      size_t nApplied = rdt.GetSegArrayDataRanges().NApplyContiguous( 0, rdt.NPositions(), lambdaProcessCharData );
+      if ( nApplied < rdt.NPositions() )
+          rdt.GetSegArrayDataRanges().SetSizeSmaller( nApplied, false );
+    }
+    
+    if ( !m_fFilterWhitespaceCharData )
+      return false;
+    if ( !rdt.FContainsSingleDataRange() || ( s_kdtPlainText != rdt.DataRangeGetSingle().type() ) )
       return false;
     // The data must still be present in the stream when this method is called, but since the engine is calling it we assume that it is:
     // These are the same as the S production from the XML specification. XML 1.1 might actually allow some other space characters but we aren't going to worry about that now.
-    return _rstrm.FSpanChars( krdt, str_array_cast<_TyChar>("\n\r\x20\t") );
+    return _rstrm.FSpanChars( rdt.DataRangeGetSingle(), str_array_cast<_TyChar>("\n\r\x20\t") );
   }
   template < class t_TyTransportCtxt >
   size_t _NChars( _TyData const & _rd, t_TyTransportCtxt const & _rcxt ) const
   {
     if ( _rd.FContainsSingleDataRange() )
-      return _NCharsDr( _rd.DataRangeGetSingle() );
+      return _NCharsDr( _rd.DataRangeGetSingle(), _rcxt );
     size_t nChars = 0;
     _rd.GetSegArrayDataRanges().ApplyContiguous( 0, _rd.GetSegArrayDataRanges().NElements(),
-      [&nChars]( _l_data_typed_range const * _pdrBegin, _l_data_typed_range const * const _pdrEnd )
+      [this,&nChars,&_rcxt]( _l_data_typed_range const * _pdrBegin, _l_data_typed_range const * const _pdrEnd )
       {
         for ( ; _pdrEnd != _pdrBegin; ++_pdrBegin )
           nChars += _NCharsDr( *_pdrBegin, _rcxt );
@@ -154,7 +197,7 @@ public:
     return nChars;
   }
   template < class t_TyTransportCtxt >
-  size_t _NCharsDr( _l_data_typed_range const & _rdr, t_TyTransportCtxt const & _rcxt )
+  size_t _NCharsDr( _l_data_typed_range const & _rdr, t_TyTransportCtxt const & _rcxt ) const
   {
     size_t nLen;
     switch( _rdr.type() )
@@ -186,7 +229,7 @@ public:
     }
     return nLen;
   }
-  _TyChar _TchTranslateRef( _TyStrView & _rsv, vtyDataType _rdt )
+  static _TyChar _TchTranslateRef( vtyDataType _rdt, _TyStrView & _rsv )
   {
     Assert( s_kdtCharDecRef == _rdt || s_kdtCharHexRef == _rdt );
     _TyChar tch;
@@ -200,7 +243,7 @@ public:
   }
   // Return 0 and populate _rsv or return the character to which the markup corresponds.
   template < class t_TyTransportCtxt >
-  _TyChar _TchGetStringViewDr( _TyStrView & _rsv, _l_data_typed_range const & _rdr, t_TyTransportCtxt const & _rcxt )
+  _TyChar _TchGetStringViewDr( _TyStrView & _rsv, _l_data_typed_range const & _rdr, t_TyTransportCtxt const & _rcxt ) const
   {
     _TyChar tchRtn = 0;
     switch( _rdr.type() )
@@ -234,7 +277,7 @@ public:
     return tchRtn;
   }
   template < class t_TyTransportCtxt >
-  const _TyStdStr & _RLookupEntity( _l_data_typed_range const & _rdr, t_TyTransportCtxt const & _rcxt )
+  const _TyStdStr & _RLookupEntity( _l_data_typed_range const & _rdr, t_TyTransportCtxt const & _rcxt ) const
   {
     _TyStrView sv;
     _rcxt.GetStringView( sv, _rdr );
@@ -248,7 +291,7 @@ public:
   }
 
   template < class t_TyStringView, class t_TyToken, class t_TyTransportCtxt >
-  static void GetStringView( t_TyStringView & _rsvDest, t_TyTransportCtxt & _rcxt, t_TyToken & _rtok, typename t_TyToken::_TyValue& _rval )
+  void GetStringView( t_TyStringView & _rsvDest, t_TyTransportCtxt & _rcxt, t_TyToken & _rtok, typename t_TyToken::_TyValue& _rval ) const
     requires ( sizeof( typename t_TyStringView::value_type ) != sizeof( _TyChar ) )
   {
     typedef typename t_TyToken::_TyValue::template get_string_type< typename t_TyStringView::value_type > _TyStrConvertTo;
@@ -257,7 +300,7 @@ public:
     _rsvDest = _rval.emplaceVal( std::move( strConverted ) );
   }
   template < class t_TyStringView, class t_TyString, class t_TyToken, class t_TyTransportCtxt >
-  static bool FGetStringViewOrString( t_TyStringView & _rsvDest, t_TyString & _rstrDest, t_TyTransportCtxt & _rcxt, t_TyToken & _rtok, typename t_TyToken::_TyValue const & _rval )
+  bool FGetStringViewOrString( t_TyStringView & _rsvDest, t_TyString & _rstrDest, t_TyTransportCtxt & _rcxt, t_TyToken & _rtok, typename t_TyToken::_TyValue const & _rval ) const
     requires ( sizeof( typename t_TyStringView::value_type ) != sizeof( _TyChar ) )
   {
     static_assert( sizeof( typename t_TyStringView::value_type ) == sizeof( typename t_TyString::value_type ) );
@@ -268,7 +311,7 @@ public:
   }
 // var transport:
   template < class t_TyStringView, class t_TyToken, class t_TyTransportCtxt >
-  static void GetStringView( t_TyStringView & _rsvDest, t_TyTransportCtxt & _rcxt, t_TyToken & _rtok, typename t_TyToken::_TyValue & _rval )
+  void GetStringView( t_TyStringView & _rsvDest, t_TyTransportCtxt & _rcxt, t_TyToken & _rtok, typename t_TyToken::_TyValue & _rval ) const
     requires ( TFIsTransportVarCtxt_v< t_TyTransportCtxt > )
   {
     return visit(_VisitHelpOverloadFCall {
@@ -279,7 +322,7 @@ public:
     }, _rcxt.GetVariant() );
   }
   template < class t_TyStringView, class t_TyString, class t_TyToken, class t_TyTransportCtxt >
-  static bool FGetStringViewOrString( t_TyStringView & _rsvDest, t_TyString & _rstrDest, t_TyTransportCtxt & _rcxt, t_TyToken & _rtok, const typename t_TyToken::_TyValue & _rval )
+  bool FGetStringViewOrString( t_TyStringView & _rsvDest, t_TyString & _rstrDest, t_TyTransportCtxt & _rcxt, t_TyToken & _rtok, const typename t_TyToken::_TyValue & _rval ) const
     requires ( TFIsTransportVarCtxt_v< t_TyTransportCtxt > )
   {
     return visit(_VisitHelpOverloadFCall {
@@ -290,7 +333,7 @@ public:
     }, _rcxt.GetVariant() );
   }
   template < class t_TyString, class t_TyToken, class t_TyTransportCtxt >
-  static void GetString( t_TyString & _rstrDest, t_TyTransportCtxt & _rcxt, t_TyToken & _rtok, const typename t_TyToken::_TyValue & _rval )
+  void GetString( t_TyString & _rstrDest, t_TyTransportCtxt & _rcxt, t_TyToken & _rtok, const typename t_TyToken::_TyValue & _rval )
     requires ( TFIsTransportVarCtxt_v< t_TyTransportCtxt > )
   {
     return visit(_VisitHelpOverloadFCall {
@@ -302,7 +345,7 @@ public:
   }
 // Non-converting GetString*.
   template < class t_TyStringView, class t_TyToken, class t_TyTransportCtxt >
-  static void GetStringView( t_TyStringView & _rsvDest, t_TyTransportCtxt & _rcxt, t_TyToken & _rtok, typename t_TyToken::_TyValue & _rval )
+  void GetStringView( t_TyStringView & _rsvDest, t_TyTransportCtxt & _rcxt, t_TyToken & _rtok, typename t_TyToken::_TyValue & _rval ) const
     requires ( ( sizeof( typename t_TyStringView::value_type ) == sizeof( _TyChar ) ) && !TFIsTransportVarCtxt_v< t_TyTransportCtxt > )
   {
     Assert( _rsvDest.empty() );
@@ -325,7 +368,7 @@ public:
     }
   }
   template < class t_TyStringView, class t_TyToken, class t_TyTransportCtxt >
-  static void KGetStringView( t_TyStringView & _rsvDest, t_TyTransportCtxt & _rcxt, t_TyToken & _rtok, typename t_TyToken::_TyValue const & _rval )
+  void KGetStringView( t_TyStringView & _rsvDest, t_TyTransportCtxt & _rcxt, t_TyToken & _rtok, typename t_TyToken::_TyValue const & _rval ) const
     requires ( ( sizeof( typename t_TyStringView::value_type ) == sizeof( _TyChar ) ) && !TFIsTransportVarCtxt_v< t_TyTransportCtxt > )
   {
     Assert( _rsvDest.empty() );
@@ -336,7 +379,7 @@ public:
     _rcxt.GetStringView( _rsvDest, kdtr );
   }
   template < class t_TyStringView, class t_TyString, class t_TyToken, class t_TyTransportCtxt >
-  static bool FGetStringViewOrString( t_TyStringView & _rsvDest, t_TyString & _rstrDest, t_TyTransportCtxt & _rcxt, t_TyToken & _rtok, const typename t_TyToken::_TyValue & _rval )
+  bool FGetStringViewOrString( t_TyStringView & _rsvDest, t_TyString & _rstrDest, t_TyTransportCtxt & _rcxt, t_TyToken & _rtok, const typename t_TyToken::_TyValue & _rval ) const
     requires ( ( sizeof( typename t_TyStringView::value_type ) == sizeof( _TyChar ) ) && !TFIsTransportVarCtxt_v< t_TyTransportCtxt > )
   {
     static_assert( sizeof( typename t_TyStringView::value_type ) == sizeof( typename t_TyString::value_type ) );
@@ -357,7 +400,7 @@ public:
     }
   }
   template < class t_TyString, class t_TyToken, class t_TyTransportCtxt >
-  static void GetString( t_TyString & _rstrDest, t_TyTransportCtxt & _rcxt, t_TyToken & _rtok, const typename t_TyToken::_TyValue & _rval )
+  void GetString( t_TyString & _rstrDest, t_TyTransportCtxt & _rcxt, t_TyToken & _rtok, const typename t_TyToken::_TyValue & _rval ) const
     requires ( ( sizeof( typename t_TyString::value_type ) == sizeof( _TyChar ) ) && !TFIsTransportVarCtxt_v< t_TyTransportCtxt > )
   {
     Assert( _rstrDest.empty() );
@@ -411,7 +454,7 @@ public:
 
 // Converting GetString*.
   template < class t_TyString, class t_TyToken, class t_TyTransportCtxt >
-  static void GetString( t_TyString & _rstrDest, t_TyTransportCtxt & _rcxt, t_TyToken & _rtok, typename t_TyToken::_TyValue const & _rval )
+  void GetString( t_TyString & _rstrDest, t_TyTransportCtxt & _rcxt, t_TyToken & _rtok, typename t_TyToken::_TyValue const & _rval ) const
     requires ( ( sizeof( typename t_TyString::value_type ) != sizeof( _TyChar ) ) && !TFIsTransportVarCtxt_v< t_TyTransportCtxt > )
   {
     Assert( _rstrDest.empty() );
@@ -444,12 +487,12 @@ public:
     {
       _TyChar * pcCur = pcBuf; // Current output pointer.
       kdtr.GetSegArrayDataRanges().ApplyContiguous( 0, kdtr.GetSegArrayDataRanges().NElements(), 
-        [&pcCur,&nCharsRemaining,&_rcxt]( const _l_data_typed_range * _pdtrBegin, const _l_data_typed_range * _pdtrEnd )
+        [this,&pcCur,&nCharsRemaining,&_rcxt]( const _l_data_typed_range * _pdtrBegin, const _l_data_typed_range * _pdtrEnd )
         {
-          _TyStrView sv;
           const _l_data_typed_range * pdtrCur = _pdtrBegin;
           for ( ; nCharsRemaining && ( _pdtrEnd != pdtrCur ); ++pdtrCur )
           {
+            _TyStrView sv;
             _TyChar tch = _TchGetStringViewDr( sv, *pdtrCur, _rcxt );
             if ( !tch )
             {

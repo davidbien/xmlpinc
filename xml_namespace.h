@@ -59,6 +59,7 @@ public:
   typedef typename _TyKey::value_type _TyChar;
   typedef typename _TyNamespaceMap::mapped_type _TyMapped; // UniquePtrSList< _xml_namespace_uri<t_TyChar> >
   typedef typename _TyMapped::value_type _TyMappedValueType; // _xml_namespace_uri<t_TyChar>
+  typedef _TyMappedValueType _TyNamespaceUri;
   typedef typename _TyMapped::_TyListEl _TyNamespaceListEl;
   typedef typename _TyMappedValueType::_TyStdStr _TyStdStr;
   typedef typename _TyNamespaceMap::value_type _TyMapValue;
@@ -204,16 +205,16 @@ public:
       return;
     }
     _rjv.SetArrayCapacity( 3 ); // preallocate
-    _rjv[0].SetStringValue( m_pvt->first );
+    _rjv[0ull].SetStringValue( m_pvt->first );
     _rjv[1].SetStringValue( (*m_pnleUri)->RStrUri() );
-    const size_t knUris = m_pvt->second.NUrisInStack();
+    const size_t knUris = m_pvt->second.count();
     t_TyJsoValue & rrgjvUris = _rjv[2];
     rrgjvUris.SetArrayCapacity( knUris );
     size_t nUri = 0;
-    m_pvt->second.ApplyUri( 
-      [&nUri,&rrgjvUris]( _TyStdStr const & _rstr )
+    m_pvt->second.Apply( 
+      [&nUri,&rrgjvUris]( _TyNamespaceUri const & _rnu )
       {
-        rrgjvUris[nUri++].SetStringValue( _rstr );
+        rrgjvUris[nUri++].SetStringValue( _rnu.RStrUri() );
       }
     );
   }
@@ -223,7 +224,7 @@ public:
     // nothing to do here
   }
 protected:
-  const _TyMapValue * m_pvt{nullptr};
+  _TyMapValue * m_pvt{nullptr};
   const _TyNamespaceListEl * m_pnleUri; // Invariant: m_pnleUri is contained in m_pvt->second's list.
   // If non-null then destruction of this object will remove m_pnleUri from the top of m_pvt->second's list.
   _TyNamespaceMap * m_pmapReleaseOnDestruct{nullptr};

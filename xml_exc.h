@@ -29,10 +29,10 @@ public:
   {
     RenderVA(_pcFmt, args);
   }
-  using _tyBase::RenderVA(const char *_pcFmt, va_list args);
+  using _tyBase::RenderVA;
 };
 // By default we will always add the __FILE__, __LINE__ even in retail for debugging purposes.
-#define THROWXMLPARSEEXCEPTION(MESG, ...) ExceptionUsage<xml_parse_exception<_tyCharTraits>>::ThrowFileLineFunc(__FILE__, __LINE__, FUNCTION_PRETTY_NAME, MESG, ##__VA_ARGS__)
-#define THROWXMLPARSEEXCEPTIONERRNO(ERRNO, MESG, ...) ExceptionUsage<xml_parse_exception<_tyCharTraits>>::ThrowFileLineFuncErrno(__FILE__, __LINE__, FUNCTION_PRETTY_NAME, ERRNO, MESG,##__VA_ARGS__)
+#define THROWXMLPARSEEXCEPTION(MESG, ...) ExceptionUsage<xml_parse_exception>::ThrowFileLineFunc(__FILE__, __LINE__, FUNCTION_PRETTY_NAME, MESG, ##__VA_ARGS__)
+#define THROWXMLPARSEEXCEPTIONERRNO(ERRNO, MESG, ...) ExceptionUsage<xml_parse_exception>::ThrowFileLineFuncErrno(__FILE__, __LINE__, FUNCTION_PRETTY_NAME, ERRNO, MESG,##__VA_ARGS__)
 
 __XMLP_END_NAMESPACE
