@@ -118,15 +118,12 @@ public:
     m_fFilterWhitespaceCharData = _fFilterWhitespaceCharData;
   }
   using _TyBase::_RLookupParameterEntity;
-  
   template < class t_TyStream >
   bool FProcessAndFilterToken( _TyAxnObjBase * _paobCurToken, t_TyStream const & _rstrm, const vtyDataPosition _kposEndToken ) const
   {
-    // We only process CharData tokens because they require special processing.
-    // As well we only potentially filter CharData tokens in this manner.
-    if ( s_knTokenCharData != _paobCurToken->VGetTokenId() )
+    if ( _paobCurToken->VGetTokenId() != s_knTokenCharData )
       return false;
-    // Move through and fix up the CharData endpoints since we had to do things this way:
+    // Move through and fix up the CharData endpoints since we had to do things this way.
     // We know the ultimate type of this token so we can cast:
     typedef typename t_TyStream::_TyTraits _TyLexTraits;
     typedef TyGetTokenCharData< _TyLexTraits, false > _TyTokenCharData;
