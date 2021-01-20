@@ -176,7 +176,7 @@ public:
       return false;
     // The data must still be present in the stream when this method is called, but since the engine is calling it we assume that it is:
     // These are the same as the S production from the XML specification. XML 1.1 might actually allow some other space characters but we aren't going to worry about that now.
-    return _rstrm.FSpanChars( rdt.DataRangeGetSingle(), str_array_cast<_TyChar>("\n\r\x20\t") );
+    return _rstrm.FSpanChars( rdt.DataRangeGetSingle(), str_array_cast<_TyChar>( STR_XML_WHITESPACE_TOKEN ) );
   }
   template < class t_TyTransportCtxt >
   size_t _NChars( _TyData const & _rd, t_TyTransportCtxt const & _rcxt ) const

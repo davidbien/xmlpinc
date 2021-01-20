@@ -18,6 +18,9 @@ static const vtyDataType s_kdtFirstDTDRef = 3;
 static const vtyDataType s_kdtEntityRef = 3;
 static const vtyDataType s_kdtPEReference = 4;
 
+// The string containing the values from the Production S.
+#define STR_XML_WHITESPACE_TOKEN "\n\r\x20\t"
+
 // xml_user.h:
 template < class t_TyEntityMap, bool t_kfSupportDTD >
 class _xml_user_obj_base_dtd;

@@ -24,37 +24,222 @@ __XMLP_BEGIN_NAMESPACE
 // This maintains the a single level of the current read state of the XML parser.
 // The read cursor maintains a stack of these.
 // We don't need to maintain file positions, etc, as these are maintained by the lexical analyzer.
-// The invariant is that the parser is always located at the position at the end of the 
+// The invariant is that the parser is always located at the position at the end of the last token of the
+//  tail of the stack of read contexts.
 template < class t_TyXmlTraits >
 class _xml_read_context
 {
   typedef _xml_read_context _TyThis;
 public:
   typedef t_TyXmlTraits _TyXmlTraits;
+  typedef typename _TyXmlTraits::_TyChar _TyChar;
+  typedef typename _TyXmlTraits::_TyStdStr _TyStdStr;
+  typedef typename _TyXmlTraits::_TyStrView _TyStrView;
   typedef typename _TyXmlTraits::_TyLexTraits _TyLexTraits;
   typedef _l_token< _TyLexTraits > _TyLexToken;
   typedef xml_token< _TyXmlTraits > _TyXmlToken;
+  static constexpr size_t s_knbySegSize = sizeof( _TyXmlToken ) * 16;
 
   ~_xml_read_context() = default;
   _xml_read_context( _TyLexToken && _rrtok )
-    : m_tok( std::move( _rrtok ) )
+    : m_saTokens( s_knbySegSize )
   {
+    AddToken( std::move( _rrtok ) );
   }
   _xml_read_context() = delete;
   _xml_read_context( _xml_read_context const & ) = delete;
   _xml_read_context & operator=( _xml_read_context const & ) = delete;
   _xml_read_context & operator=( _xml_read_context && ) = delete;
 
-  const _TyXmlToken & GetToken() const
+  void AssertValid()
   {
-    return m_tok;
+#if ASSERTSENABLED
+    Assert( m_saTokens.GetSize() ); // should always have at least the tag token at element 0.
+#endif //ASSERTSENABLED
   }
-  _TyXmlToken & GetToken()
+
+  // This will either return an XMLDecl (for the root/head context) or a s_knTokenSTag or s_knTokenEmptyElemTag.
+  const _TyXmlToken & GetTag() const
   {
-    return m_tok;
+    return const_cast< _TyThis * >( this )->GetTag(); // avoid detritus due to the throw being unique.
   }
+  _TyXmlToken & GetTag()
+  {
+    VerifyThrowSz( !!m_saTokens.GetSize(), "No tag." );
+    return m_saTokens.ElGet( 0 );
+  }
+
+  size_t NContentTokens() const
+  {
+    size_t nEls = m_saTokens.NElements();
+    Assert( nEls );
+    return !nEls ? 0 : ( nEls - 1 );
+  }
+  _TyXmlToken const & GetContentToken( size_t _nEl ) const
+  {
+    return m_saToken.ElGet( _nEl+1 );
+  }
+  _TyXmlToken & GetContentToken( size_t _nEl )
+  {
+    return m_saToken.ElGet( _nEl+1 );
+  }
+  _TyXmlToken const & operator []( size_t _nEl ) const
+  {
+    return GetContentToken( _nEl );
+  }
+  _TyXmlToken & operator []( size_t _nEl )
+  {
+    return GetContentToken( _nEl );
+  }
+  // Peruse all content using a functor.
+  template < class t_TyFunctor >
+  void ApplyContent( size_t _nTokenBegin, size_t _nTokenEnd, t_TyFunctor && _rrftor )
+  {
+    m_saTokens.Apply( _nTokenBegin, _nTokenEnd, std::forward< t_TyFunctor >( _rrftor ) );
+  }
+  // Peruse conditionally - see SegArray::NApply().
+  template < class t_TyFunctor >
+  size_t NApplyContent( size_t _nTokenBegin, size_t _nTokenEnd, t_TyFunctor && _rrftor )
+  {
+    return m_saTokens.NApply( _nTokenBegin, _nTokenEnd, std::forward< t_TyFunctor >( _rrftor ) );
+  }
+  void AddToken( _TyLexToken && _rrtok )
+  {
+    m_saTokens.emplaceAtEnd( std::move( _rrtok ) );
+  }
+  // Coalesce all content CharData and CDataSection content tokens into a single string of the given character type.
+  // The non-const version of this will store rendered strings in their elements.
+  template < class t_TyString >
+  void KGetContentString( t_TyString & _rstr ) const
+  {
+    _rstr.clear();
+    size_t nContentTokens = NContentTokens();
+    if ( !nContentTokens )
+      return;
+    // Use a AllocaArray to efficiently store pieces of the string so that we can then allocate once.
+    // We will get the content strings in token's character type and then perform a single conversion at the end.
+    typedef AllocaArray< _TyStdStr, true > _TyRgStrings;
+    _TyRgStrings rgStrings( ALLOCA_ARRAY_ALLOC( _TyStdStr, NContentTokens() ) );
+    size_t nCharsTotal = 0;
+    m_saTokens.Apply( 1, m_saTokens.NElements(),
+      [&rgStrings,&nCharsTotal]( _TyXmlToken const * _ptokBegin, _TyXmlToken const * _ptokEnd )
+      {
+        _TyXmlToken const * ptokCur = _ptokBegin;
+        for ( ; _ptokEnd != ptokCur; ++ptokCur )
+        {
+          vtyTokenIdent tid = ptokCur->GetTokenId();
+          if ( ( tid == s_knTokenCDataSection ) || ( tid == s_knTokenCharData ) )
+          {
+            _TyStdStr * pstrEmplaced;
+            ptokCur->GetLexToken().GetString( *( pstrEmplaced = &rgStrings.emplaceAtEnd() ) );
+            nCharsTotal += pstrEmplaced->length();
+          }
+        }
+      }
+    );
+    if ( rgStrings.GetSize() )
+      _KGetContentString( _rstr, rgStrings.begin(), rgStrings.end() );
+  }
+  // The non-const version of this will store rendered strings in their elements.
+  // That's this one. We will store the strings in the character type requested here in the tokens themselves.
+  // This makes for faster parsing in the future when and if these same values are accessed (using the same character type as this).
+  template < class t_TyString >
+  void GetContentString( t_TyString & _rstr )
+  {
+    typedef typename t_TyString::value_type _TyCharResult;
+    typedef basic_string_view< _TyCharResult > _TyStrViewResult;
+    _rstr.clear();
+    size_t nContentTokens = NContentTokens();
+    if ( !nContentTokens )
+      return;
+    // Use a AllocaArray to efficiently store pieces of the string so that we can then allocate once.
+    // We will get the content strings in token's character type and then perform a single conversion at the end.
+    typedef AllocaArray< _TyStrViewResult, true > _TyRgStrViews;
+    _TyRgStrings rgStrViews( ALLOCA_ARRAY_ALLOC( _TyStrViewResult, NContentTokens() ) );
+    size_t nCharsTotal = 0;
+    m_saTokens.Apply( 1, m_saTokens.NElements(),
+      [&rgStrViews,&nCharsTotal]( _TyXmlToken * _ptokBegin, _TyXmlToken * _ptokEnd )
+      {
+        _TyXmlToken * ptokCur = _ptokBegin;
+        for ( ; _ptokEnd != ptokCur; ++ptokCur )
+        {
+          vtyTokenIdent tid = ptokCur->GetTokenId();
+          if ( ( tid == s_knTokenCDataSection ) || ( tid == s_knTokenCharData ) )
+          {
+            _TyStrViewResult * psvEmplaced;
+            ptokCur->GetLexToken().GetStringView( *( psvEmplaced = &rgStrViews.emplaceAtEnd() ) );
+            nCharsTotal += pstrEmplaced->length();
+          }
+        }
+      }
+    );
+    if ( rgStrViews.GetSize() )
+    {
+      _rstr.resize( nCharsTotal );
+      _TyCharResult * pcCur = &_rstr[0];
+      _TyStrViewResult * psvCur = rgStrViews.begin();
+      _TyStrViewResult * const psvEnd = rgStrViews.end();
+      for ( ; psvEnd != psvCur; ++psvCur )
+      {
+        memcpy( pcCur, &psvCur->at(0), psvCur->length() * sizeof( _TyChar ) );
+        pcCur += psvCur->length();
+      }
+    }
+  }
+
 protected:
-  _TyXmlToken m_tok;
+  template< class t_TyStringResult >
+  void _KGetContentString( t_TyStringResult & _rstr, size_t _nCharsTotal, _TyStdStr * _pstrSrcBegin, _TyStdStr * _pstrSrcEnd )
+    requires TAreSameSizeTypes_v< typename t_TyStringResult::value_type, _TyChar >
+  {
+    if ( 1 == ( _pstrSrcEnd - _pstrSrcBegin ) )
+      _pstrSrcBegin->swap( _rstr );
+    else
+    {
+      _rstr.resize( _nCharsTotal );
+      _TyChar * pcCur = &_rstr[0];
+      _TyStdStr * pstrSrcCur = _pstrSrcBegin;
+      for ( ; _pstrSrcEnd != pstrSrcCur; ++pstrSrcCur )
+      {
+        memcpy( pcCur, &pstrSrcCur->at(0), pstrSrcCur->length() * sizeof( _TyChar ) );
+        pcCur += pstrSrcCur->length();
+      }
+      Assert( pcCur == &_rstr[0] + _nCharsTotal );
+    }
+  }
+  template< class t_TyStringResult >
+  void _KGetContentString( t_TyStringResult & _rstr, size_t _nCharsTotal, _TyStdStr * _pstrSrcBegin, _TyStdStr * _pstrSrcEnd )
+    requires ( !TAreSameSizeTypes_v< typename t_TyStringResult::value_type, _TyChar > )
+  {
+    _TyStdStr strTempBuf;
+    static constexpr size_t knchMaxAllocaSize = vknbyMaxAllocaSize / sizeof( _TyChar );
+    _TyChar * pcBuf;
+    if ( _nCharsTotal > knchMaxAllocaSize )
+    {
+      strTempBuf.resize( _nCharsTotal );
+      pcBuf = &strTempBuf[0];
+    }
+    else
+      pcBuf = (_TyChar*)alloca( _nCharsTotal * sizeof( _TyChar ) );
+      _TyChar * pcCur = pcBuf;
+      _TyStdStr * pstrSrcCur = _pstrSrcBegin;
+      for ( ; _pstrSrcEnd != pstrSrcCur; ++pstrSrcCur )
+      {
+        memcpy( pcCur, &pstrSrcCur->at(0), pstrSrcCur->length() * sizeof( _TyChar ) );
+        pcCur += pstrSrcCur->length();
+      }
+      Assert( pcCur == pcBuf + _nCharsTotal );
+    }
+    ConvertString( _rstr, pcBuf, _nCharsTotal );
+  }
+
+  // The first token is always:
+  // 1) An XMLDecl token if we are at the head of the context list.
+  // 2) A Tag token (either s_knTokenSTag or s_knTokenEmptyElemTag).
+  // The remaining tokens are content for that (pseudo)tag.
+
+  typedef SegArray< _TyXmlToken, true > _TySegArrayTokens;
+  _TySegArrayTokens m_saTokens;
 };
 
 template < class t_TyXmlTraits >
@@ -90,8 +275,6 @@ public:
   {
     return m_fGotFirstTag;
   }
-
-
   void SetStrict( bool _fStrict = true )
   {
     m_fStrict = _fStrict;
@@ -100,7 +283,6 @@ public:
   {
     return m_fStrict;
   }
-
   // If this is set to true then all consecutive CharData and CDataSections are integrated into a single CharData token.
   void SetIntegrateCDataSections( bool _fIntegrateCDataSections = true )
   {
@@ -176,29 +358,42 @@ public:
     return m_fCheckDuplicateAttrs;
   }
 protected:
+  bool _FGetToken( unique_ptr< _TyLexToken > & _rpltok, const _TyStateProto * _pspStart = nullptr )
+  {
+    Assert( !!m_pXp );
+    if ( m_fUpdateSkip )
+      _UpdateSkip();
+    return m_pXp->RLex().FGetToken( _rpltok, m_rgSkipTokensCur.begin(), m_rgSkipTokensCur.begin() + m_nSkip, _pspStart, false );
+  }
   void _AttachXmlParser( _TyXmlParser * _pXp )
   {
     if ( !!m_pXp )
       _DetachXmlParser();
     m_pXp = _pXp;
     m_pXp->SetFilterWhitespaceCharData( m_fFilterWhitespaceCharData );
-    _UpdateSkip();
-    unique_ptr< _TyLexToken > pltokFirst;
-    VerifyThrowSz( _pXp->RLex().FGetToken( pltokFirst, m_rgSkipTokensCur.begin(), m_rgSkipTokensCur.begin() + m_nSkip ), 
-      "You failed at the first thing you tried to do! No token found at beginning of stream." );
-    vtyTokenIdent rgtidInvalidFirstToken = { s_knTokenETag, s_knTokenCDataSection, s_knTokenCharData };
-    const vtyTokenIdent * ptidEndInvalidFirstToken = rgtidInvalidFirstToken + DimensionOf( rgtidInvalidFirstToken );
-    VerifyThrowSz( ptidEndInvalidFirstToken == find( rgtidInvalidFirstToken, ptidEndInvalidFirstToken, pltokFirst->GetTokenId() ), "Got an invalid tag as the first tag in the stream." );
-    _ProcessToken( pltokFirst ); // process any namespaces, etc.
-    if ( ( s_knTokenXMLDecl == pltokFirst->GetTokenId() ) && m_fSkipXMLDecl )
+    { //B
+      unique_ptr< _TyLexToken > pltokFirst;
+      // For the first token we must check to see if we get an XMLDecl token since it is optional.
+      bool fGotXMLDecl = _FGetToken( pltokFirst, &startXMLDecl );
+      if ( !fGotXMLDecl )
+      {
+        // Then we are going to create a "fake" XMLDecl token because the invariant is that the first
+        //  token of the top context is an XMLDecl token. Our fake token will be completely empty.
+        pltokFirst = make_unique< _TyLexToken >( &m_pXp->GetActionObj< s_knTokenXMLDecl >() );
+      }
+      _ProcessToken( pltokFirst ); // This pushes XMLDecl onto the head of the stack as the first token in that context.
+    }//EB
+    // Now "prime the pump" by reading the read-ahead token and then call _GetTagTokenSet().
+    VerifyThrowSz( _FGetToken( pltokFirst ),  "You failed at the first thing you tried to do! No token found at beginning of stream." );
+    m_pltokLookahead
+
+    // Then we gotta get a different token:
+    VerifyThrowSz( _FGetToken( pltokFirst ),  "You failed at the first thing you tried to do! No token found at beginning of stream." );
+    if ( fGotXMLDecl && m_fSkipXMLDecl )
     {
       // Then we must get another token because we needed to record the XMLDecl info anyway even if we didn't give it to the user.
       pltokFirst.reset();
-      VerifyThrowSz( _pXp->RLex().FGetToken( pltokFirst, m_rgSkipTokensCur.begin(), m_rgSkipTokensCur.begin() + m_nSkip ), 
-        "Second token was not found at beginning of stream." );
-      vtyTokenIdent rgtidInvalidSecondToken = { s_knTokenETag, s_knTokenCDataSection, s_knTokenXMLDecl };
-      const vtyTokenIdent * ptidEndInvalidSecondToken = rgtidInvalidSecondToken + DimensionOf( rgtidInvalidSecondToken );
-      VerifyThrowSz( ptidEndInvalidSecondToken == find( rgtidInvalidSecondToken, ptidEndInvalidSecondToken, pltokFirst->GetTokenId() ), "Got an invalid tag as the first tag in the stream." );
+      VerifyThrowSz( _FGetToken( pltokFirst ), "Second token was not found at beginning of stream." );
       _ProcessToken( pltokFirst );
     }
     m_lContexts.emplace_front( std::move( *pltokFirst ) );
@@ -502,7 +697,6 @@ protected:
     switch( _rpltok->GetTokenId() )
     {
       case s_knTokenXMLDecl:
-        // This is only valid at the beginning of the file.
         _ProcessXMLDecl( *_rpltok );
       break;
       case s_knTokenSTag:
@@ -516,16 +710,36 @@ protected:
       }
       break;
       case s_knTokenETag:
-        _ProcessTagName( _rpltok->GetValue() ); // No need to process namespaces on the end tag - just the name itself.
+        _ProcessEndTag( *_rpltok );
       break;
       case s_knTokenComment:
-        _ProcessComment( _rpltok );
+        _ProcessComment( *_rpltok );
       break;
       case s_knTokenCDataSection:
+        _ProcessCDataSection( *_rpltok );
+      break;
       case s_knTokenCharData:
-        _ProcessCharData( _rpltok );
+        _ProcessCharData( *_rpltok );
       break;
     }
+  }
+  void _ProcessEndTag( _TyLexToken & _rltok )
+  {
+    VerifyThrowSz( !m_fGotFirstTag, "Found end tag before first tag declaration." );
+    _TyValue & rvalTagEnd = _rpltok->GetValue();
+    _ProcessTagName( rvalTagEnd ); // No need to process namespaces on the end tag - just the name itself.
+    _TyXmlReadContext & rctxtLast = m_lContexts.back();
+    const _TyXmlToken & rxtTagStart = rctxtLast.GetToken(0);
+    Assert( rxtTagStart.FIsTag() );
+    const _TyLexToken & rltokTagStart = rxtTagStart.RGetLexToken();
+    const _TyValue & rvalTagStart = rltokTagStart.GetValue()[0];
+    _TyStrView svTagStart;
+    rltokTag.KGetStringView( rvalTagStart[0], svTagStart );
+    _TyStrView svTagEnd;
+    _rltok.KGetStringView( rvalTagEnd[0], svTagStart );
+    VerifyThrowSz( svTagStart == svTagEnd, "Start tag[%s] doesn't match end tag[%s]", StrConvertString<char>( svTagStart ).c_str(), StrConvertString<char>( svTagEnd ).c_str() );
+    // Ok so we got the end tag for the end context.
+
   }
   void _ProcessXMLDecl( _TyLexToken & _rltok )
   {
@@ -537,6 +751,8 @@ protected:
     _TyStdStr strMinorVNum;
     rrgVals[4].GetString( _rltok, strMinorVNum );
     m_nVersionMinorNumber = strMinorVNum[0] - _TyChar('0');
+    // Even if the caller is ignoring the XMLDecl we will start the root context with it if it is present.
+    _PushCurrentContext( _rltok ); // Push on current context. There will be no current context so one will be created.
   }
   void _ProcessComment( _TyLexToken & _rltok )
   {
@@ -546,16 +762,36 @@ protected:
     drToken.m_posEnd -= 3; // -->
     // REVIEW:<dbien>: Could strip whitespace off front and rear but...
     _rltok.template emplace< _TyData >( drToken );
+    _PushCurrentContext( _rltok );
   }
-  void _ProcessCharData( )
-  void _ProcessComment( _TyLexToken & _rltok )
+  void _ProcessCDataSection( _TyLexToken & _rltok )
   {
+    VerifyThrowSz( !m_fGotFirstTag, "Found CDataSection before first tag declaration." );
     _l_data_range drToken;
     _rltok.GetTokenDataRange( drToken );
-    drToken.m_posBegin += 4; // <!--
-    drToken.m_posEnd -= 3; // -->
-    // REVIEW:<dbien>: Could strip whitespace off front and rear but...
+    drToken.m_posBegin += 9; // <![CDATA[
+    drToken.m_posEnd -= 3; // ]]>
     _rltok.template emplace< _TyData >( drToken );
+    _PushCurrentContext( _rltok );
+  }
+  void _ProcessCharData( _TyLexToken & _rltok )
+  {
+    if ( !m_fGotFirstTag )
+    {
+      // We should only see plain whitespace CharData before the first tag:
+      _TyValue & rVal = _rltok.GetValue();
+      Assert( rVal.FHasTypedData() );
+      const _TyData & rdt = rVal.GetVal< _TyData >();
+      bool fError = !rdt.FContainsSingleDataRange() || ( rdt.DataRangeGetSingle().type() != s_kdtPlainText );
+      if ( !fError )
+      {
+        _TyStrView svData;
+        rVal.KGetStringView( _rltok, svData );
+        fError = ( svData.length() != StrSpn( &svData[0], svData.length(), str_array_cast<_TyChar>( STR_XML_WHITESPACE_TOKEN ) ) );
+      }
+      VerifyThrowSz( !fError, "Found non-whitespace CharData before first tag declaration." );
+    }
+    _PushCurrentContext( _rltok ); // Push on current context.
   }
   void _DetachXmlParser
   {

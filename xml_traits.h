@@ -43,9 +43,13 @@ public:
 
   // URI hash:
   // We hash every URI associated with every prefix and use the value_type from the hash as the key for that URI. It much less unwieldy and allows constant time comparisons, etc.
-  // All URIs are active for the lifetime of the XML parser.
+  // All URIs are active for the lifetime of the XML parser - i.e. none are removed from this map.
   // This also allows xml_tokens to be copied and squirreled away. (Processing occurs on copy.) As long as the xml_parser object is around the xml_tokens will be valid for use.
   typedef unordered_set< _TyStdStr, _TyStringTransparentHash, std::equal_to<void> > _TyUriMap;
+  // Prefix hash:
+  // Same as the URI hash except for prefixes. Keep em around forver so that our xml_token objects are valid as long as the xml_parser object is valid.
+  // REVIEW:<dbien>: This may happen later.
+  typedef unordered_set< _TyStdStr, _TyStringTransparentHash, std::equal_to<void> > _TyPrefixMap;
 
   // namespace hash:
   typedef _xml_namespace_uri< _TyUriMap > _TyNamespaceUri;

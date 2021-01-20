@@ -28,16 +28,16 @@ public:
   typedef typename _TyXmlTraits::_TyChar _TyChar;
   typedef basic_string_view< _TyChar > _TyStrView;
   typedef pair< _TyStrView, _TyStrView > _TyPrSvTagPrefix; // note that the prefix is second, not first.
-  typedef _l_token< _TyLexTraits > _TyToken;
+  typedef _l_token< _TyLexTraits > _TyLexToken;
   typedef _l_data< _TyChar > _TyData;
   typedef _l_value< _TyLexTraits > _TyValue;
 
   ~xml_token() = default;
-  xml_token( _TyToken const & _rtok )
+  xml_token( _TyLexToken const & _rtok )
     : m_tokToken( _rtok )
   {
   }
-  xml_token( _TyToken && _rrtok )
+  xml_token( _TyLexToken && _rrtok )
     : m_tokToken( std::move( _rrtok ) )
   {
   }
@@ -46,6 +46,19 @@ public:
   xml_token & operator=( xml_token const & ) = default;
   xml_token( xml_token && ) = default;
   xml_token & operator=( xml_token && ) = default;
+
+  vtyTokenIdent GetTokenId() const
+  {
+    return m_tokToken.GetTokenId();
+  }
+  const _TyLexToken & GetLexToken() const
+  {
+    return m_tokToken;
+  }
+  _TyLexToken & GetLexToken()
+  {
+    return m_tokToken;
+  }
 
   bool FIsTag() const
   {
@@ -89,7 +102,7 @@ public:
   }
 
 protected:
-  _TyToken m_tokToken;
+  _TyLexToken m_tokToken;
 };
 
 __XMLP_END_NAMESPACE
