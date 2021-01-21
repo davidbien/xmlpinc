@@ -58,6 +58,12 @@ public:
 #endif //ASSERTSENABLED
   }
 
+  // Return the token ID of the tag at element 0 of m_saTokens.
+  vtyTokenIdent GetTagTokenId() const
+  {
+    return GetTag().GetTokenId();
+  }
+
   // This will either return an XMLDecl (for the root/head context) or a s_knTokenSTag or s_knTokenEmptyElemTag.
   const _TyXmlToken & GetTag() const
   {
@@ -237,7 +243,6 @@ protected:
   // 1) An XMLDecl token if we are at the head of the context list.
   // 2) A Tag token (either s_knTokenSTag or s_knTokenEmptyElemTag).
   // The remaining tokens are content for that (pseudo)tag.
-
   typedef SegArray< _TyXmlToken, true > _TySegArrayTokens;
   _TySegArrayTokens m_saTokens;
 };
@@ -271,10 +276,28 @@ public:
   xml_read_cursor( xml_read_cursor && ) = default;
   xml_read_cursor & operator=( xml_read_cursor && ) = default;
 
-  bool FGotFirstTag() const
+// State querying:
+  // This is true while we are parsing inside of the element tag.
+  // This is true after the first tag is read and then false
+  //  after the end tag for that first tag is read.
+  bool FInsideDocumentTag() const
   {
-    return m_fGotFirstTag;
+    return m_lContexts.size() > 1; // the claim is constant time since C++17.
   }
+  bool FInProlog() const
+  {
+    return !FInsideDocumentTag() && !m_fGotFirstTag;
+  }
+  bool FInEpilog() const
+  {
+    return !FInsideDocumentTag() && m_fGotFirstTag;
+  }
+  bool FAtEOF() const
+  {
+    Assert( !!m_pXp ); // kinda meaningless...
+    return !m_pXp || !m_pltokLookahead;
+  }
+// Parse settings.
   void SetStrict( bool _fStrict = true )
   {
     m_fStrict = _fStrict;
@@ -282,15 +305,6 @@ public:
   bool FGetStrict() const
   {
     return m_fStrict;
-  }
-  // If this is set to true then all consecutive CharData and CDataSections are integrated into a single CharData token.
-  void SetIntegrateCDataSections( bool _fIntegrateCDataSections = true )
-  {
-    m_fIntegrateCDataSections = _fIntegrateCDataSections;
-  }
-  bool FGetIntegrateCDataSections() const
-  {
-    return m_fIntegrateCDataSections;
   }
   void SetFilterWhitespaceCharData( bool _fFilterWhitespaceCharData = true )
   {
@@ -304,18 +318,6 @@ public:
   bool FFilterWhitespaceCharData() const
   {
     return m_fFilterWhitespaceCharData;
-  }
-  void SetSkipXMLDecl( bool _fSkipXMLDecl = true )
-  {
-    if ( m_fSkipXMLDecl != _fSkipXMLDecl )
-    {
-      m_fSkipXMLDecl = _fSkipXMLDecl;
-      m_fUpdateSkip = true;
-    }
-  }
-  bool FGetSkipXMLDecl() const
-  {
-    return m_fSkipXMLDecl;
   }
   void SetSkipComments( bool _fSkipComments = true )
   {
@@ -357,13 +359,47 @@ public:
   {
     return m_fCheckDuplicateAttrs;
   }
+  
+// Navigation:
+  // Move down - i.e. to the next subtag.
+  // If the context is already present - i.e. we are not at the end of the context list - then we just move the context pointer and return true.
+  // If we are at the end of the context list then this has some side effects:
+  // 1) If successful then all content tokens in the current context are cleared. There are operational reasons for this as well as logical reasons.
+  //    a) Then the next tag is read, a new context is created below the current one, and all content tokens for that next tag are read.
+  // 2) If not sucessful then there is no change to any state - i.e. nothing is read or processed. To move further from here 
+  bool FMoveDown()
+  {
+    if ( !_FAtTailContext() )
+    {
+      ++m_itCurContext;
+      return true;
+    }
+    // At the tail context.
+    if (  ( s_knTokenEmptyElemTag == m_itCurContext->GetTagTokenId() ) ||
+          !m_pltokLookahead
+  }
 protected:
+  bool _FAtTailContext() const
+  {
+    _TyListReadContexts::const_iterator citEnd = m_lContexts.end();
+    Assert( citEnd != m_lContexts.begin() );
+    if ( citEnd == m_lContexts.begin() )
+      return false;
+    return --citEnd == m_itCurContext;
+  }
   bool _FGetToken( unique_ptr< _TyLexToken > & _rpltok, const _TyStateProto * _pspStart = nullptr )
   {
     Assert( !!m_pXp );
     if ( m_fUpdateSkip )
       _UpdateSkip();
     return m_pXp->RLex().FGetToken( _rpltok, m_rgSkipTokensCur.begin(), m_rgSkipTokensCur.begin() + m_nSkip, _pspStart, false );
+  }
+  void _DetachXmlParser
+  {
+#error make sure this is complete.
+    m_pXp = nullptr;
+    m_lContexts.clear();
+    m_itCurContext = m_lContexts.end();
   }
   void _AttachXmlParser( _TyXmlParser * _pXp )
   {
@@ -383,21 +419,145 @@ protected:
       }
       _ProcessToken( pltokFirst ); // This pushes XMLDecl onto the head of the stack as the first token in that context.
     }//EB
-    // Now "prime the pump" by reading the read-ahead token and then call _GetTagTokenSet().
-    VerifyThrowSz( _FGetToken( pltokFirst ),  "You failed at the first thing you tried to do! No token found at beginning of stream." );
-    m_pltokLookahead
-
-    // Then we gotta get a different token:
-    VerifyThrowSz( _FGetToken( pltokFirst ),  "You failed at the first thing you tried to do! No token found at beginning of stream." );
-    if ( fGotXMLDecl && m_fSkipXMLDecl )
+    // Now "prime the pump" by reading the read-ahead token and then call _ReadTokenContent().
+    VerifyThrow( _FGetToken( m_pltokLookahead ) );
+    _ReadTokenContent();
+  }
+  void _ReadTokenContent()
+  {
+    if ( !m_pltokLookahead || ( s_knTokenEmptyElemTag == m_lContext.back().GetTagTokenId() ) )
+      return; // At eof or tag with no content.
+    // The invarient is that we have a token in the m_pltokLookahead or we have hit eof.
+    // After the last end token of the file, the Misc production is active - which means
+    //  that whitespace CharData, Comments and PIs are still allowed.
+    // So once that last end tag is read we fill the XMLDecl tag with the epilogue Misc tokens.
+    // The user is left with that which can then be read and the iteration is over.
+    while( _FIsContentToken( m_pltokLookahead ) )
     {
-      // Then we must get another token because we needed to record the XMLDecl info anyway even if we didn't give it to the user.
-      pltokFirst.reset();
-      VerifyThrowSz( _FGetToken( pltokFirst ), "Second token was not found at beginning of stream." );
-      _ProcessToken( pltokFirst );
+      _ProcessToken( *m_pltokLookahead );
+      Assert( !m_pltokLookahead->PAxnObjGet() ); // We should have moved this token away...
+      m_pltokLookahead.reset(); // Rid the null token object.
+      bool fGotToken = _FGetToken( m_pltokLookahead );
+      VerifyThrowSz( fGotToken || FInEpilog(), "Hit premature EOF." );
+      if ( !fGotToken )
+        break;
     }
-    m_lContexts.emplace_front( std::move( *pltokFirst ) );
-    m_itCurContext = m_lContexts.begin();
+  }
+  void _ProcessToken( unique_ptr< _TyLexToken > & _rpltok )
+  {
+    // 1) If a tag then we need to process namespaces.
+    // 2) If CharData or CDATASection then we may need to read a token ahead to see if we need to combine, etc.
+    switch( _rpltok->GetTokenId() )
+    {
+      case s_knTokenXMLDecl:
+        _ProcessXMLDecl( *_rpltok );
+      break;
+      case s_knTokenSTag:
+      case s_knTokenEmptyElemTag:
+      {
+        m_fGotFirstTag = true;
+        if ( m_fUseXMLNamespaces )
+          _ProcessNamespaces( *_rpltok, m_fSkippingTags );
+        else
+          _ProcessNoNamespaces( *_rpltok, m_fSkippingTags );
+      }
+      break;
+      case s_knTokenETag:
+        _ProcessEndTag( *_rpltok );
+      break;
+      case s_knTokenComment:
+        _ProcessComment( *_rpltok );
+      break;
+      case s_knTokenCDataSection:
+        _ProcessCDataSection( *_rpltok );
+      break;
+      case s_knTokenCharData:
+        _ProcessCharData( *_rpltok );
+      break;
+    }
+  }
+  void _ProcessEndTag( _TyLexToken & _rltok )
+  {
+    VerifyThrowSz( FInsideDocumentTag(), "Found end tag before first tag declaration." );
+    _TyValue & rvalTagEnd = _rpltok->GetValue();
+    _ProcessTagName( rvalTagEnd ); // No need to process namespaces on the end tag - just the name itself.
+    _TyXmlReadContext & rctxtLast = m_lContexts.back();
+    const _TyXmlToken & rxtTagStart = rctxtLast.GetToken(0);
+    Assert( rxtTagStart.FIsTag() );
+    const _TyLexToken & rltokTagStart = rxtTagStart.RGetLexToken();
+    const _TyValue & rvalTagStart = rltokTagStart.GetValue()[0];
+    _TyStrView svTagStart;
+    rltokTag.KGetStringView( rvalTagStart[0], svTagStart );
+    _TyStrView svTagEnd;
+    _rltok.KGetStringView( rvalTagEnd[0], svTagStart );
+    VerifyThrowSz( svTagStart == svTagEnd, "Start tag[%s] doesn't match end tag[%s]", StrConvertString<char>( svTagStart ).c_str(), StrConvertString<char>( svTagEnd ).c_str() );
+    // Ok so we got the end tag for the end context.
+
+  }
+
+  void _PushNewContext( _TyLexToken & _rltok )
+  {
+    m_lContexts.emplace_back( std::move( _rltok ) );
+    if ( 1 == m_lContexts.size() )
+      m_itCurContext = m_lContexts.begin();
+  }
+  void _AppendContextContent( _TyLexToken & _rltok )
+  {
+    m_lContexts.back().AddToken( std::move( _rltok ) );
+  }
+
+  void _ProcessXMLDecl( _TyLexToken & _rltok )
+  {
+    // Pull the info we want out of it to store in the cursor.
+    _TyValue & rrgVals = _rltok.GetValue();
+    Assert( rrgVals.FIsArray() );
+    m_fStandalone = rrgVals[0].GetVal<bool>();
+    rrgVals[2].GetString( _rltok, m_strEncoding );
+    _TyStdStr strMinorVNum;
+    rrgVals[4].GetString( _rltok, strMinorVNum );
+    m_nVersionMinorNumber = strMinorVNum[0] - _TyChar('0');
+    Assert( !m_lContexts.size() );
+    // Even if the caller is ignoring the XMLDecl we will start the root context with it if it is present.
+    _PushNewContext( _rltok ); // Push on current context. There will be no current context so one will be created.
+  }
+  void _ProcessComment( _TyLexToken & _rltok )
+  {
+    _l_data_range drToken;
+    _rltok.GetTokenDataRange( drToken );
+    drToken.m_posBegin += 4; // <!--
+    drToken.m_posEnd -= 3; // -->
+    // REVIEW:<dbien>: Could strip whitespace off front and rear but...
+    _rltok.template emplace< _TyData >( drToken );
+    _AppendContextContent( _rltok );
+  }
+  void _ProcessCDataSection( _TyLexToken & _rltok )
+  {
+    VerifyThrowSz( FInsideDocumentTag(), "Found CDataSection before first tag declaration." );
+    _l_data_range drToken;
+    _rltok.GetTokenDataRange( drToken );
+    drToken.m_posBegin += 9; // <![CDATA[
+    drToken.m_posEnd -= 3; // ]]>
+    _rltok.template emplace< _TyData >( drToken );
+    _AppendContextContent( _rltok );
+  }
+  void _ProcessCharData( _TyLexToken & _rltok )
+  {
+    if ( !FInsideDocumentTag() )
+    {
+      // We should only see plain whitespace CharData before the first tag:
+      _TyValue & rVal = _rltok.GetValue();
+      Assert( rVal.FHasTypedData() );
+      const _TyData & rdt = rVal.GetVal< _TyData >();
+      bool fError = !rdt.FContainsSingleDataRange() || ( rdt.DataRangeGetSingle().type() != s_kdtPlainText );
+      if ( !fError )
+      {
+        _TyStrView svData;
+        rVal.KGetStringView( _rltok, svData );
+        fError = ( svData.length() != StrSpn( &svData[0], svData.length(), str_array_cast<_TyChar>( STR_XML_WHITESPACE_TOKEN ) ) );
+      }
+      VerifyThrowSz( !fError, "Found non-whitespace CharData before first tag declaration." );
+    }
+    _AppendContextContent( _rltok ); // Push on current context.
   }
   void _ProcessTagName( _TyValue & _rrgvalName )
   {
@@ -558,8 +718,7 @@ protected:
         rdtName.DataRangeGetSingle().m_posBegin -= 1 + rnvw.PVtNamespaceMapValue()->first.length(); // push back to include the prefix.
       }
     }
-  }
-  }
+  }  
   // This pass made when namespace are not being validated. Because the productions separate out the namespace prefixes still,
   //  we must combine the name and the prefix and as well indicate that they are in no namespace by setting the 1th element to false.
   void _ProcessNoNamespaces( _TyLexToken & _rltok, bool _fOnlyTagName )
@@ -690,116 +849,6 @@ protected:
     }
     VerifyThrowSz( !fAnyDuplicateAttrNames, "Found dupicate (qualified) attribute names or namespace prefix declarations.");
   }
-  void _ProcessToken( unique_ptr< _TyLexToken > & _rpltok )
-  {
-    // 1) If a tag then we need to process namespaces.
-    // 2) If CharData or CDATASection then we may need to read a token ahead to see if we need to combine, etc.
-    switch( _rpltok->GetTokenId() )
-    {
-      case s_knTokenXMLDecl:
-        _ProcessXMLDecl( *_rpltok );
-      break;
-      case s_knTokenSTag:
-      case s_knTokenEmptyElemTag:
-      {
-        m_fGotFirstTag = true;
-        if ( m_fUseXMLNamespaces )
-          _ProcessNamespaces( *_rpltok, m_fSkippingTags );
-        else
-          _ProcessNoNamespaces( *_rpltok, m_fSkippingTags );
-      }
-      break;
-      case s_knTokenETag:
-        _ProcessEndTag( *_rpltok );
-      break;
-      case s_knTokenComment:
-        _ProcessComment( *_rpltok );
-      break;
-      case s_knTokenCDataSection:
-        _ProcessCDataSection( *_rpltok );
-      break;
-      case s_knTokenCharData:
-        _ProcessCharData( *_rpltok );
-      break;
-    }
-  }
-  void _ProcessEndTag( _TyLexToken & _rltok )
-  {
-    VerifyThrowSz( !m_fGotFirstTag, "Found end tag before first tag declaration." );
-    _TyValue & rvalTagEnd = _rpltok->GetValue();
-    _ProcessTagName( rvalTagEnd ); // No need to process namespaces on the end tag - just the name itself.
-    _TyXmlReadContext & rctxtLast = m_lContexts.back();
-    const _TyXmlToken & rxtTagStart = rctxtLast.GetToken(0);
-    Assert( rxtTagStart.FIsTag() );
-    const _TyLexToken & rltokTagStart = rxtTagStart.RGetLexToken();
-    const _TyValue & rvalTagStart = rltokTagStart.GetValue()[0];
-    _TyStrView svTagStart;
-    rltokTag.KGetStringView( rvalTagStart[0], svTagStart );
-    _TyStrView svTagEnd;
-    _rltok.KGetStringView( rvalTagEnd[0], svTagStart );
-    VerifyThrowSz( svTagStart == svTagEnd, "Start tag[%s] doesn't match end tag[%s]", StrConvertString<char>( svTagStart ).c_str(), StrConvertString<char>( svTagEnd ).c_str() );
-    // Ok so we got the end tag for the end context.
-
-  }
-  void _ProcessXMLDecl( _TyLexToken & _rltok )
-  {
-    // Pull the info we want out of it to store in the cursor.
-    _TyValue & rrgVals = _rltok.GetValue();
-    Assert( rrgVals.FIsArray() );
-    m_fStandalone = rrgVals[0].GetVal<bool>();
-    rrgVals[2].GetString( _rltok, m_strEncoding );
-    _TyStdStr strMinorVNum;
-    rrgVals[4].GetString( _rltok, strMinorVNum );
-    m_nVersionMinorNumber = strMinorVNum[0] - _TyChar('0');
-    // Even if the caller is ignoring the XMLDecl we will start the root context with it if it is present.
-    _PushCurrentContext( _rltok ); // Push on current context. There will be no current context so one will be created.
-  }
-  void _ProcessComment( _TyLexToken & _rltok )
-  {
-    _l_data_range drToken;
-    _rltok.GetTokenDataRange( drToken );
-    drToken.m_posBegin += 4; // <!--
-    drToken.m_posEnd -= 3; // -->
-    // REVIEW:<dbien>: Could strip whitespace off front and rear but...
-    _rltok.template emplace< _TyData >( drToken );
-    _PushCurrentContext( _rltok );
-  }
-  void _ProcessCDataSection( _TyLexToken & _rltok )
-  {
-    VerifyThrowSz( !m_fGotFirstTag, "Found CDataSection before first tag declaration." );
-    _l_data_range drToken;
-    _rltok.GetTokenDataRange( drToken );
-    drToken.m_posBegin += 9; // <![CDATA[
-    drToken.m_posEnd -= 3; // ]]>
-    _rltok.template emplace< _TyData >( drToken );
-    _PushCurrentContext( _rltok );
-  }
-  void _ProcessCharData( _TyLexToken & _rltok )
-  {
-    if ( !m_fGotFirstTag )
-    {
-      // We should only see plain whitespace CharData before the first tag:
-      _TyValue & rVal = _rltok.GetValue();
-      Assert( rVal.FHasTypedData() );
-      const _TyData & rdt = rVal.GetVal< _TyData >();
-      bool fError = !rdt.FContainsSingleDataRange() || ( rdt.DataRangeGetSingle().type() != s_kdtPlainText );
-      if ( !fError )
-      {
-        _TyStrView svData;
-        rVal.KGetStringView( _rltok, svData );
-        fError = ( svData.length() != StrSpn( &svData[0], svData.length(), str_array_cast<_TyChar>( STR_XML_WHITESPACE_TOKEN ) ) );
-      }
-      VerifyThrowSz( !fError, "Found non-whitespace CharData before first tag declaration." );
-    }
-    _PushCurrentContext( _rltok ); // Push on current context.
-  }
-  void _DetachXmlParser
-  {
-#error make sure this is complete.
-    m_pXp = nullptr;
-    m_lContexts.clear();
-    m_itCurContext = m_lContexts.end();
-  }
   void _UpdateSkip()
   {
     if ( !m_fUpdateSkip )
@@ -817,18 +866,18 @@ protected:
 
   _TyXmlParser * m_pXp{nullptr}; // the pointer to the XML parser we are reading tokens from.
   _TyListReadContexts m_lContexts;
-  unique_ptr< _TyLexToken > m_pltokLookahead; // When m_fIntegrateCDataSections is true then this may be populated with the next token.
+  unique_ptr< _TyLexToken > m_pltokLookahead;
   typename _TyListReadContexts::iterator m_itCurContext{m_lContexts.end()};
 
   // The prefix xml is by definition bound to the namespace name http://www.w3.org/XML/1998/namespace
   _TyNamespaceMap m_mapNamespaces{ { str_array_cast<_TyChar>("xml"), str_array_cast<_TyChar>("http://www.w3.org/XML/1998/namespace") } };
   // We will hash the default namespace by the invalid prefix "#". This way it essentially works the same as other namespaces.
 // State:
-  // Before we get the first tag CharData must contain all whitespace - and if not we will throw. Also various other things - DTD declaration, etc.
-  bool m_fGotFirstTag{false};
   // The current skip token array and the number of elements in it. This is passed to the lexical analyzer to cut token processing off optimally.
   _TySkipArray m_rgSkipTokensCur{0};
   size_t m_nSkip{0};
+  // Whether we have read the first tag of the file yet:
+  bool m_fGotFirstTag{false};
   // This is set to true when we are skipping sets of tags due to FNextTag() or FNextToken() being called at a level higher than a leaf tag.
   bool m_fSkippingTags{false}; 
   // This is set to true when one of the "m_fSkip..." settings changes. We will then update m_rgSkipTokensCur and m_nSkip right before checking for more tokens.
@@ -845,10 +894,7 @@ protected:
   bool m_fStrict{false};
   // Don't return tokens for CharData composed entirely of whitespace.
   bool m_fFilterWhitespaceCharData{false};
-  // Integrate CDataSections with any adjacent CharData, References, etc.
-  bool m_fIntegrateCDataSections{false};
 // Skip settings: Ignore the corresponding token types and don't return to the user.
-  bool m_fSkipXMLDecl{false};
   bool m_fSkipComments{false};
   bool m_fSkipPI{false};
 // XMLDecl properties:
