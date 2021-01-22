@@ -117,15 +117,35 @@ public:
   {
     m_fFilterWhitespaceCharData = _fFilterWhitespaceCharData;
   }
+  void SetFilterAllTokenData( bool _fFilterAllTokenData )
+  {
+    m_fFilterAllTokenData = _fFilterAllTokenData;
+  }
   using _TyBase::_RLookupParameterEntity;
   template < class t_TyStream >
   bool FProcessAndFilterToken( _TyAxnObjBase * _paobCurToken, t_TyStream const & _rstrm, const vtyDataPosition _kposEndToken ) const
   {
+    typedef typename t_TyStream::_TyTraits _TyLexTraits;
+    if ( m_fFilterAllTokenData )
+    {
+      vtyTokenIdent tid = _paobCurToken->VGetTokenId();
+      Assert( ( tid == s_knTokenSTag ) || ( tid == s_knTokenETag ) );
+      if ( tid == s_knTokenSTag )
+      {
+        // Then rid all token attribute data.
+        typedef TyGetTokenSTag< _TyLexTraits, false > _TyTokenSTag;
+        _TyTokenSTag * ptst = static_cast< _TyTokenSTag * >( _paobCurToken );
+        typedef TyGetTriggerSaveAttributes< _TyLexTraits, false > _TyTriggerSaveAttributes;
+        _TyTriggerSaveAttributes & rtgSaveAttributes = ptcd->GetConstituentTriggerObj< _TyTriggerSaveAttributes >();
+        rtgSaveAttributes.Clear(); // Clear all accumulated attributes.
+      }
+      return false;
+    }
+    else
     if ( _paobCurToken->VGetTokenId() != s_knTokenCharData )
       return false;
     // Move through and fix up the CharData endpoints since we had to do things this way.
     // We know the ultimate type of this token so we can cast:
-    typedef typename t_TyStream::_TyTraits _TyLexTraits;
     typedef TyGetTokenCharData< _TyLexTraits, false > _TyTokenCharData;
     typedef TyGetTriggerCharDataEnd< _TyLexTraits, false > _TyTriggerCharDataEnd;
     _TyTokenCharData * ptcd = static_cast< _TyTokenCharData * >( _paobCurToken );

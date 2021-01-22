@@ -70,6 +70,13 @@ protected:
     //  won't create a token for the whitespace.
     m_lexXml.RGetUserObj().SetFilterWhitespaceCharData( _fFilterWhitespaceCharData );
   }
+  void _SetFilterAllTokenData( bool _fFilterAllTokenData )
+  {
+    // We set this filter into the user object since it can short-circuit token creation and then we
+    //  won't create a token for the whitespace.
+    m_lexXml.RGetUserObj().SetFilterAllTokenData( _fFilterAllTokenData );
+  }
+  
   _TyLexicalAnalyzer m_lexXml;
   _TyUriMap m_mapUris;
 };
