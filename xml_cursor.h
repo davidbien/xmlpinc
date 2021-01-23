@@ -451,70 +451,57 @@ void AssertValid( bool _fIncludeContextList = false ) const
     if ( s_knTokenEmptyElemTag == tidCur )
     {
       Assert( _FAtTailContext() ); // must be.
-      vtyTokenIdent tidLookahead = !m_pltokLookahead ? vktidInvalidIdToken : m_pltokLookahead->GetTokenId();
       // Regardless we will be ending the current token. Do it.
       --m_itCurContext; // Must be able to do this because we know that at least XMLDecl is above us.
       m_lContexts.pop_back(); // rid current context.
-      if ( ( s_knTokenSTag == tidLookahead ) || ( s_knTokenEmptyElemTag == tidLookahead ) )
-      {
-        _ProcessToken( *m_pltokLookahead );
-        Assert( !_FAtTailContext() ); // A new context should have been inserted below us.
-        Assert( !m_pltokLookahead->PAxnObjGet() ); // We should have moved this token away...
-        m_pltokLookahead.reset(); // Rid the null token object.
-        // Now we must read the lookahead to prime the ending.
-        VerifyThrowSz( _FGetToken( m_pltokLookahead ), "Premature EOF." );
-        _ReadTokenContent();
-        ++m_itCurContext;
-        return true; // We remained at the current level and read in a tag and its contents.
-      }
-      else
-      {
-        // Read any token content but don't read any end tag token - that requires another call to FNextTag().
-        _ReadTokenContent();
-        return false; // We moved to the context above us.
-      }
+      return _FProcessNextTag();
     }
     if ( s_knTokenSTag == tidCur )
     {
       // We will read until the end of this tag on the current level of the iterator.
       // Then we will check to see what is beyond that to decide whether we will go up or stay at the current level of the iterator.
-      vtyTokenIdent tidLookahead = !m_pltokLookahead ? vktidInvalidIdToken : m_pltokLookahead->GetTokenId();
-      if ( !_FAtTailContext() || ( s_knTokenETag != tidLookahead ) )
+      if ( !_FAtTailContext() || ( s_knTokenETag != m_pltokLookahead->GetTokenId() ) )
       {
         // Then we need to get to the point where the above conditions hold.
         _SkipToEndCurrentContext(); // Skip potentially a ton of XML.
       }
-      Assert( _FAtTailContext() && ( s_knTokenETag == tidLookahead ) );
+      Assert( _FAtTailContext() && ( s_knTokenETag == m_pltokLookahead->GetTokenId() ) );
       // Consume the end tag.
       --m_itCurContext;
-      _ProcessToken( *m_pltokLookahead );
+      _ProcessLookahead("Premature EOF.");
       Assert( _FAtTailContext() ); // Should have popped the context.
-      Assert( !m_pltokLookahead->PAxnObjGet() ); // We should have moved this token away...
-      m_pltokLookahead.reset(); // Rid the null token object.
-      VerifyThrowSz( _FGetToken( m_pltokLookahead ), "Premature EOF." );
-      if ( ( s_knTokenSTag == m_pltokLookahead->GetTokenId() ) || ( s_knTokenEmptyElemTag == m_pltokLookahead->GetTokenId() ) )
-      {
-        _ProcessToken( *m_pltokLookahead );
-        Assert( !_FAtTailContext() ); // A new context should have been inserted below us.
-        Assert( !m_pltokLookahead->PAxnObjGet() ); // We should have moved this token away...
-        m_pltokLookahead.reset(); // Rid the null token object.
-        // Now we must read the lookahead to prime the ending.
-        VerifyThrowSz( _FGetToken( m_pltokLookahead ), "Premature EOF." );
-        _ReadTokenContent();
-        ++m_itCurContext;
-        return true; // We remained at the current level and read in a tag and its contents.
-      }
-      else
-      {
-        // Read any token content but don't read any end tag token - that requires another call to FNextTag().
-        _ReadTokenContent();
-        return false; // We moved to the context above us.
-      }
+      return _FProcessNextTag();
     }
-
-
-
-
+    Assert( s_knTokenXMLDecl == tidCur );
+    if ( !_FAtTailContext() )
+      _SkipToEndCurrentContext(); // Skip potentially a ton of XML.
+    Assert( _FAtTailContext() );
+    Assert( m_lContexts.size() == 1 );
+  }
+  bool _FProcessNextTag()
+  {
+    if ( ( s_knTokenSTag == m_pltokLookahead->GetTokenId() ) || ( s_knTokenEmptyElemTag == m_pltokLookahead->GetTokenId() ) )
+    {
+      _ProcessLookahead("Premature EOF.");
+      Assert( !_FAtTailContext() ); // A new context should have been inserted below us.
+      _ReadTokenContent();
+      ++m_itCurContext;
+      return true; // We remained at the current level and read in a tag and its contents.
+    }
+    else
+    {
+      // Read any token content but don't read any end tag token - that requires another call to FNextTag().
+      _ReadTokenContent();
+      return false; // We moved to the context above us.
+    }
+  }
+  void _ProcessLookahead( const char * _pszMesg )
+  {
+    _ProcessToken( *m_pltokLookahead );
+    Assert( !m_pltokLookahead->PAxnObjGet() ); // We should have moved this token away...
+    m_pltokLookahead.reset(); // Rid the null token object.
+    // Now we must read the lookahead to prime the ending.
+    VerifyThrowSz( _FGetToken( m_pltokLookahead ), _pszMesg );
   }
 
   void _SkipToEndCurrentContext()
@@ -540,7 +527,7 @@ void AssertValid( bool _fIncludeContextList = false ) const
       m_pltokLookahead.reset(); // Rid the null token object.
       VerifyThrowSz( m_pXp->RLex().FGetToken( m_pltokLookahead, rgSkipTokens, rgSkipTokens + nSkipTokens, nullptr, false ), "Premature EOF." );
     }
-    Assert( s_knTokenETag == m_pltokLookahead->GetTokenId() ); // Should always be the case or we have a bug.
+    Assert( !m_pltokLookahead || ( s_knTokenETag == m_pltokLookahead->GetTokenId() ); // Should always be the case or we have a bug.
     m_pXp->_SetFilterAllTokenData( false );
     m_fSkippingTags = false; // This optimizes processing a bit.
   }

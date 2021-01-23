@@ -102,6 +102,7 @@ public:
   // Then this is true then when s_knTokenCharData is received it is check for be entirely composed of whitespace
   // and if so it is ignored entirely and not retunred to the xml parser.
   bool m_fFilterWhitespaceCharData{false};
+  bool m_fFilterAllTokenData{false};
 
   xml_user_obj() = default;
   xml_user_obj( xml_user_obj const & _r ) = delete;
@@ -136,7 +137,7 @@ public:
         typedef TyGetTokenSTag< _TyLexTraits, false > _TyTokenSTag;
         _TyTokenSTag * ptst = static_cast< _TyTokenSTag * >( _paobCurToken );
         typedef TyGetTriggerSaveAttributes< _TyLexTraits, false > _TyTriggerSaveAttributes;
-        _TyTriggerSaveAttributes & rtgSaveAttributes = ptcd->GetConstituentTriggerObj< _TyTriggerSaveAttributes >();
+        _TyTriggerSaveAttributes & rtgSaveAttributes = ptst->GetConstituentTriggerObj< _TyTriggerSaveAttributes >();
         rtgSaveAttributes.Clear(); // Clear all accumulated attributes.
       }
       return false;
