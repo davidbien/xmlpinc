@@ -26,7 +26,7 @@ public:
   typedef t_TyXmlTraits _TyXmlTraits;
   typedef typename _TyXmlTraits::_TyLexTraits _TyLexTraits;
   typedef _lexical_analyzer< _TyLexTraits > _TyLexicalAnalyzer;
-  typedef typename _TyXmlTraits::_TyUriMap _TyUriMap;
+  typedef typename _TyXmlTraits::_TyUriAndPrefixMap _TyUriAndPrefixMap;
   typedef typename _TyXmlTraits::_TyStdStr _TyStdStr;
   typedef typename _TyXmlTraits::_TyStrView _TyStrView;
 
@@ -52,16 +52,24 @@ public:
 
   }
 
-  _TyUriMap::value_type const & RStrAddUri( _tyStrView const & _rsv )
+  _TyUriAndPrefixMap::value_type const & RStrAddPrefix( _tyStrView const & _rsv )
   {
-    _TyUriMap::const_iterator cit = m_mapUris.find( _rsv );
-    if ( m_mapUris.end() != cit )
+    _TyUriAndPrefixMap::const_iterator cit = m_mapPrefixs.find( _rsv );
+    if ( m_mapPrefixs.end() != cit )
       return *cit;
-    pair< _TyUriMap::iterator, bool > pib = m_mapUris.insert( _rsv );
+    pair< _TyUriAndPrefixMap::iterator, bool > pib = m_mapPrefixs.insert( _rsv );
     Assert( pib.second );
     return *pib.first;
   }
-
+  _TyUriAndPrefixMap::value_type const & RStrAddUri( _tyStrView const & _rsv )
+  {
+    _TyUriAndPrefixMap::const_iterator cit = m_mapUris.find( _rsv );
+    if ( m_mapUris.end() != cit )
+      return *cit;
+    pair< _TyUriAndPrefixMap::iterator, bool > pib = m_mapUris.insert( _rsv );
+    Assert( pib.second );
+    return *pib.first;
+  }
 protected:
   // Accessed by xml_read_cursor<>:
   void _SetFilterWhitespaceCharData( bool _fFilterWhitespaceCharData )
@@ -78,7 +86,8 @@ protected:
   }
   
   _TyLexicalAnalyzer m_lexXml;
-  _TyUriMap m_mapUris;
+  _TyUriAndPrefixMap m_mapUris;
+  _TyUriAndPrefixMap m_mapPrefixes;
 };
 
 __XMLP_END_NAMESPACE

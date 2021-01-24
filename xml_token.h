@@ -60,6 +60,16 @@ public:
     return m_tokToken;
   }
 
+  // Shortcut.
+  _TyValue & operator [] ( size_type _nEl )
+  {
+    return m_tokToken[_nEl];
+  }
+  const _TyValue & operator [] ( size_type _nEl ) const
+  {
+    return m_tokToken[_nEl];
+  }
+  
   bool FIsTag() const
   {
     vtyTokenIdent tid = m_tokToken.GetTokenId();

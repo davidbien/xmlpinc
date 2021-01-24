@@ -33,6 +33,29 @@ class _xml_namespace_uri;
 template < class t_TyNamespaceMap >
 class xml_namespace_value_wrap;
 
+template < class t_TyChar >
+class XMLDeclProperties
+{
+  typedef XMLDeclProperties _TyThis;
+public:
+  typedef t_TyChar _TyChar;
+  typedef basic_string< _TyChar > _TyStdStr;
+  XMLDeclProperties() = default;
+  XMLDeclProperties( XMLDeclProperties const & ) = default;
+  XMLDeclProperties & operator=( XMLDeclProperties const & ) = default;
+  XMLDeclProperties( XMLDeclProperties && ) = default;
+  XMLDeclProperties & operator=( XMLDeclProperties && ) = default;
+  void swap( _TyThis & _r )
+  {
+    std::swap( m_fStandalone, _r.m_fStandalone );
+    m_strEncoding.swap( _r.m_strEncoding );
+    std::swap( m_nVersionMinorNumber, _r.m_nVersionMinorNumber );
+  }
+  _TyStdStr m_strEncoding;
+  bool m_fStandalone{false};
+  uint8_t m_nVersionMinorNumber{0};
+};
+
 // Declare all the various types of the triggers and tokens for the XML lexical analyzer.
 static const vtyActionIdent s_knTriggerPITargetStart = 1;
 static const vtyActionIdent s_knTriggerPITargetEnd = 2;
