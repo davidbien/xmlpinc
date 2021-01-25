@@ -76,6 +76,39 @@ public:
 
 };
 
+// char32_t:
+template < class t_TyChar >
+struct _TGetCharRefConvertBuffer
+{
+  typedef t_TyChar type;
+};
+template <>
+struct _TGetCharRefConvertBuffer<char>
+{
+  typedef char type[4];
+};
+template <>
+struct _TGetCharRefConvertBuffer<char8_t>
+{
+  typedef char8_t type[4];
+};
+template <>
+struct _TGetCharRefConvertBuffer<char16_t>
+{
+  typedef char16_t type[2];
+};
+template <>
+struct _TGetCharRefConvertBuffer<wchar_t>
+{
+#ifdef BIEN_WCHAR_16BIT
+  typedef wchar_t type[2];
+#else 
+  typedef wchar_t type;
+#endif
+};
+template < class t_TyChar >
+using TGetCharRefConvertBuffer = _TGetCharRefConvertBuffer< t_TyChar >;
+
 template < class t_TyEntityMap, bool t_kfSupportDTD >
 class xml_user_obj 
   : public _xml_user_obj_base_dtd< t_TyEntityMap, t_kfSupportDTD >
@@ -90,6 +123,7 @@ public:
   using typename _TyBase::_TyStrView;
   typedef _l_data< _TyChar > _TyData;
   typedef _l_action_object_base< _TyChar, false > _TyAxnObjBase;
+  typedef TGetCharRefConvertBuffer< _TyChar > _TyCharRefConvertBuffer;
 
   // Entity reference lookup:
   // To keep things simple (at least for now) we insert the standard entity references in the constructor.
@@ -247,21 +281,50 @@ public:
     }
     return nLen;
   }
-  static _TyChar _TchTranslateRef( vtyDataType _rdt, _TyStrView & _rsv )
+  // Smae character type char-ref:
+  static _TyChar _TchTranslateRef( vtyDataType _rdt, _TyStrView & _rsv, _TyCharRefConvertBuffer & )
+    requires( TAreSameSizeTypes_v< _TyChar, char32_t > )
   {
     Assert( s_kdtCharDecRef == _rdt || s_kdtCharHexRef == _rdt );
-    _TyChar tch;
-    int iTrans = IReadPositiveNum( s_kdtCharDecRef == _rdt ? 10 : 16, &_rsv[0], _rsv.length(), tch, _l_char_type_map<_TyChar>::ms_kcMax, false );
+    char32_t tch;
+    int iTrans = IReadPositiveNum( s_kdtCharDecRef == _rdt ? 10 : 16, &_rsv[0], _rsv.length(), tch, _l_char_type_map<char32_t>::ms_kcMax, false );
     if ( !!iTrans )
     {
       Assert( -1 == iTrans );
       THROWXMLPARSEEXCEPTIONERRNO( ::GetLastErrNo(), "Error translating character reference[%s].", StrConvertString<char>( _rsv ).c_str() );
     }
-    return tch;
+    return (_TyChar)tch;
+  }
+  // Different character type char-ref - the reference is always in UTF32.
+  static _TyChar _TchTranslateRef( vtyDataType _rdt, _TyStrView & _rsv, _TyCharRefConvertBuffer & _rgcbBuffer )
+    requires( !TAreSameSizeTypes_v< _TyChar, char32_t > )
+  {
+    Assert( s_kdtCharDecRef == _rdt || s_kdtCharHexRef == _rdt );
+    char32_t tch;
+    int iTrans = IReadPositiveNum( s_kdtCharDecRef == _rdt ? 10 : 16, &_rsv[0], _rsv.length(), tch, _l_char_type_map<char32_t>::ms_kcMax, false );
+    if ( !!iTrans )
+    {
+      Assert( -1 == iTrans );
+      THROWXMLPARSEEXCEPTIONERRNO( ::GetLastErrNo(), "Error translating character reference[%s].", StrConvertString<char>( _rsv ).c_str() );
+    }
+    // Now we must convert the character into potentially a string:
+    _TyStdStr strConverted;
+    ConvertString( strConverted, &tch, 1 );
+    Assert( strConverted.length() <= sizeof( _rgcbBuffer ) ); // max UTF16 = 2, UTF8 = 4.
+    size_t nLen = strConverted.length();
+    if ( 1 == nLen )
+      return strConverted[0];
+    else
+    {
+      memcpy( _rgcbBuffer, &strConverted[0], nLen * sizeof(_TyChar) );
+      _rsv = _TyStrView( _rgcbBuffer, nLen );
+    }
+    return 0;
   }
   // Return 0 and populate _rsv or return the character to which the markup corresponds.
+  // _rgcbBuffer contains a buffer that allows for translation from a UTF32 character reference into the current character type which may be UTF16 or UTF8.
   template < class t_TyTransportCtxt >
-  _TyChar _TchGetStringViewDr( _TyStrView & _rsv, _l_data_typed_range const & _rdr, t_TyTransportCtxt const & _rcxt ) const
+  _TyChar _TchGetStringViewDr( _TyStrView & _rsv, _l_data_typed_range const & _rdr, t_TyTransportCtxt const & _rcxt, _TyCharRefConvertBuffer & _rgcbBuffer ) const
   {
     _TyChar tchRtn = 0;
     switch( _rdr.type() )
@@ -275,7 +338,7 @@ public:
       case s_kdtCharHexRef:
       {
         _rcxt.GetStringView( _rsv , _rdr );
-        tchRtn = _TchTranslateRef( _rdr.type(), _rsv );
+        tchRtn = _TchTranslateRef( _rdr.type(), _rsv, _rgcbBuffer );
       }
       break;
       case s_kdtEntityRef:

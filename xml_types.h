@@ -30,7 +30,7 @@ class xml_user_obj;
 // xml_namespace.h
 template < class t_TyUriMap >
 class _xml_namespace_uri;
-template < class t_TyNamespaceMap >
+template < class t_TyNamespaceMap, class t_TyUriAndPrefixMaps >
 class xml_namespace_value_wrap;
 
 template < class t_TyChar >
@@ -50,6 +50,12 @@ public:
     std::swap( m_fStandalone, _r.m_fStandalone );
     m_strEncoding.swap( _r.m_strEncoding );
     std::swap( m_nVersionMinorNumber, _r.m_nVersionMinorNumber );
+  }
+  void clear()
+  {
+    m_strEncoding.clear();
+    m_fStandalone = false;
+    m_nVersionMinorNumber = 0;
   }
   _TyStdStr m_strEncoding;
   bool m_fStandalone{false};

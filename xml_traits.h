@@ -50,11 +50,12 @@ public:
   // namespace hash:
   typedef _xml_namespace_uri< _TyUriAndPrefixMap > _TyNamespaceUri;
   typedef UniquePtrSList< _TyNamespaceUri > _TyUpListNamespaceUris;
-  typedef pair< const _TyUriAndPrefixMap::value_type *, _TyUpListNamespaceUris > _TyNamespaceMapped;
-  typedef unordered_map< _TyStdStr, _TyUpListNamespaceUris, _TyStringTransparentHash, std::equal_to<void> > _TyNamespaceMap;
+  // first is a pointer to a PrefixMap value for the prefix, second is the current list of namespace URIs for that prefix.
+  typedef pair< const typename _TyUriAndPrefixMap::value_type *, _TyUpListNamespaceUris > _TyNamespaceMapped;
+  typedef unordered_map< _TyStdStr, _TyNamespaceMapped, _TyStringTransparentHash, std::equal_to<void> > _TyNamespaceMap;
 
 // Declare our lexical analyzer traits:
-  typedef xml_namespace_value_wrap< _TyNamespaceMap > _TyXmlNamespaceValueWrap;
+  typedef xml_namespace_value_wrap< _TyNamespaceMap, _TyUriAndPrefixMap > _TyXmlNamespaceValueWrap;
   typedef _l_value_traits< _TyXmlNamespaceValueWrap > _TyValueTraitsPack; // We are extending the types in _l_value by this one type currently.
   typedef _l_traits< _TyTransport, _TyLexUserObj, _TyValueTraitsPack > _TyLexTraits;
 };

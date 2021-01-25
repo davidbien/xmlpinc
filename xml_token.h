@@ -59,17 +59,15 @@ public:
   {
     return m_tokToken;
   }
-
   // Shortcut.
-  _TyValue & operator [] ( size_type _nEl )
+  _TyValue & operator [] ( size_t _nEl )
   {
     return m_tokToken[_nEl];
   }
-  const _TyValue & operator [] ( size_type _nEl ) const
+  const _TyValue & operator [] ( size_t _nEl ) const
   {
     return m_tokToken[_nEl];
   }
-  
   bool FIsTag() const
   {
     vtyTokenIdent tid = m_tokToken.GetTokenId();
@@ -79,14 +77,15 @@ public:
   {
     return s_knTokenComment == m_tokToken.GetTokenId();
   }
-
+  bool FIsProcessingInstruction() const
+  {
+    return s_knTokenComment == m_tokToken.GetTokenId();
+  }
 // Tag methods:
-  // Return a view on the tag. If the caller requests it then return the namespace prefix.
-  // If the caller wants the URI associated with that namespace then that must be looked up.
+#if 0 // later
   _TyStrView SvGetTag( _TyStrView * _svGetNamespacePrefix ) const
   {
     VerifyThrowSz( FIsTag(), "Not a tag." );
-
 
   }
   // This returns the tag and the prefix.
@@ -98,6 +97,7 @@ public:
   }
   // This will return the full qualified tag name with URI prefixed onto the front of the tag.
   _TyPrSvTagPrefix PrSvGetFullyQualifiedTag() const
+
   // This must be a tag-token.
   // This method doesn't validate the uniqueness of attribute names.
   // I figure that if we aren't going to validate everything then there is no
@@ -110,6 +110,7 @@ public:
     typename _TyValue::_TySegArrayValues & rsaAttrs = valAttr.GetValueArray();
     rsaAttrs.NApplyContiguous( 0, rsaAttrs.NElements(), std::forward<t_FObj>(_rrf) );
   }
+#endif //0
 
 protected:
   _TyLexToken m_tokToken;

@@ -57,11 +57,9 @@ public:
   typedef t_TyNamespaceMap _TyNamespaceMap;
   typedef typename _TyNamespaceMap::key_type _TyKey;
   typedef typename _TyKey::value_type _TyChar;
-  typedef typename _TyNamespaceMap::mapped_type _TyMapped; // UniquePtrSList< _xml_namespace_uri<t_TyChar> >
-  typedef typename _TyMapped::value_type _TyMappedValueType;
-  typedef _TyMappedValueType _TyNamespaceUri;
-  typedef typename _TyMapped::_TyListEl _TyNamespaceListEl;
-  typedef typename _TyMappedValueType::_TyStdStr _TyStdStr;
+  typedef _TyKey _TyStdStr;
+  typedef typename _TyNamespaceMap::mapped_type _TyMapped; // pair< const typename _TyUriAndPrefixMap::value_type *, _TyUpListNamespaceUris >
+  typedef _xml_namespace_uri< t_TyUriAndPrefixMaps > _TyNamespaceUri;
   typedef typename _TyNamespaceMap::value_type _TyMapValue;
   typedef typename t_TyUriAndPrefixMaps::value_type _TyUriAndPrefixValueType;
 
@@ -72,7 +70,7 @@ public:
   xml_namespace_value_wrap() = default;
   xml_namespace_value_wrap(  _TyMapValue const & _rvt, _TyNamespaceMap * _pmapReleaseOnDestruct  )
     : m_pvtNamespaceMap( !_pmapReleaseOnDestruct ? nullptr : &_rvt ),
-      m_pmapReleaseOnDestruct( _pmapReleaseOnDestruct )
+      m_pmapReleaseOnDestruct( _pmapReleaseOnDestruct ),
       m_pvtUri( &_rvt.second.second.front().RStrUri() ),
       m_pvtPrefix( _rvt.second.first )
   {
