@@ -14,9 +14,13 @@
 // Note that as far as my brief research could surmise, for a start tag and end tag that are expected to match each other, the literal text of the tag
 //  declarations themselves must match. This allows non-namespace aware readers to correctly process XML with namespaces.
 
+#include <algorithm>
+#include <array>
+#include "alloca_list.h"
 #include "xml_ns.h"
 #include "xml_types.h"
 #include "xml_traits.h"
+#include "xml_parse.h"
 
 __XMLP_BEGIN_NAMESPACE
 
@@ -51,7 +55,7 @@ public:
   _xml_read_context & operator=( _xml_read_context const & ) = delete;
   _xml_read_context & operator=( _xml_read_context && ) = delete;
 
-  void AssertValid( bool _fIsTail = false )
+  void AssertValid( bool _fIsTail = false ) const
   {
 #if ASSERTSENABLED
     size_t nSize = m_saTokens.GetSize();
@@ -96,6 +100,11 @@ public:
   _TyXmlToken & operator []( size_t _nEl )
   {
     return GetContentToken( _nEl );
+  }
+  void ClearContent() 
+  {
+    if ( m_saTokens.GetSize() > 1 )
+      m_saTokens.SetSizeSmaller( 1 );
   }
   // Peruse all content using a functor.
   template < class t_TyFunctor >
@@ -273,12 +282,15 @@ public:
   typedef typename _TyXmlTraits::_TyNamespaceMap _TyNamespaceMap;
   typedef typename _TyXmlTraits::_TyUriAndPrefixMap _TyUriAndPrefixMap;  
   typedef typename _TyXmlTraits::_TyXmlNamespaceValueWrap _TyXmlNamespaceValueWrap;
+  typedef typename _TyXmlTraits::_TyNamespaceUri _TyNamespaceUri;
   typedef _l_value< _TyLexTraits > _TyLexValue;
+  typedef _l_user_context< _TyLexTraits > _TyUserContext;
   typedef _l_data< _TyChar > _TyData;
   typedef xml_parser< _TyXmlTraits > _TyXmlParser;
   friend _TyXmlParser;
   typedef _xml_read_context< _TyXmlTraits > _TyXmlReadContext;
   typedef list< _TyXmlReadContext > _TyListReadContexts;
+  typedef XMLDeclProperties< _TyChar > _TyXMLDeclProperties;
 
   ~xml_read_cursor() = default;
   xml_read_cursor() = default;
@@ -389,27 +401,35 @@ public:
       vtyTokenIdent tidLookahead = !m_pltokLookahead ? vktidInvalidIdToken : m_pltokLookahead->GetTokenId();
       if ( s_knTokenSTag == tidTail )
       {
-        Assert( ( s_knTokenSTag == tidLookahead ) || || ( s_knTokenEmptyElemTag == tidLookahead ) || ( s_knTokenETag == tidLookahead ) );
+        Assert( ( s_knTokenSTag == tidLookahead ) || ( s_knTokenEmptyElemTag == tidLookahead ) || ( s_knTokenETag == tidLookahead ) );
       }
       else
       if ( s_knTokenEmptyElemTag == tidTail )
       {
         // In the case of an empty element we may have content for the parent tag after us, another tag, or the end tag of our parent.
         // So really no restrictions at all... lol.
-        Assert( _FIsContentToken( tidLookahead ) || ( ( s_knTokenSTag == tidLookahead ) || || ( s_knTokenEmptyElemTag == tidLookahead ) || ( s_knTokenETag == tidLookahead ) ) );
+        Assert( _FIsContentToken( tidLookahead ) || ( ( s_knTokenSTag == tidLookahead ) || ( s_knTokenEmptyElemTag == tidLookahead ) || ( s_knTokenETag == tidLookahead ) ) );
       }
       if ( _fIncludeContextList )
       {
-        _TyListReadContexts::const_iterator cit = m_lContexts.begin();
-        _TyListReadContexts::const_iterator citEnd = m_lContexts.end();
+        typename _TyListReadContexts::const_iterator cit = m_lContexts.begin();
+        typename _TyListReadContexts::const_iterator citEnd = m_lContexts.end();
         for ( ; citEnd != cit; ++cit )
-          cit->AssertValid( ( cit + 1 ) == m_lContexts.end() );
+          cit->AssertValid( &*cit == &m_lContexts.back() );
       }
     }
   #endif //ASSERTSENABLED
   }
 
-  _TyXmlToken & GetXMLDeclToken( XMLDeclProperties * _pXMLDeclProperties = 0 )
+  _TyXmlReadContext &
+  GetContextCur()
+  {
+    Assert( m_lContexts.size() );
+    Assert( m_itCurContext != m_lContexts.end() );
+    return *m_itCurContext;
+  }
+
+  _TyXmlToken & GetXMLDeclToken( _TyXMLDeclProperties * _pXMLDeclProperties = 0 )
   {
     Assert( m_pXp );
     *_pXMLDeclProperties = m_XMLDeclProperties;
@@ -437,15 +457,15 @@ public:
       return false;
     
     // Able to move down. First process the next tag:
-    _ProcessToken( *m_pltokLookahead );
+    _ProcessToken( m_pltokLookahead );
     Assert( !_FAtTailContext() ); // A new context should have been inserted below us.
     Assert( !m_pltokLookahead->PAxnObjGet() ); // We should have moved this token away...
     m_pltokLookahead.reset(); // Rid the null token object.
     // Now we must read the lookahead to prime the ending.
-    VerifyThrowSz( _FGetToken( m_pltokLookahead ) || ( ( s_knTokenEmptyElemTag == tidLookahead ) && () m_lContexts.size() == 2 ), "Premature EOF." );
+    VerifyThrowSz( _FGetToken( m_pltokLookahead ) || ( ( s_knTokenEmptyElemTag == tidLookahead ) && ( m_lContexts.size() == 2 ) ), "Premature EOF." );
     _ReadTokenContent();
     // Now remove the token content from our current context (the old tail) and move down to our newly read context.
-    m_itCurContext->RemoveTokenContent();
+    m_itCurContext->ClearContent();
     ++m_itCurContext;
     return true; // We moved down.
   }
@@ -467,7 +487,8 @@ public:
   //  a) If we were already at the XMLDecl tag at the front of the list then this ends the iteration entirely and all data structures are left empty.
   //  a) If we are not at the front of the list then this will read all data up until the end of the tag of the current level.
   // 1) 
-  bool FNextTag( _TyXmlToken * _ptokRtnSpentTag = nullptr )
+  typedef optional< _TyXmlToken > _TyOptXmlToken; // no default constructor for _TyXmlToken.
+  bool FNextTag( _TyOptXmlToken * _popttokRtnSpentTag = nullptr )
   {
     AssertValid( true );
     vtyTokenIdent tidCur = m_itCurContext->GetTagTokenId();
@@ -476,7 +497,7 @@ public:
       Assert( _FAtTailContext() ); // must be.
       // Regardless we will be ending the current token. Do it.
       --m_itCurContext; // Must be able to do this because we know that at least XMLDecl is above us.
-      _PopContext( _ptokRtnSpentTag );
+      _PopContext( _popttokRtnSpentTag );
       return _FProcessNextTag();
     }
     if ( s_knTokenSTag == tidCur )
@@ -492,7 +513,7 @@ public:
       // Process the end tag and then consume it.
       _ProcessLookahead("Premature EOF.");
       --m_itCurContext;
-      _PopContext( _ptokRtnSpentTag );
+      _PopContext( _popttokRtnSpentTag );
       Assert( _FAtTailContext() );
       return _FProcessNextTag();
     }
@@ -521,7 +542,7 @@ public:
   }
   void _ProcessLookahead( const char * _pszMesg )
   {
-    _ProcessToken( *m_pltokLookahead );
+    _ProcessToken( m_pltokLookahead );
     Assert( !m_pltokLookahead->PAxnObjGet() ); // We should have moved this token away...
     m_pltokLookahead.reset(); // Rid the null token object.
     // Now we must read the lookahead to prime the ending.
@@ -530,9 +551,9 @@ public:
 
   void _SkipToEndCurrentContext()
   {
-    Assert( !_FAtTailContext() || ( s_knTokenETag != tidLookahead ) );
+    Assert( !_FAtTailContext() || ( s_knTokenETag != m_pltokLookahead->GetTokenId() ) );
     // Setup to skip all tokens except for start tags and end tags.
-    vtyTokenIdent rgSkipTokens = { s_knTokenEmptyElemTag, s_knTokenComment, s_knTokenCDataSection, s_knTokenCharData, s_knTokenProcessingInstruction };
+    vtyTokenIdent rgSkipTokens[] = { s_knTokenEmptyElemTag, s_knTokenComment, s_knTokenCDataSection, s_knTokenCharData, s_knTokenProcessingInstruction };
     size_t nSkipTokens = DimensionOf( rgSkipTokens );
     // Tell the xml_user_obj to filter all token data so that we don't pass around data that we are going to throw away.
     m_pXp->_SetFilterAllTokenData( true );
@@ -549,7 +570,7 @@ public:
       }
       Assert( !m_pltokLookahead->PAxnObjGet() ); // We should have moved this token away...
       m_pltokLookahead.reset(); // Rid the null token object.
-      VerifyThrowSz( m_pXp->RLex().FGetToken( m_pltokLookahead, rgSkipTokens, rgSkipTokens + nSkipTokens, nullptr, false ), "Premature EOF." );
+      VerifyThrowSz( m_pXp->GetLexicalAnalyzer().FGetToken( m_pltokLookahead, rgSkipTokens, rgSkipTokens + nSkipTokens, nullptr, false ), "Premature EOF." );
     }
     Assert( !m_pltokLookahead || ( s_knTokenETag == m_pltokLookahead->GetTokenId() ) ); // Should always be the case or we have a bug.
     m_pXp->_SetFilterAllTokenData( false );
@@ -564,17 +585,18 @@ protected:
       _DetachXmlParser();
     _InitNamespaceMap();
     m_pXp = _pXp;
-    m_pXp->InitMapsAndUserObj();
-    m_pXp->SetFilterWhitespaceCharData( m_fFilterWhitespaceCharData );
+    m_pXp->_InitMapsAndUserObj();
+    m_pXp->_SetFilterWhitespaceCharData( m_fFilterWhitespaceCharData );
     { //B
       unique_ptr< _TyLexToken > pltokFirst;
       // For the first token we must check to see if we get an XMLDecl token since it is optional.
-      bool fGotXMLDecl = _FGetToken( pltokFirst, &startXMLDecl );
+      bool fGotXMLDecl = _FGetToken( pltokFirst, (const ns_xmlplex::_TyStateProto *)&startXMLDecl< _TyXmlTraits > );
       if ( !fGotXMLDecl )
       {
         // Then we are going to create a "fake" XMLDecl token because the invariant is that the first
         //  token of the top context is an XMLDecl token. Our fake token will be completely empty.
-        pltokFirst = make_unique< _TyLexToken >( &m_pXp->GetActionObj< s_knTokenXMLDecl >() );
+        _TyUserContext ucxtEmpty( m_pXp->GetUserObj() );
+        pltokFirst = make_unique< _TyLexToken >( std::move( ucxtEmpty ), &m_pXp->GetLexicalAnalyzer().GetActionObj< s_knTokenXMLDecl >() );
       }
       _ProcessToken( pltokFirst ); // This pushes XMLDecl onto the head of the stack as the first token in that context.
     }//EB
@@ -586,9 +608,9 @@ protected:
   {
     Assert( !m_mapNamespaces.size() );
   // The prefix xml is by definition bound to the namespace name http://www.w3.org/XML/1998/namespace
-    typename _TyUriAndPrefixMap::value_type const & rstrPrefix = m_pXp->_RStrAddPrefix( str_array_cast<_TyChar>("xml") );
-    typename _TyUriAndPrefixMap::value_type const & rstrUri = m_pXp->_RStrAddUri( str_array_cast<_TyChar>("http://www.w3.org/XML/1998/namespace") );
-    pair< _TyNamespaceMap::iterator, bool > pib = m_mapNamespaces.emplace( std::piecewise_construct, rstrPrefix, std::forward_as_tuple() );
+    typename _TyUriAndPrefixMap::value_type const & rstrPrefix = m_pXp->_RStrAddPrefix( typename _TyUriAndPrefixMap::value_type( str_array_cast<_TyChar>("xml") ) );
+    typename _TyUriAndPrefixMap::value_type const & rstrUri = m_pXp->_RStrAddUri( typename _TyUriAndPrefixMap::value_type( str_array_cast<_TyChar>("http://www.w3.org/XML/1998/namespace") ) );
+    pair< typename _TyNamespaceMap::iterator, bool > pib = m_mapNamespaces.emplace( std::piecewise_construct, rstrPrefix, std::forward_as_tuple() );
     pib.first->second.first = &rstrPrefix;
     pib.first->second.second.push( &rstrUri );
   }
@@ -607,20 +629,24 @@ protected:
     Assert( !!m_pXp );
     if ( m_fUpdateSkip )
       _UpdateSkip();
-    return m_pXp->RLex().FGetToken( _rpltok, m_rgSkipTokensCur.begin(), m_rgSkipTokensCur.begin() + m_nSkip, _pspStart, false );
+    return m_pXp->GetLexicalAnalyzer().FGetToken( _rpltok, &*m_rgSkipTokensCur.begin(), &*m_rgSkipTokensCur.begin() + m_nSkip, _pspStart, false );
+  }
+  bool _FIsContentToken( vtyTokenIdent _tid ) const
+  {
+    return ( s_knTokenComment == _tid ) || ( s_knTokenCDataSection == _tid ) || ( s_knTokenCharData == _tid ) || ( s_knTokenProcessingInstruction == _tid );
   }
   void _ReadTokenContent()
   {
-    if ( !m_pltokLookahead || ( s_knTokenEmptyElemTag == m_lContext.back().GetTagTokenId() ) )
+    if ( !m_pltokLookahead || ( s_knTokenEmptyElemTag == m_lContexts.back().GetTagTokenId() ) )
       return; // At eof or tag with no content.
     // The invarient is that we have a token in the m_pltokLookahead or we have hit eof.
     // After the last end token of the file, the Misc production is active - which means
     //  that whitespace CharData, Comments and PIs are still allowed.
     // So once that last end tag is read we fill the XMLDecl tag with the epilogue Misc tokens.
     // The user is left with that which can then be read and the iteration is over.
-    while( _FIsContentToken( m_pltokLookahead ) )
+    while( _FIsContentToken( m_pltokLookahead->GetTokenId() ) )
     {
-      _ProcessToken( *m_pltokLookahead );
+      _ProcessToken( m_pltokLookahead );
       Assert( !m_pltokLookahead->PAxnObjGet() ); // We should have moved this token away...
       m_pltokLookahead.reset(); // Rid the null token object.
       bool fGotToken = _FGetToken( m_pltokLookahead );
@@ -644,28 +670,28 @@ protected:
   {
     m_lContexts.back().AddToken( std::move( _rltok ) );
   }
-  void _PopContext( _TyXmlToken * _ptokRtnSpentTag )
+  void _PopContext( _TyOptXmlToken * _popttokRtnSpentTag )
   {
-    if ( _ptokRtnSpentTag )
+    if ( _popttokRtnSpentTag )
     {
-      *_ptokRtnSpentTag = std::move( m_lContexts.back().GetTag() );
+      *_popttokRtnSpentTag = std::move( m_lContexts.back().GetTag() );
       if ( m_fUseXMLNamespaces )
       {
         // Then we must check if we have any namespace declarations in this tag and if so undeclare them.
-        _TyValue const & rrgvName = (*_ptokRtnSpentTag)[0];
+        _TyLexValue const & rrgvName = (**_popttokRtnSpentTag)[0];
         size_t nNamespaceDecls = rrgvName[2].GetVal< size_t >();
         if ( nNamespaceDecls )
         {
           // Move through looking for namespace declarations and undeclare them. No need to do this in reverse.
-          typename _TyValue::_TySegArrayValues & rsaAttrs = (*_ptokRtnSpentTag)[1].GetValueArray();
-          (void)rsaAttrs.NApply( 0, rsaAttrs.NElements(), 
-            [&nNamespaceDecls]( _TyValue * _pattrBegin, _TyValue * _pattrEnd ) -> size_t
+          typename _TyLexValue::_TySegArrayValues & rsaAttrs = (**_popttokRtnSpentTag)[1].GetValueArray();
+          (void)rsaAttrs.NApplyContiguous( 0, rsaAttrs.NElements(), 
+            [&nNamespaceDecls]( _TyLexValue * _pattrBegin, _TyLexValue * _pattrEnd ) -> size_t
             {
-              _TyValue * pattrCur = _pattrBegin;
+              _TyLexValue * pattrCur = _pattrBegin;
               for ( ; ( _pattrEnd != pattrCur ) && !!nNamespaceDecls; ++pattrCur )
               {
-                _TyValue & rvNamespace = (*pattrCur)[1];
-                if ( rvNamespace.IsA<_TyXmlNamespaceValueWrap>() )
+                _TyLexValue & rvNamespace = (*pattrCur)[1];
+                if ( rvNamespace.FIsA<_TyXmlNamespaceValueWrap>() )
                 {
                   _TyXmlNamespaceValueWrap & rxnvw = rvNamespace.GetVal< _TyXmlNamespaceValueWrap >();
                   if ( rxnvw.FIsNamespaceDeclaration() )
@@ -718,30 +744,23 @@ protected:
   void _ProcessEndTag( _TyLexToken & _rltok )
   {
     VerifyThrowSz( FInsideDocumentTag(), "Found end tag before first tag declaration." );
-    _TyValue & rvalTagEnd = _rpltok->GetValue();
+    _TyLexValue & rvalTagEnd = _rltok.GetValue();
     _ProcessTagName( rvalTagEnd ); // No need to process namespaces on the end tag - just the name itself.
-    _TyXmlReadContext & rctxtLast = m_lContexts.back();
-    const _TyXmlToken & rxtTagStart = rctxtLast.GetToken(0);
+    const _TyXmlToken & rxtTagStart = m_lContexts.back().GetTag();
     Assert( rxtTagStart.FIsTag() );
     const _TyLexToken & rltokTagStart = rxtTagStart.RGetLexToken();
-    const _TyValue & rvalTagStart = rltokTagStart.GetValue()[0];
+    const _TyLexValue & rvalTagStart = rltokTagStart.GetValue()[0];
     _TyStrView svTagStart;
-    rltokTag.KGetStringView( rvalTagStart[0], svTagStart );
+    _rltok.KGetStringView( rvalTagStart[0], svTagStart );
     _TyStrView svTagEnd;
-    _rltok.KGetStringView( rvalTagEnd[0], svTagStart );
+    _rltok.KGetStringView( rvalTagEnd[0], svTagEnd );
     VerifyThrowSz( svTagStart == svTagEnd, "Start tag[%s] doesn't match end tag[%s]", StrConvertString<char>( svTagStart ).c_str(), StrConvertString<char>( svTagEnd ).c_str() );
     // The context is always popped later in FNextTag().
   }
   void _ProcessXMLDecl( _TyLexToken & _rltok )
   {
     // Pull the info we want out of it to store in the cursor.
-    _TyValue & rrgVals = _rltok.GetValue();
-    Assert( rrgVals.FIsArray() );
-    m_fStandalone = rrgVals[0].GetVal<bool>();
-    rrgVals[2].GetString( _rltok, m_strEncoding );
-    _TyStdStr strMinorVNum;
-    rrgVals[4].GetString( _rltok, strMinorVNum );
-    m_nVersionMinorNumber = strMinorVNum[0] - _TyChar('0');
+    m_XMLDeclProperties.FromXMLDeclToken( _rltok );
     Assert( !m_lContexts.size() );
     // Even if the caller is ignoring the XMLDecl we will start the root context with it if it is present.
     _PushNewContext( _rltok ); // Push on current context. There will be no current context so one will be created.
@@ -753,7 +772,7 @@ protected:
     drToken.m_posBegin += 4; // <!--
     drToken.m_posEnd -= 3; // -->
     // REVIEW:<dbien>: Could strip whitespace off front and rear but...
-    _rltok.template emplace< _TyData >( drToken );
+    _rltok.template emplaceValue< _TyData >( drToken );
     _AppendContextContent( _rltok );
   }
   void _ProcessCDataSection( _TyLexToken & _rltok )
@@ -763,7 +782,7 @@ protected:
     _rltok.GetTokenDataRange( drToken );
     drToken.m_posBegin += 9; // <![CDATA[
     drToken.m_posEnd -= 3; // ]]>
-    _rltok.template emplace< _TyData >( drToken );
+    _rltok.template emplaceValue< _TyData >( drToken );
     _AppendContextContent( _rltok );
   }
   void _ProcessCharData( _TyLexToken & _rltok )
@@ -771,7 +790,7 @@ protected:
     if ( !FInsideDocumentTag() )
     {
       // We should only see plain whitespace CharData before the first tag:
-      _TyValue & rVal = _rltok.GetValue();
+      _TyLexValue & rVal = _rltok.GetValue();
       Assert( rVal.FHasTypedData() );
       const _TyData & rdt = rVal.GetVal< _TyData >();
       bool fError = !rdt.FContainsSingleDataRange() || ( rdt.DataRangeGetSingle().type() != s_kdtPlainText );
@@ -779,13 +798,13 @@ protected:
       {
         _TyStrView svData;
         rVal.KGetStringView( _rltok, svData );
-        fError = ( svData.length() != StrSpn( &svData[0], svData.length(), str_array_cast<_TyChar>( STR_XML_WHITESPACE_TOKEN ) ) );
+        fError = ( svData.length() != StrSpn( &svData[0], svData.length(), (const _TyChar *)str_array_cast<_TyChar>( STR_XML_WHITESPACE_TOKEN ) ) );
       }
       VerifyThrowSz( !fError, "Found non-whitespace CharData before first tag declaration." );
     }
     _AppendContextContent( _rltok ); // Push on current context.
   }
-  void _ProcessTagName( _TyValue & _rrgvalName )
+  void _ProcessTagName( _TyLexValue & _rrgvalName )
   {
     // Tag names must match literally between start and end tags.
     // As well we want the end user to see a uniform representation of tag names.
@@ -799,15 +818,13 @@ protected:
     // Leave the name as is - further processing will occur depending on flavor.
   }
   template < class t_TyTransportCtxt >
-  _xml_namespace_uri & _RLookupNamespacePrefix( _l_data_typed_range const & _rdr, t_TyTransportCtxt const & _rcxt )
+  _TyNamespaceUri & _RLookupNamespacePrefix( _l_data_typed_range const & _rdr, t_TyTransportCtxt const & _rcxt )
   {
     _TyStrView sv;
     _rcxt.GetStringView( sv, _rdr );
-    _TyEntityMap::const_iterator cit = m_mapNamespaces.find( sv );
+    typename _TyNamespaceMap::const_iterator cit = m_mapNamespaces.find( sv );
     if ( m_mapNamespaces.end() == cit )
-    {
       THROWXMLPARSEEXCEPTION("Can't find namespace prefix [%s].", StrConvertString<char>( sv ).c_str() );
-    }
     return cit->second;
   }
   // Process any namespace declarations in this token and then process any namespace references.
@@ -818,7 +835,7 @@ protected:
     //    and MUST NOT be bound to any other namespace name. Other prefixes MUST NOT be bound to this namespace name, and it MUST NOT be declared as the default namespace."
     // I don't think I am going to worry about this actually.
     // First thing to do is to move through all attributes and obtain all namespace declarations and at the same time ensure they are valid.
-    typedef AllocaList< const typename _TyUriAndPrefixMap::value_type * > _TyListPrefixes;
+    typedef AllocaList< const typename _TyUriAndPrefixMap::value_type *, false > _TyListPrefixes;
     _TyListPrefixes lPrefixesUsed; // Can't declare the same prefix in the same tag.
     _TyLexValue & rrgAttrs = _rltok[1];
     size_t nNamespaceDecls = 0; // Count these so we can store with the tag and then know when we have finished processing on end-tag.
@@ -851,10 +868,10 @@ protected:
         // As such we will constrain regardless if we are validating - because we are using namespaces.
         VerifyThrowSz( fDefault || !svUri.empty(), "Empty URI given for namespace prefix. This violates the Namespace constraint: No Prefix Undeclaring." );
         // To use transparent key lookup you must use find - not any of the flavors of insert:
-        _TyNamespaceMap::iterator it = m_mapNamespaces.find( svPrefix );
+        typename _TyNamespaceMap::iterator it = m_mapNamespaces.find( svPrefix );
         if ( m_mapNamespaces.end() == it  )
         {
-          pair< _TyNamespaceMap::iterator, bool > pib = m_mapNamespaces.emplace( std::piecewise_construct, svPrefix, std::forward_as_tuple() );
+          pair< typename _TyNamespaceMap::iterator, bool > pib = m_mapNamespaces.emplace( std::piecewise_construct, svPrefix, std::forward_as_tuple() );
           Assert( pib.second );
           it = pib.first;
           it->second.first = &rvtPrefix; // This allows one lookup to process each attribute.
@@ -874,7 +891,7 @@ protected:
         _TyData & rdtPrefix = rrgTagName[0].GetVal< _TyData >();
         _TyStrView svPrefix;
         rrgTagName[0].KGetStringView( _rltok, svPrefix );
-        _TyNamespaceMap::iterator it = m_mapNamespaces.find( svPrefix );
+        typename _TyNamespaceMap::iterator it = m_mapNamespaces.find( svPrefix );
         VerifyThrowSz( m_mapNamespaces.end() != it, "Namespace prefix [%s] not found.", StrConvertString<char>( svPrefix ).c_str() );
         // Update the tag name so that it includes the prefix as is necessary for XML end tag matching.
         rdtPrefix.DataRangeGetSingle().m_posEnd = krdtName.DataRangeGetSingle().m_posEnd;
@@ -884,7 +901,7 @@ protected:
       else
       {
         // If we have a default namespace then we need to apply it to the tag.
-        _TyNamespaceMap::iterator it = m_mapNamespaces.find( _TyStrView() );
+        typename _TyNamespaceMap::iterator it = m_mapNamespaces.find( _TyStrView() );
         if ( ( m_mapNamespaces.end() == it ) || it->second.second.front().RStrUri().empty() )
         {
           // If there is no namespace at all then we just put a "false" in the 1th position:
@@ -918,7 +935,7 @@ protected:
       else
         rdtPrefix.DataRangeGetSingle() = krdtName.DataRangeGetSingle(); // The user just wants the name without the prefix.
       typename _TyNamespaceMap::iterator it = m_mapNamespaces.find( svPrefix );
-      VerifyThrowSz( m_mapNamespaces.end() != it, "Prefix [%s] was not found in the namespace map." StrConvertString<char>( svPrefix ).c_str() );
+      VerifyThrowSz( m_mapNamespaces.end() != it, "Prefix [%s] was not found in the namespace map.", StrConvertString<char>( svPrefix ).c_str() );
       rrgAttr[1].template emplaceArgs< _TyXmlNamespaceValueWrap >( *it, nullptr );
     }
     // Now if the user wants to check for duplicate attributes - before we update the attribute names to include the prefixes.
@@ -973,10 +990,10 @@ protected:
     // Then we don't have to interact with the vector at all as we fill it...
     typedef std::vector< const _TyLexValue *, default_init_allocator< std::allocator< const _TyLexValue * > > > _TyVectorPtrs;
     _TyVectorPtrs rgPointers;
-    static constexpr size_t knptrMaxAllocaSize = vknbyMaxAllocaSize / sizeof( _TyValue* );
-    _TyValue & rrgAttrs = _rltok[1];
+    static constexpr size_t knptrMaxAllocaSize = vknbyMaxAllocaSize / sizeof( _TyLexValue* );
+    _TyLexValue & rrgAttrs = _rltok[1];
     size_t nAttrs = rrgAttrs.GetSize();
-    const _TyValue ** ppvalBegin, ppvalEnd;
+    const _TyLexValue ** ppvalBegin, ppvalEnd;
     if ( knptrMaxAllocaSize < nAttrs )
     {
       rgPointers.resize( nAttrs );
@@ -985,23 +1002,23 @@ protected:
     }
     else
     {
-      ppvalBegin = (const _TyValue *)alloca( nAttrs * sizeof( const _TyValue * ) );
+      ppvalBegin = (const _TyLexValue *)alloca( nAttrs * sizeof( const _TyLexValue * ) );
       ppvalEnd = ppvalBegin + nAttrs;
     }
     // Fill up the pointers - use ApplyContiguous to do it as quickly as possible.
     {//B
-      const _TyValue ** ppvalCur = ppvalBegin;
+      const _TyLexValue ** ppvalCur = ppvalBegin;
       rrgAttrs.GetValueArray().ApplyContiguous( 0, nAttrs,
-        [&ppvalCur]( const _TyValue * _pvBegin, const _TyValue * _pvEnd )
+        [&ppvalCur]( const _TyLexValue * _pvBegin, const _TyLexValue * _pvEnd )
         {
           for ( ; _pvBegin != _pvEnd; )
             *ppvalCur++ = _pvBegin++;
         }
       );
+      Assert( ppvalCur == ppvalEnd );
     }//EB
-    Assert( ppvalCur == ppvalEnd );
     auto lambdaCompareAttrPointers =  
-      [&_rltok]( const _TyValue *& _rlpt, const _TyValue *& _rrpt ) -> bool
+      [&_rltok]( const _TyLexValue *& _rlpt, const _TyLexValue *& _rrpt ) -> bool
       {
         // First compare the names:
         _TyStrView svNameLeft;
@@ -1011,8 +1028,8 @@ protected:
         int iComp = svNameLeft.compare( svNameRight );
         if ( !iComp )
         {
-          _TyValue const & rlvalNS = (*_rlpt)[1];
-          _TyValue const & rrvalNS = (*_rrpt)[1];
+          _TyLexValue const & rlvalNS = (*_rlpt)[1];
+          _TyLexValue const & rrvalNS = (*_rrpt)[1];
           bool fIsNotBoolLeft = !rlvalNS.FIsA< bool >();
           bool fIsNotBoolRight = !rrvalNS.FIsA< bool >();
           iComp = (int)fIsNotBoolLeft - (int)fIsNotBoolRight;
@@ -1024,19 +1041,19 @@ protected:
           }
         }
         return iComp < 0;
-      }
+      };
 
     sort( ppvalBegin, ppvalEnd, lambdaCompareAttrPointers );
     // Check for adjacent equal object. We will report all violations, cuz duh...
     bool fAnyDuplicateAttrNames = false;
-    for ( const _TyValue ** ppDupeCur = adjacent_find( ppvalBegin, ppvalEnd, lambdaCompareAttrPointers );
+    for ( const _TyLexValue ** ppDupeCur = adjacent_find( ppvalBegin, ppvalEnd, lambdaCompareAttrPointers );
           ( ppvalEnd != ppDupeCur );
           ppDupeCur = adjacent_find( ppDupeCur+1, ppvalEnd, lambdaCompareAttrPointers ) )
     {
       // If the same prefix declares the same URI then we will will ignore it because I cannot see an interpretation of this in the W3C XML Namespace Specification.
       // We will throw an error for any duplicate prefix declarations if m_fStrict is on because other parsers may barf on such declarations.
-      const _TyValue & rvattrCur = **ppDupeCur;
-      const _TyValue & rvnsCur = rvattrCur[1];
+      const _TyLexValue & rvattrCur = **ppDupeCur;
+      const _TyLexValue & rvnsCur = rvattrCur[1];
       _TyStdStr strAttrName;
       rvattrCur[0].GetString( _rltok, strAttrName );        
       if ( rvnsCur.FIsA<bool>() )
@@ -1055,8 +1072,8 @@ protected:
                             // We perform that check regardless if m_fCheckDuplicateAttrs since it would cause issues with interpretation
                             //  of the attributes and it is quick since only several namespaces at most would be declared in a given tag.
                             // I'll leave this code here since it can't really hurt too much and it might be decided to not do the check in _ProcessNamespaces().
-          const _TyValue & rvattrNext = *ppDupeCur[1];
-          const _TyValue & rvnsNext = rvattrNext[1];
+          const _TyLexValue & rvattrNext = *ppDupeCur[1];
+          const _TyLexValue & rvnsNext = rvattrNext[1];
           if ( m_fStrict || !!rxnvwCur.ICompare( rvnsNext.GetVal< _TyXmlNamespaceValueWrap >() ) )
           {
             fAnyDuplicateAttrNames = true;
@@ -1078,16 +1095,17 @@ protected:
     if ( !m_fUpdateSkip )
       return;
     m_fUpdateSkip = false;
-    size_t * pstCur = m_rgSkipTokensCur.begin();
+    vtyTokenIdent * ptidCur = &*m_rgSkipTokensCur.begin();
     if ( m_fSkipComments )
-      *pstCur++ = s_knTokenComment;
+      *ptidCur++ = s_knTokenComment;
     if ( m_fSkipPI )
-      *pstCur++ = s_knTokenProcessingInstruction;
-    m_nSkip = pstCur - m_rgSkipTokensCur.begin();
+      *ptidCur++ = s_knTokenProcessingInstruction;
+    m_nSkip = ptidCur - &*m_rgSkipTokensCur.begin();
   }
   static constexpr size_t s_knMaxSkippedTokens = 32; // random number.
   typedef array< vtyTokenIdent, s_knMaxSkippedTokens > _TySkipArray;
 
+// DS:
   _TyXmlParser * m_pXp{nullptr}; // the pointer to the XML parser we are reading tokens from.
   _TyListReadContexts m_lContexts;
   unique_ptr< _TyLexToken > m_pltokLookahead;
@@ -1108,7 +1126,7 @@ protected:
   // If this is false then we will not check for duplicate attributes.
   bool m_fCheckDuplicateAttrs{true};
   // If this is true then we will process namespaces, otherwise we will still show the prefixes but not apply XML Namespace validation and logic.
-  bool m_fUseXMLNamespaces{false};
+  bool m_fUseXMLNamespaces{true};
   // This option allows the user to either see the prefixes that are present in the attr names or see just the names.
   bool m_fIncludePrefixesInAttrNames{false};
   // If m_fStrict then we will not be lenient in cases that may be ambiguous wrt to the XML Specifications.
@@ -1118,7 +1136,7 @@ protected:
 // Skip settings: Ignore the corresponding token types and don't return to the user.
   bool m_fSkipComments{false};
   bool m_fSkipPI{false};
-  XMLDeclProperties m_XMLDeclProperties;
+  _TyXMLDeclProperties m_XMLDeclProperties;
 };
 
 __XMLP_END_NAMESPACE

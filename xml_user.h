@@ -41,7 +41,10 @@ public:
   {
     m_mapParameterEntities.swap( _r.m_mapParameterEntities );
   }
-
+  void ClearParamEntities()
+  {
+     m_mapParameterEntities.clear();
+  }
   template < class t_TyTransportCtxt >
   const _TyStdStr & _RLookupParameterEntity( _l_data_typed_range const & _rdr, t_TyTransportCtxt const & _rcxt ) const
   {
@@ -65,6 +68,9 @@ public:
   typedef typename _TyStdStr::value_type _TyChar;
   typedef basic_string_view< _TyChar > _TyStrView;
   void swap( _TyThis & _r )
+  {
+  }
+  void ClearParamEntities()
   {
   }
   template < class t_TyTransportCtxt >
@@ -157,6 +163,19 @@ public:
     m_fFilterAllTokenData = _fFilterAllTokenData;
   }
   using _TyBase::_RLookupParameterEntity;
+  bool ClearEntities()
+  {
+    if ( m_mapEntities.size() != 5 )
+    {
+      m_mapEntities.clear();
+      m_mapEntities = { { _TyStdStr( str_array_cast<_TyChar>("quot") ), _TyStdStr( str_array_cast<_TyChar>("\"") ) }, 
+                        { _TyStdStr( str_array_cast<_TyChar>("amp") ), _TyStdStr( str_array_cast<_TyChar>("&") ) }, 
+                        { _TyStdStr( str_array_cast<_TyChar>("apos") ), _TyStdStr( str_array_cast<_TyChar>("\'") ) }, 
+                        { _TyStdStr( str_array_cast<_TyChar>("lt") ), _TyStdStr( str_array_cast<_TyChar>("<") ) }, 
+                        { _TyStdStr( str_array_cast<_TyChar>("gt") ), _TyStdStr( str_array_cast<_TyChar>(">") ) } };
+    }
+    _TyBase::ClearParamEntities();
+  }
   template < class t_TyStream >
   bool FProcessAndFilterToken( _TyAxnObjBase * _paobCurToken, t_TyStream const & _rstrm, const vtyDataPosition _kposEndToken ) const
   {

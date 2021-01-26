@@ -33,6 +33,29 @@ class _xml_namespace_uri;
 template < class t_TyNamespaceMap, class t_TyUriAndPrefixMaps >
 class xml_namespace_value_wrap;
 
+// xml_cursor.h:
+template < class t_TyXmlTraits >
+class _xml_read_context;
+template < class t_TyXmlTraits >
+class xml_read_cursor;
+
+// xml_token.h:
+template < class t_TyXmlTraits >
+class xml_token;
+
+// xml_tag.h:
+template < class t_TyXmlTraits >
+class xml_tag;
+template < class t_TyXmlTraits >
+class xml_document;
+
+// xml_parse.h:
+template < class t_TyXmlTraits >
+class xml_parser;
+
+// xml_exc.h:
+class xml_parse_exception;
+
 template < class t_TyChar >
 class XMLDeclProperties
 {
@@ -56,6 +79,18 @@ public:
     m_strEncoding.clear();
     m_fStandalone = false;
     m_nVersionMinorNumber = 0;
+  }
+  template < class t_TyLexToken >
+  void FromXMLDeclToken( t_TyLexToken const & _rltok )
+  {
+    typedef typename t_TyLexToken::_TyValue _TyLexValue;
+    const _TyLexValue & rrgVals = _rltok.GetValue();
+    Assert( rrgVals.FIsArray() );
+    m_fStandalone = rrgVals[0].template GetVal<bool>();
+    rrgVals[2].GetString( _rltok, m_strEncoding );
+    _TyStdStr strMinorVNum;
+    rrgVals[4].GetString( _rltok, strMinorVNum );
+    m_nVersionMinorNumber = strMinorVNum[0] - _TyChar('0');
   }
   _TyStdStr m_strEncoding;
   bool m_fStandalone{false};

@@ -8,10 +8,11 @@
 #include "xml_ns.h"
 #include "xml_types.h"
 #include "xml_traits.h"
-#include "xml_lex.h"
+#include "_xmlplex.h"
 
 __XMLP_BEGIN_NAMESPACE
-__XMLLEX_USING_NAMESPACE
+__XMLPLEX_USING_NAMESPACE
+
 
 // 1) Need mode to skip comments that can be turned on and off.
 // 2) Ditto for processing instructions.
@@ -22,17 +23,19 @@ template < class t_TyXmlTraits >
 class xml_parser
 {
   typedef xml_parser _TyThis;
+  friend xml_read_cursor< t_TyXmlTraits >;
 public:
   typedef t_TyXmlTraits _TyXmlTraits;
   typedef typename _TyXmlTraits::_TyLexTraits _TyLexTraits;
   typedef _lexical_analyzer< _TyLexTraits > _TyLexicalAnalyzer;
-  typedef typename _TyLexTraits::_TyStream _TyStream;
+  typedef _l_stream< _TyLexTraits > _TyStream;
   typedef typename _TyLexTraits::_TyUserObj _TyUserObj;
   typedef typename _TyLexTraits::_TyPtrUserObj _TyPtrUserObj;
   typedef typename _TyLexTraits::_TyTransport _TyTransport;
   typedef typename _TyXmlTraits::_TyUriAndPrefixMap _TyUriAndPrefixMap;
   typedef typename _TyXmlTraits::_TyStdStr _TyStdStr;
   typedef typename _TyXmlTraits::_TyStrView _TyStrView;
+  typedef xml_read_cursor< _TyXmlTraits > _TyReadCursor;
 
   ~xml_parser() = default;
   xml_parser() = default;
@@ -60,6 +63,15 @@ public:
   void emplaceVarTransport( t_TysArgs&& ... _args )
   {
     m_lexXml.template emplaceVarTransport< t_TyTransport >( std::forward< t_TysArgs >( _args )... );
+  }
+
+  _TyLexicalAnalyzer & GetLexicalAnalyzer()
+  {
+    return m_lexXml;
+  }
+  const _TyLexicalAnalyzer & GetLexicalAnalyzer() const
+  {
+    return m_lexXml;
   }
   _TyStream & GetStream()
   {
@@ -124,24 +136,30 @@ protected:
     //  won't create a token for the whitespace.
     m_lexXml.GetUserObj().SetFilterAllTokenData( _fFilterAllTokenData );
   }
-  _TyUriAndPrefixMap::value_type const & _RStrAddPrefix( _tyStrView const & _rsv )
+  typename _TyUriAndPrefixMap::value_type const & _RStrAddPrefix( _TyStrView const & _rsv )
   {
-    _TyUriAndPrefixMap::const_iterator cit = m_mapPrefixs.find( _rsv );
-    if ( m_mapPrefixs.end() != cit )
+    typename _TyUriAndPrefixMap::const_iterator cit = m_mapPrefixes.find( _rsv );
+    if ( m_mapPrefixes.end() != cit )
       return *cit;
-    pair< _TyUriAndPrefixMap::iterator, bool > pib = m_mapPrefixs.insert( _rsv );
+    pair< typename _TyUriAndPrefixMap::iterator, bool > pib = m_mapPrefixes.insert( _rsv );
     Assert( pib.second );
     return *pib.first;
   }
-  _TyUriAndPrefixMap::value_type const & _RStrAddUri( _tyStrView const & _rsv )
+  typename _TyUriAndPrefixMap::value_type const & _RStrAddUri( _TyStrView const & _rsv )
   {
-    _TyUriAndPrefixMap::const_iterator cit = m_mapUris.find( _rsv );
+    typename _TyUriAndPrefixMap::const_iterator cit = m_mapUris.find( _rsv );
     if ( m_mapUris.end() != cit )
       return *cit;
-    pair< _TyUriAndPrefixMap::iterator, bool > pib = m_mapUris.insert( _rsv );
+    pair< typename _TyUriAndPrefixMap::iterator, bool > pib = m_mapUris.insert( _rsv );
     Assert( pib.second );
     return *pib.first;
   }  
+  void _InitMapsAndUserObj()
+  {
+    m_mapUris.clear();
+    m_mapPrefixes.clear();
+    GetUserObj().ClearEntities();
+  }
   _TyLexicalAnalyzer m_lexXml;
   _TyUriAndPrefixMap m_mapUris;
   _TyUriAndPrefixMap m_mapPrefixes;

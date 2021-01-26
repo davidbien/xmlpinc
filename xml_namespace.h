@@ -96,7 +96,7 @@ public:
     Assert( !m_pmapReleaseOnDestruct || ( m_pmapReleaseOnDestruct->end() != m_pmapReleaseOnDestruct->find( m_pvtNamespaceMap->first ) ) );
     Assert( !m_pmapReleaseOnDestruct || ( m_pvtNamespaceMap == &*m_pmapReleaseOnDestruct->find( m_pvtNamespaceMap->first ) ) );
     Assert( !m_pmapReleaseOnDestruct || ( m_pvtUri == &m_pvtNamespaceMap->second.second.front().RStrUri() ) );
-    Assert( !m_pmapReleaseOnDestruct || ( m_pvtPrefix == &m_pvtNamespaceMap->second.first ) );
+    Assert( !m_pmapReleaseOnDestruct || ( m_pvtPrefix == m_pvtNamespaceMap->second.first ) );
     Assert( !m_pvtUri == !m_pvtPrefix );
     Assert( !m_pvtNamespaceMap || !!m_pvtPrefix );
 #endif //ASSERTSENABLED
@@ -231,11 +231,11 @@ public:
     _rjv[1].SetStringValue( *m_pvtUri );
     if ( m_pvtNamespaceMap )
     {
-      const size_t knUris = m_pvtNamespaceMap->second.count();
+      const size_t knUris = m_pvtNamespaceMap->second.second.count();
       t_TyJsoValue & rrgjvUris = _rjv[2];
       rrgjvUris.SetArrayCapacity( knUris );
       size_t nUri = 0;
-      m_pvtNamespaceMap->second.Apply( 
+      m_pvtNamespaceMap->second.second.Apply( 
         [&nUri,&rrgjvUris]( _TyNamespaceUri const & _rnu )
         {
           rrgjvUris[nUri++].SetStringValue( _rnu.RStrUri() );
