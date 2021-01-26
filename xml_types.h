@@ -90,7 +90,7 @@ public:
     rrgVals[2].GetString( _rltok, m_strEncoding );
     _TyStdStr strMinorVNum;
     rrgVals[4].GetString( _rltok, strMinorVNum );
-    m_nVersionMinorNumber = strMinorVNum[0] - _TyChar('0');
+    m_nVersionMinorNumber = uint8_t( strMinorVNum[0] - _TyChar('0') );
   }
   _TyStdStr m_strEncoding;
   bool m_fStandalone{false};

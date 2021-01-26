@@ -163,7 +163,7 @@ public:
     m_fFilterAllTokenData = _fFilterAllTokenData;
   }
   using _TyBase::_RLookupParameterEntity;
-  bool ClearEntities()
+  void ClearEntities()
   {
     if ( m_mapEntities.size() != 5 )
     {
@@ -468,7 +468,7 @@ public:
     }
   }
   template < class t_TyStringView, class t_TyToken, class t_TyTransportCtxt >
-  void KGetStringView( t_TyStringView & _rsvDest, t_TyTransportCtxt & _rcxt, t_TyToken & _rtok, typename t_TyToken::_TyValue const & _rval ) const
+  void KGetStringView( t_TyStringView & _rsvDest, t_TyTransportCtxt & _rcxt, t_TyToken const & _rtok, typename t_TyToken::_TyValue const & _rval ) const
     requires ( ( sizeof( typename t_TyStringView::value_type ) == sizeof( _TyChar ) ) && !TFIsTransportVarCtxt_v< t_TyTransportCtxt > )
   {
     Assert( _rsvDest.empty() );
@@ -476,10 +476,10 @@ public:
     const _TyData kdtr = _rval.template GetVal< _TyData >();
     _rcxt.AssertValidDataRange( kdtr );
     VerifyThrowSz( kdtr.FContainsSingleDataRange(s_kdtPlainText), "KGetStringView() is only valid for single data ranges." );
-    _rcxt.GetStringView( _rsvDest, kdtr );
+    _rcxt.GetStringView( _rsvDest, kdtr.DataRangeGetSingle() );
   }
   template < class t_TyStringView, class t_TyString, class t_TyToken, class t_TyTransportCtxt >
-  bool FGetStringViewOrString( t_TyStringView & _rsvDest, t_TyString & _rstrDest, t_TyTransportCtxt & _rcxt, t_TyToken & _rtok, const typename t_TyToken::_TyValue & _rval ) const
+  bool FGetStringViewOrString( t_TyStringView & _rsvDest, t_TyString & _rstrDest, t_TyTransportCtxt & _rcxt, t_TyToken const & _rtok, const typename t_TyToken::_TyValue & _rval ) const
     requires ( ( sizeof( typename t_TyStringView::value_type ) == sizeof( _TyChar ) ) && !TFIsTransportVarCtxt_v< t_TyTransportCtxt > )
   {
     static_assert( sizeof( typename t_TyStringView::value_type ) == sizeof( typename t_TyString::value_type ) );
@@ -500,7 +500,7 @@ public:
     }
   }
   template < class t_TyString, class t_TyToken, class t_TyTransportCtxt >
-  void GetString( t_TyString & _rstrDest, t_TyTransportCtxt & _rcxt, t_TyToken & _rtok, const typename t_TyToken::_TyValue & _rval ) const
+  void GetString( t_TyString & _rstrDest, t_TyTransportCtxt & _rcxt, t_TyToken const & _rtok, const typename t_TyToken::_TyValue & _rval ) const
     requires ( ( sizeof( typename t_TyString::value_type ) == sizeof( _TyChar ) ) && !TFIsTransportVarCtxt_v< t_TyTransportCtxt > )
   {
     Assert( _rstrDest.empty() );
@@ -515,20 +515,21 @@ public:
     t_TyString strBacking( nCharsRemaining, 0 ); // Return the type the caller asked for.
     if ( kdtr.FContainsSingleDataRange(s_kdtPlainText) )
     {
-      memcpy( &strBacking[0], _rcxt.GetTokenBuffer().begin() + kdtr.begin() - _rcxt.PosTokenStart(), nCharsRemaining * sizeof( _TyChar ) );
+      memcpy( &strBacking[0], _rcxt.GetTokenBuffer().begin() + kdtr.DataRangeGetSingle().begin() - _rcxt.PosTokenStart(), nCharsRemaining * sizeof( _TyChar ) );
       nCharsRemaining = 0;
     }
     else
     {
       _TyChar * pcCur = (_TyChar*)&strBacking[0]; // Current output pointer.
       kdtr.GetSegArrayDataRanges().ApplyContiguous( 0, kdtr.GetSegArrayDataRanges().NElements(), 
-        [&pcCur,&nCharsRemaining,&_rcxt]( const _l_data_typed_range * _pdtrBegin, const _l_data_typed_range * _pdtrEnd )
+        [this,&pcCur,&nCharsRemaining,&_rcxt]( const _l_data_typed_range * _pdtrBegin, const _l_data_typed_range * _pdtrEnd )
         {
-          _TyStrView sv;
           const _l_data_typed_range * pdtrCur = _pdtrBegin;
           for ( ; nCharsRemaining && ( _pdtrEnd != pdtrCur ); ++pdtrCur )
           {
-            _TyChar tch = _TchGetStringViewDr( sv, *pdtrCur, _rcxt );
+            _TyStrView sv;
+            _TyCharRefConvertBuffer crcb;
+            _TyChar tch = _TchGetStringViewDr( sv, *pdtrCur, _rcxt, crcb );
             if ( !tch )
             {
               Assert( nCharsRemaining >= sv.length() );
@@ -554,7 +555,7 @@ public:
 
 // Converting GetString*.
   template < class t_TyString, class t_TyToken, class t_TyTransportCtxt >
-  void GetString( t_TyString & _rstrDest, t_TyTransportCtxt & _rcxt, t_TyToken & _rtok, typename t_TyToken::_TyValue const & _rval ) const
+  void GetString( t_TyString & _rstrDest, t_TyTransportCtxt & _rcxt, t_TyToken const & _rtok, typename t_TyToken::_TyValue const & _rval ) const
     requires ( ( sizeof( typename t_TyString::value_type ) != sizeof( _TyChar ) ) && !TFIsTransportVarCtxt_v< t_TyTransportCtxt > )
   {
     Assert( _rstrDest.empty() );
@@ -593,7 +594,8 @@ public:
           for ( ; nCharsRemaining && ( _pdtrEnd != pdtrCur ); ++pdtrCur )
           {
             _TyStrView sv;
-            _TyChar tch = _TchGetStringViewDr( sv, *pdtrCur, _rcxt );
+            _TyCharRefConvertBuffer crcb;
+            _TyChar tch = _TchGetStringViewDr( sv, *pdtrCur, _rcxt, crcb );
             if ( !tch )
             {
               Assert( nCharsRemaining >= sv.length() );

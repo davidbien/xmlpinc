@@ -141,7 +141,7 @@ protected:
     typename _TyUriAndPrefixMap::const_iterator cit = m_mapPrefixes.find( _rsv );
     if ( m_mapPrefixes.end() != cit )
       return *cit;
-    pair< typename _TyUriAndPrefixMap::iterator, bool > pib = m_mapPrefixes.insert( _rsv );
+    pair< typename _TyUriAndPrefixMap::iterator, bool > pib = m_mapPrefixes.insert( _TyStdStr( _rsv ) );
     Assert( pib.second );
     return *pib.first;
   }
@@ -150,7 +150,7 @@ protected:
     typename _TyUriAndPrefixMap::const_iterator cit = m_mapUris.find( _rsv );
     if ( m_mapUris.end() != cit )
       return *cit;
-    pair< typename _TyUriAndPrefixMap::iterator, bool > pib = m_mapUris.insert( _rsv );
+    pair< typename _TyUriAndPrefixMap::iterator, bool > pib = m_mapUris.insert( _TyStdStr( _rsv ) );
     Assert( pib.second );
     return *pib.first;
   }  

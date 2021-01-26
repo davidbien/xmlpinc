@@ -68,7 +68,7 @@ public:
     ResetNamespaceDecls();
   }
   xml_namespace_value_wrap() = default;
-  xml_namespace_value_wrap(  _TyMapValue const & _rvt, _TyNamespaceMap * _pmapReleaseOnDestruct  )
+  xml_namespace_value_wrap(  _TyMapValue & _rvt, _TyNamespaceMap * _pmapReleaseOnDestruct  )
     : m_pvtNamespaceMap( !_pmapReleaseOnDestruct ? nullptr : &_rvt ),
       m_pmapReleaseOnDestruct( _pmapReleaseOnDestruct ),
       m_pvtUri( &_rvt.second.second.front().RStrUri() ),
@@ -145,7 +145,7 @@ public:
     AssertValid();
     _r.AssertValid();
     std::strong_ordering iComp = FIsNamespaceDeclaration() <=> _r.FIsNamespaceDeclaration();
-    if ( !iComp )
+    if ( 0 == iComp )
     {
       if ( FIsNamespaceDeclaration() )
       {
@@ -165,10 +165,10 @@ public:
   std::strong_ordering ICompare( const _TyThis & _r ) const
   {
     std::strong_ordering iComp = FIsNamespaceDeclaration() <=> _r.FIsNamespaceDeclaration();
-    if ( !iComp )
+    if ( 0 == iComp )
     {
       iComp = m_pvtUri <=> _r.m_pvtUri;
-      if ( !iComp )
+      if (  0 == iComp )
         iComp = m_pvtPrefix <=> _r.m_pvtPrefix;
     }
     return iComp;
@@ -185,6 +185,12 @@ public:
     if ( !m_pvtUri )
       return;
     _rsv = t_TyStringView( (const typename t_TyStringView::value_type*)&(*m_pvtUri)[0], m_pvtUri->length() );;
+  }
+  template < class t_TyStringView, class t_TyToken >
+  void KGetStringView( t_TyStringView & _rsv, t_TyToken & _rtok ) const
+    requires( sizeof( _TyChar ) == sizeof( typename t_TyStringView::value_type ) ) // We only support a view on our character type's size - use GetString instead.
+  {
+    return GetStringView( _rsv, _rtok );
   }
   template < class t_TyString, class t_TyToken >
   void GetString( t_TyString & _rstr, t_TyToken & /* _rtok */ ) const

@@ -110,23 +110,23 @@ public:
   template < class t_TyFunctor >
   void ApplyContent( size_t _nTokenBegin, size_t _nTokenEnd, t_TyFunctor && _rrftor )
   {
-    m_saTokens.Apply( _nTokenBegin, _nTokenEnd, std::forward< t_TyFunctor >( _rrftor ) );
+    m_saTokens.ApplyContiguous( _nTokenBegin, _nTokenEnd, std::forward< t_TyFunctor >( _rrftor ) );
   }
   template < class t_TyFunctor >
   void ApplyContent( size_t _nTokenBegin, size_t _nTokenEnd, t_TyFunctor && _rrftor ) const
   {
-    m_saTokens.Apply( _nTokenBegin, _nTokenEnd, std::forward< t_TyFunctor >( _rrftor ) );
+    m_saTokens.ApplyContiguous( _nTokenBegin, _nTokenEnd, std::forward< t_TyFunctor >( _rrftor ) );
   }
-  // Peruse conditionally - see SegArray::NApply().
+  // Peruse conditionally - see SegArray::NApplyContiguous().
   template < class t_TyFunctor >
   size_t NApplyContent( size_t _nTokenBegin, size_t _nTokenEnd, t_TyFunctor && _rrftor )
   {
-    return m_saTokens.NApply( _nTokenBegin, _nTokenEnd, std::forward< t_TyFunctor >( _rrftor ) );
+    return m_saTokens.NApplyContiguous( _nTokenBegin, _nTokenEnd, std::forward< t_TyFunctor >( _rrftor ) );
   }
   template < class t_TyFunctor >
   size_t NApplyContent( size_t _nTokenBegin, size_t _nTokenEnd, t_TyFunctor && _rrftor ) const
   {
-    return m_saTokens.NApply( _nTokenBegin, _nTokenEnd, std::forward< t_TyFunctor >( _rrftor ) );
+    return m_saTokens.NApplyContiguous( _nTokenBegin, _nTokenEnd, std::forward< t_TyFunctor >( _rrftor ) );
   }
   void AddToken( _TyLexToken && _rrtok )
   {
@@ -146,7 +146,7 @@ public:
     typedef AllocaArray< _TyStdStr, true > _TyRgStrings;
     _TyRgStrings rgStrings( ALLOCA_ARRAY_ALLOC( _TyStdStr, NContentTokens() ) );
     size_t nCharsTotal = 0;
-    m_saTokens.Apply( 1, m_saTokens.NElements(),
+    m_saTokens.ApplyContiguous( 1, m_saTokens.NElements(),
       [&rgStrings,&nCharsTotal]( _TyXmlToken const * _ptokBegin, _TyXmlToken const * _ptokEnd )
       {
         _TyXmlToken const * ptokCur = _ptokBegin;
@@ -182,7 +182,7 @@ public:
     typedef AllocaArray< _TyStrViewResult, true > _TyRgStrViews;
     _TyRgStrViews rgStrViews( ALLOCA_ARRAY_ALLOC( _TyStrViewResult, NContentTokens() ) );
     size_t nCharsTotal = 0;
-    m_saTokens.Apply( 1, m_saTokens.NElements(),
+    m_saTokens.ApplyContiguous( 1, m_saTokens.NElements(),
       [&rgStrViews,&nCharsTotal]( _TyXmlToken * _ptokBegin, _TyXmlToken * _ptokEnd )
       {
         _TyXmlToken * ptokCur = _ptokBegin;
@@ -522,6 +522,7 @@ public:
       _SkipToEndCurrentContext(); // Skip potentially a ton of XML.
     Assert( _FAtTailContext() );
     Assert( m_lContexts.size() == 1 );
+    return false;
   }
   bool _FProcessNextTag()
   {
@@ -583,14 +584,14 @@ protected:
     VerifyThrow( !!_pXp );
     if ( !!m_pXp )
       _DetachXmlParser();
-    _InitNamespaceMap();
     m_pXp = _pXp;
     m_pXp->_InitMapsAndUserObj();
+    _InitNamespaceMap();
     m_pXp->_SetFilterWhitespaceCharData( m_fFilterWhitespaceCharData );
     { //B
       unique_ptr< _TyLexToken > pltokFirst;
       // For the first token we must check to see if we get an XMLDecl token since it is optional.
-      bool fGotXMLDecl = _FGetToken( pltokFirst, (const ns_xmlplex::_TyStateProto *)&startXMLDecl< _TyXmlTraits > );
+      bool fGotXMLDecl = _FGetToken( pltokFirst, (const ns_xmlplex::_TyStateProto *)&startXMLDecl< _TyLexTraits > );
       if ( !fGotXMLDecl )
       {
         // Then we are going to create a "fake" XMLDecl token because the invariant is that the first
@@ -606,11 +607,12 @@ protected:
   }
   void _InitNamespaceMap()
   {
+    Assert( !!m_pXp );
     Assert( !m_mapNamespaces.size() );
   // The prefix xml is by definition bound to the namespace name http://www.w3.org/XML/1998/namespace
     typename _TyUriAndPrefixMap::value_type const & rstrPrefix = m_pXp->_RStrAddPrefix( typename _TyUriAndPrefixMap::value_type( str_array_cast<_TyChar>("xml") ) );
     typename _TyUriAndPrefixMap::value_type const & rstrUri = m_pXp->_RStrAddUri( typename _TyUriAndPrefixMap::value_type( str_array_cast<_TyChar>("http://www.w3.org/XML/1998/namespace") ) );
-    pair< typename _TyNamespaceMap::iterator, bool > pib = m_mapNamespaces.emplace( std::piecewise_construct, rstrPrefix, std::forward_as_tuple() );
+    pair< typename _TyNamespaceMap::iterator, bool > pib = m_mapNamespaces.emplace( std::piecewise_construct, std::forward_as_tuple(rstrPrefix), std::forward_as_tuple() );
     pib.first->second.first = &rstrPrefix;
     pib.first->second.second.push( &rstrUri );
   }
@@ -748,12 +750,12 @@ protected:
     _ProcessTagName( rvalTagEnd ); // No need to process namespaces on the end tag - just the name itself.
     const _TyXmlToken & rxtTagStart = m_lContexts.back().GetTag();
     Assert( rxtTagStart.FIsTag() );
-    const _TyLexToken & rltokTagStart = rxtTagStart.RGetLexToken();
+    const _TyLexToken & rltokTagStart = rxtTagStart.GetLexToken();
     const _TyLexValue & rvalTagStart = rltokTagStart.GetValue()[0];
     _TyStrView svTagStart;
-    _rltok.KGetStringView( rvalTagStart[0], svTagStart );
+    _rltok.KGetStringView( svTagStart, rvalTagStart[0] );
     _TyStrView svTagEnd;
-    _rltok.KGetStringView( rvalTagEnd[0], svTagEnd );
+    _rltok.KGetStringView( svTagEnd, rvalTagEnd[0] );
     VerifyThrowSz( svTagStart == svTagEnd, "Start tag[%s] doesn't match end tag[%s]", StrConvertString<char>( svTagStart ).c_str(), StrConvertString<char>( svTagEnd ).c_str() );
     // The context is always popped later in FNextTag().
   }
@@ -871,7 +873,7 @@ protected:
         typename _TyNamespaceMap::iterator it = m_mapNamespaces.find( svPrefix );
         if ( m_mapNamespaces.end() == it  )
         {
-          pair< typename _TyNamespaceMap::iterator, bool > pib = m_mapNamespaces.emplace( std::piecewise_construct, svPrefix, std::forward_as_tuple() );
+          pair< typename _TyNamespaceMap::iterator, bool > pib = m_mapNamespaces.emplace( std::piecewise_construct, std::forward_as_tuple(svPrefix), std::forward_as_tuple() );
           Assert( pib.second );
           it = pib.first;
           it->second.first = &rvtPrefix; // This allows one lookup to process each attribute.
@@ -988,21 +990,23 @@ protected:
   {
     // The default init allocator allows us to resize without initializing the elements...
     // Then we don't have to interact with the vector at all as we fill it...
-    typedef std::vector< const _TyLexValue *, default_init_allocator< std::allocator< const _TyLexValue * > > > _TyVectorPtrs;
+    typedef const _TyLexValue * _TyPtrLexValue;
+    typedef std::vector< _TyPtrLexValue, default_init_allocator< _TyPtrLexValue > > _TyVectorPtrs;
     _TyVectorPtrs rgPointers;
     static constexpr size_t knptrMaxAllocaSize = vknbyMaxAllocaSize / sizeof( _TyLexValue* );
     _TyLexValue & rrgAttrs = _rltok[1];
     size_t nAttrs = rrgAttrs.GetSize();
-    const _TyLexValue ** ppvalBegin, ppvalEnd;
+    const _TyLexValue ** ppvalBegin;
+    const _TyLexValue ** ppvalEnd;
     if ( knptrMaxAllocaSize < nAttrs )
     {
       rgPointers.resize( nAttrs );
-      ppvalBegin = rgPointers.begin();
-      ppvalEnd = rgPointers.end();
+      ppvalBegin = &*rgPointers.begin();
+      ppvalEnd = ppvalBegin + nAttrs;
     }
     else
     {
-      ppvalBegin = (const _TyLexValue *)alloca( nAttrs * sizeof( const _TyLexValue * ) );
+      ppvalBegin = (const _TyLexValue **)alloca( nAttrs * sizeof( const _TyLexValue * ) );
       ppvalEnd = ppvalBegin + nAttrs;
     }
     // Fill up the pointers - use ApplyContiguous to do it as quickly as possible.
@@ -1025,15 +1029,15 @@ protected:
         (*_rlpt)[0].KGetStringView( _rltok, svNameLeft );
         _TyStrView svNameRight;
         (*_rrpt)[0].KGetStringView( _rltok, svNameRight );
-        int iComp = svNameLeft.compare( svNameRight );
-        if ( !iComp )
+        strong_ordering iComp = svNameLeft <=> svNameRight;
+        if ( 0 == iComp )
         {
           _TyLexValue const & rlvalNS = (*_rlpt)[1];
           _TyLexValue const & rrvalNS = (*_rrpt)[1];
           bool fIsNotBoolLeft = !rlvalNS.FIsA< bool >();
           bool fIsNotBoolRight = !rrvalNS.FIsA< bool >();
-          iComp = (int)fIsNotBoolLeft - (int)fIsNotBoolRight;
-          if ( !iComp && fIsNotBoolLeft )
+          iComp = (int)fIsNotBoolLeft <=> (int)fIsNotBoolRight;
+          if ( ( 0 == iComp ) && fIsNotBoolLeft )
           {
             const _TyXmlNamespaceValueWrap & rxnvwLeft = rlvalNS.GetVal< _TyXmlNamespaceValueWrap >();
             const _TyXmlNamespaceValueWrap & rxnvwRight = rrvalNS.GetVal< _TyXmlNamespaceValueWrap >();
@@ -1074,7 +1078,7 @@ protected:
                             // I'll leave this code here since it can't really hurt too much and it might be decided to not do the check in _ProcessNamespaces().
           const _TyLexValue & rvattrNext = *ppDupeCur[1];
           const _TyLexValue & rvnsNext = rvattrNext[1];
-          if ( m_fStrict || !!rxnvwCur.ICompare( rvnsNext.GetVal< _TyXmlNamespaceValueWrap >() ) )
+          if ( m_fStrict || ( 0 != rxnvwCur.ICompare( rvnsNext.GetVal< _TyXmlNamespaceValueWrap >() ) ) )
           {
             fAnyDuplicateAttrNames = true;
             LOGSYSLOG( eslmtError, "Duplicate namespace prefix name declared[%s].", strAttrName.c_str() );
