@@ -528,6 +528,8 @@ public:
   }
   bool _FProcessNextTag()
   {
+    if ( !m_pltokLookahead )
+      return false;
     if ( ( s_knTokenSTag == m_pltokLookahead->GetTokenId() ) || ( s_knTokenEmptyElemTag == m_pltokLookahead->GetTokenId() ) )
     {
       _ProcessLookahead("Premature EOF.");
@@ -545,11 +547,12 @@ public:
   }
   void _ProcessLookahead( const char * _pszMesg )
   {
+    vtyTokenIdent tid = m_pltokLookahead->GetTokenId();
     _ProcessToken( m_pltokLookahead );
     Assert( !m_pltokLookahead->PAxnObjGet() ); // We should have moved this token away...
     m_pltokLookahead.reset(); // Rid the null token object.
     // Now we must read the lookahead to prime the ending.
-    VerifyThrowSz( _FGetToken( m_pltokLookahead ), _pszMesg );
+    VerifyThrowSz( _FGetToken( m_pltokLookahead ) || ( ( tid == s_knTokenETag ) && ( m_lContexts.size() == 2 ) ), _pszMesg );
   }
 
   void _SkipToEndCurrentContext()

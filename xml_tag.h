@@ -46,7 +46,6 @@ public:
   void AcquireTag( _TyXmlToken && _rrtok )
   {
     m_opttokTag = std::move( _rrtok );
-    Assert( !m_rgTokens.size() );
   }
   // Read from this read cursor into this object.
   void FromXmlStream( _TyReadCursor & _rxrc )
