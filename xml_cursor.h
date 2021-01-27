@@ -60,7 +60,7 @@ public:
 #if ASSERTSENABLED
     size_t nSize = m_saTokens.GetSize();
     Assert( nSize ); // should always have at least the tag token at element 0.
-    Assert( ( nSize <= 1 ) == !_fIsTail );
+    Assert( ( nSize <= 1 ) || _fIsTail );
 #endif //ASSERTSENABLED
   }
 
@@ -110,23 +110,23 @@ public:
   template < class t_TyFunctor >
   void ApplyContent( size_t _nTokenBegin, size_t _nTokenEnd, t_TyFunctor && _rrftor )
   {
-    m_saTokens.ApplyContiguous( _nTokenBegin, _nTokenEnd, std::forward< t_TyFunctor >( _rrftor ) );
+    m_saTokens.ApplyContiguous( _nTokenBegin+1, _nTokenEnd+1, std::forward< t_TyFunctor >( _rrftor ) );
   }
   template < class t_TyFunctor >
   void ApplyContent( size_t _nTokenBegin, size_t _nTokenEnd, t_TyFunctor && _rrftor ) const
   {
-    m_saTokens.ApplyContiguous( _nTokenBegin, _nTokenEnd, std::forward< t_TyFunctor >( _rrftor ) );
+    m_saTokens.ApplyContiguous( _nTokenBegin+1, _nTokenEnd+1, std::forward< t_TyFunctor >( _rrftor ) );
   }
   // Peruse conditionally - see SegArray::NApplyContiguous().
   template < class t_TyFunctor >
   size_t NApplyContent( size_t _nTokenBegin, size_t _nTokenEnd, t_TyFunctor && _rrftor )
   {
-    return m_saTokens.NApplyContiguous( _nTokenBegin, _nTokenEnd, std::forward< t_TyFunctor >( _rrftor ) );
+    return m_saTokens.NApplyContiguous( _nTokenBegin+1, _nTokenEnd+1, std::forward< t_TyFunctor >( _rrftor ) );
   }
   template < class t_TyFunctor >
   size_t NApplyContent( size_t _nTokenBegin, size_t _nTokenEnd, t_TyFunctor && _rrftor ) const
   {
-    return m_saTokens.NApplyContiguous( _nTokenBegin, _nTokenEnd, std::forward< t_TyFunctor >( _rrftor ) );
+    return m_saTokens.NApplyContiguous( _nTokenBegin+1, _nTokenEnd+1, std::forward< t_TyFunctor >( _rrftor ) );
   }
   void AddToken( _TyLexToken && _rrtok )
   {
@@ -395,6 +395,7 @@ public:
   #if ASSERTSENABLED
     if ( !!m_pXp && !!m_lContexts.size() )
     {
+      Assert( m_itCurContext != m_lContexts.end() ); // We should never be at the end.
       vtyTokenIdent tidTail = m_lContexts.back().GetTagTokenId();
       Assert( ( tidTail == s_knTokenXMLDecl ) == ( 1 == m_lContexts.size() ) );
       Assert( ( ( tidTail == s_knTokenSTag ) || ( tidTail == s_knTokenEmptyElemTag ) ) == ( 1 < m_lContexts.size() ) );
@@ -425,14 +426,15 @@ public:
   GetContextCur()
   {
     Assert( m_lContexts.size() );
-    Assert( m_itCurContext != m_lContexts.end() );
+    AssertValid();
     return *m_itCurContext;
   }
 
   _TyXmlToken & GetXMLDeclToken( _TyXMLDeclProperties * _pXMLDeclProperties = 0 )
   {
     Assert( m_pXp );
-    *_pXMLDeclProperties = m_XMLDeclProperties;
+    if ( _pXMLDeclProperties )
+      *_pXMLDeclProperties = m_XMLDeclProperties;
     return m_lContexts.front().GetTag();
   }
 // Navigation:
@@ -709,6 +711,7 @@ protected:
         }
       }
     }
+    m_lContexts.pop_back();
   }
   void _ProcessToken( unique_ptr< _TyLexToken > & _rpltok )
   {
@@ -727,19 +730,23 @@ protected:
           _ProcessNamespaces( *_rpltok );
         else
           _ProcessNoNamespaces( *_rpltok );
+        _PushNewContext( *_rpltok );
       }
       break;
       case s_knTokenETag:
         _ProcessEndTag( *_rpltok );
-      break;
-      case s_knTokenComment:
-        _ProcessComment( *_rpltok );
       break;
       case s_knTokenCDataSection:
         _ProcessCDataSection( *_rpltok );
       break;
       case s_knTokenCharData:
         _ProcessCharData( *_rpltok );
+      break;
+      case s_knTokenComment:
+        _ProcessComment( *_rpltok );
+      break;
+      case s_knTokenProcessingInstruction:
+        _ProcessProcessingInstruction( *_rpltok );
       break;
     }
   }
@@ -753,11 +760,12 @@ protected:
     const _TyLexToken & rltokTagStart = rxtTagStart.GetLexToken();
     const _TyLexValue & rvalTagStart = rltokTagStart.GetValue()[0];
     _TyStrView svTagStart;
-    _rltok.KGetStringView( svTagStart, rvalTagStart[0] );
+    rltokTagStart.KGetStringView( svTagStart, rvalTagStart[0] );
     _TyStrView svTagEnd;
     _rltok.KGetStringView( svTagEnd, rvalTagEnd[0] );
     VerifyThrowSz( svTagStart == svTagEnd, "Start tag[%s] doesn't match end tag[%s]", StrConvertString<char>( svTagStart ).c_str(), StrConvertString<char>( svTagEnd ).c_str() );
     // The context is always popped later in FNextTag().
+    _TyLexToken ltokEat( std::move( _rltok ) ); // eat the token.
   }
   void _ProcessXMLDecl( _TyLexToken & _rltok )
   {
@@ -775,6 +783,23 @@ protected:
     drToken.m_posEnd -= 3; // -->
     // REVIEW:<dbien>: Could strip whitespace off front and rear but...
     _rltok.template emplaceValue< _TyData >( drToken );
+    _AppendContextContent( _rltok );
+  }
+  void _ProcessProcessingInstruction( _TyLexToken & _rltok )
+  {
+    // We may have some "meat" after the PITarget - or not.
+    vtyDataPosition posMeatBegin = _rltok[1].GetVal< vtyDataPosition >();
+    if ( vkdpNullDataPosition == posMeatBegin )
+    {
+      // Then insert a null _TyData:
+      _rltok[1].template emplaceArgs< _TyData >();
+    }
+    else
+    {
+      _l_data_range drToken;
+      _rltok.GetTokenDataRange( drToken );
+      _rltok[1].template emplaceArgs< _TyData >( posMeatBegin, drToken.end()-2, s_kdtPlainText, s_knTriggerPITargetMeatBegin ); // subtract "?>".
+    }
     _AppendContextContent( _rltok );
   }
   void _ProcessCDataSection( _TyLexToken & _rltok )
@@ -858,7 +883,7 @@ protected:
         VerifyThrowSz( !lPrefixesUsed.FFind( &rvtPrefix ), "Namespaces Validity: Cannot use same namespace prefix more than once within the same tag." );
         ALLOCA_LIST_PUSH( lPrefixesUsed, &rvtPrefix );
         _TyStrView svUri;
-        rrgAttr[3].KGetStringView( _rltok, svUri );
+        rrgAttr[2].KGetStringView( _rltok, svUri );
         _ProcessTagName( rrgAttr ); // For xmlns attr names we process the same as we process the tag name. We want to leave both "xmlns" and any colon and prefix in the attr name.
         // Add the URI to the UriMap:
         const _TyUriAndPrefixMap::value_type & rvtUri = m_pXp->_RStrAddUri( svUri );
@@ -1021,8 +1046,9 @@ protected:
       );
       Assert( ppvalCur == ppvalEnd );
     }//EB
+    bool fLessThan = true;
     auto lambdaCompareAttrPointers =  
-      [&_rltok]( const _TyLexValue *& _rlpt, const _TyLexValue *& _rrpt ) -> bool
+      [&_rltok,&fLessThan]( const _TyLexValue *& _rlpt, const _TyLexValue *& _rrpt ) -> bool
       {
         // First compare the names:
         _TyStrView svNameLeft;
@@ -1044,12 +1070,13 @@ protected:
             iComp = rxnvwLeft.ICompareForUniqueAttr( rxnvwRight );
           }
         }
-        return iComp < 0;
+        return fLessThan ? ( iComp < 0 ) : ( iComp == 0 );
       };
 
     sort( ppvalBegin, ppvalEnd, lambdaCompareAttrPointers );
     // Check for adjacent equal object. We will report all violations, cuz duh...
     bool fAnyDuplicateAttrNames = false;
+    fLessThan = false; // cause the lambda to return equal, not less than.
     for ( const _TyLexValue ** ppDupeCur = adjacent_find( ppvalBegin, ppvalEnd, lambdaCompareAttrPointers );
           ( ppvalEnd != ppDupeCur );
           ppDupeCur = adjacent_find( ppDupeCur+1, ppvalEnd, lambdaCompareAttrPointers ) )

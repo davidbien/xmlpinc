@@ -143,8 +143,6 @@ public:
     VerifyThrowSz( _rxrc.FInProlog() || _rxrc.FInsideDocumentTag(), "Read cursor is in an invalid state." );
     // Read each element in order. When done transfer the user object, UriMap and PrefixMap over to this object.
     // We can attach at any point during the iteration and we will glean the XMLDecl top node from the read cursor.
-    // We always obtain the XMLDecl node from the read cursor specially.
-    _TyBase::AcquireTag( std::move( _rxrc.GetXMLDeclToken( &m_XMLDeclProperties ) ) );
     
     bool fStartedInProlog = _rxrc.FInProlog();
     // We only read the top-level content tokens if we are currently at the XMLDecl tag.
@@ -167,6 +165,9 @@ public:
       Assert( _rxrc.FInEpilog() );
       _AcquireContent( _rxrc.GetContextCur() );
     }
+    // We always obtain the XMLDecl node from the read cursor specially.
+    _TyBase::AcquireTag( std::move( _rxrc.GetXMLDeclToken( &m_XMLDeclProperties ) ) );
+
     // Now transfer/copy over the various objects from the parser to allow this object to exist solo - while,
     //  of course, messing with the parser state. So we must make sure to disconnect the parser after we are done
     //  with this.
