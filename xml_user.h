@@ -113,7 +113,7 @@ struct _TGetCharRefConvertBuffer<wchar_t>
 #endif
 };
 template < class t_TyChar >
-using TGetCharRefConvertBuffer = _TGetCharRefConvertBuffer< t_TyChar >;
+using TGetCharRefConvertBuffer = typename _TGetCharRefConvertBuffer< t_TyChar >::type;
 
 template < class t_TyEntityMap, bool t_kfSupportDTD >
 class xml_user_obj 

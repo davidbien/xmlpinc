@@ -286,6 +286,7 @@ public:
   typedef _l_value< _TyLexTraits > _TyLexValue;
   typedef _l_user_context< _TyLexTraits > _TyUserContext;
   typedef _l_data< _TyChar > _TyData;
+  typedef _l_state_proto< _TyChar > _TyStateProto;
   typedef xml_parser< _TyXmlTraits > _TyXmlParser;
   friend _TyXmlParser;
   typedef _xml_read_context< _TyXmlTraits > _TyXmlReadContext;
@@ -583,12 +584,31 @@ public:
     m_fSkippingTags = false; // This optimizes processing a bit.
   }
 protected:
+  void _InitStartStates()
+    requires( is_same_v< _TyChar, char32_t > )
+  {
+    m_pspStartXmlDecl = (const _TyStateProto *)&startUTF32XMLDecl< _TyLexTraits >;
+    m_pspStartAll = (const _TyStateProto *)&startUTF32All< _TyLexTraits >;
+  }
+  void _InitStartStates()
+    requires( is_same_v< _TyChar, char16_t > )
+  {
+    m_pspStartXmlDecl = (const _TyStateProto *)&startUTF16XMLDecl< _TyLexTraits >;
+    m_pspStartAll = (const _TyStateProto *)&startUTF16All< _TyLexTraits >;
+  }
+  void _InitStartStates()
+    requires( is_same_v< _TyChar, char8_t > )
+  {
+    m_pspStartXmlDecl = (const _TyStateProto *)&startUTF8XMLDecl< _TyLexTraits >;
+    m_pspStartAll = (const _TyStateProto *)&startUTF8All< _TyLexTraits >;
+  }
   void _AttachXmlParser( _TyXmlParser * _pXp )
   {
     Assert( !!_pXp );
     VerifyThrow( !!_pXp );
     if ( !!m_pXp )
       _DetachXmlParser();
+    _InitStartStates();
     m_pXp = _pXp;
     m_pXp->_InitMapsAndUserObj();
     _InitNamespaceMap();
@@ -596,7 +616,7 @@ protected:
     { //B
       unique_ptr< _TyLexToken > pltokFirst;
       // For the first token we must check to see if we get an XMLDecl token since it is optional.
-      bool fGotXMLDecl = _FGetToken( pltokFirst, (const ns_xmlplex::_TyStateProto *)&startXMLDecl< _TyLexTraits > );
+      bool fGotXMLDecl = _FGetToken( pltokFirst, m_pspStartXmlDecl );
       if ( !fGotXMLDecl )
       {
         // Then we are going to create a "fake" XMLDecl token because the invariant is that the first
@@ -636,6 +656,8 @@ protected:
     Assert( !!m_pXp );
     if ( m_fUpdateSkip )
       _UpdateSkip();
+    if ( !_pspStart )
+      _pspStart = m_pspStartAll;
     return m_pXp->GetLexicalAnalyzer().FGetToken( _rpltok, &*m_rgSkipTokensCur.begin(), &*m_rgSkipTokensCur.begin() + m_nSkip, _pspStart, false );
   }
   bool _FIsContentToken( vtyTokenIdent _tid ) const
@@ -1141,6 +1163,8 @@ protected:
 
 // DS:
   _TyXmlParser * m_pXp{nullptr}; // the pointer to the XML parser we are reading tokens from.
+  const _TyStateProto * m_pspStartXmlDecl{nullptr};
+  const _TyStateProto * m_pspStartAll{nullptr};
   _TyListReadContexts m_lContexts;
   unique_ptr< _TyLexToken > m_pltokLookahead;
   typename _TyListReadContexts::iterator m_itCurContext{m_lContexts.end()};

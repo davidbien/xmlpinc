@@ -8,16 +8,16 @@
 #include "xml_ns.h"
 #include "xml_types.h"
 #include "xml_traits.h"
-#include "_xmlplex.h"
+#include "_xmlplex_utf32.h"
+#include "_xmlplex_utf16.h"
+#include "_xmlplex_utf8.h"
 
 __XMLP_BEGIN_NAMESPACE
 __XMLPLEX_USING_NAMESPACE
 
-
 // 1) Need mode to skip comments that can be turned on and off.
 // 2) Ditto for processing instructions.
 // 3) May want an FNextTag() as well as an FNextToken(). FNextTag() may skip CharData, whereas FNextToken() would not.
-
 
 template < class t_TyXmlTraits >
 class xml_parser
