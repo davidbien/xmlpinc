@@ -36,7 +36,7 @@ public:
 // Declare our lexical analyzer traits:
   typedef xml_user_obj< _TyChar, s_kfSupportDTD > _TyLexUserObj;
   typedef xml_namespace_value_wrap< _TyChar > _TyXmlNamespaceValueWrap;
-  typedef _l_value_traits< _TyXmlNamespaceValueWrap > _TyValueTraitsPack; // We are extending the types in _l_value by this one type currently.
+  typedef tuple< _TyXmlNamespaceValueWrap > _TyValueTraitsPack; // We are extending the types in _l_value by this one type currently.
   typedef _l_traits< _TyTransport, _TyLexUserObj, _TyValueTraitsPack > _TyLexTraits;
 };
 

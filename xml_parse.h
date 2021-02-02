@@ -166,4 +166,49 @@ protected:
   _TyUriAndPrefixMap m_mapPrefixes;
 };
 
+template < class t_TyChar >
+struct _xml_var_get_var_transport
+{
+  typedef _l_transport_file< t_TyChar, false > _TyTransportFile;
+  typedef _l_transport_file< t_TyChar, true > _TyTransportFileSwitchEndian;
+  typedef _l_transport_mapped< t_TyChar, false > _TyTransportMapped;
+  typedef _l_transport_mapped< t_TyChar, true > _TyTransportMappedSwitchEndian;
+  typedef _l_transport_fixed< t_TyChar, false > _TyTransportFixed;
+  typedef _l_transport_fixed< t_TyChar, true > _TyTransportFixedSwitchEndian;
+  // For char8_t we don't include the switch endian types...
+  using _TyTransportVar = typename std::conditional< is_same_v< t_TyChar, char8_t >, _l_transport_var< _TyTransportFile, _TyTransportMapped, _TyTransportFixed >,
+    _l_transport_var< _TyTransportFile, _TyTransportFileSwitchEndian, _TyTransportMapped, _TyTransportMappedSwitchEndian, _TyTransportFixed, _TyTransportFixedSwitchEndian > >::type;
+};
+template < class t_TyChar >
+using xml_var_get_var_transport_t = typename _xml_var_get_var_transport< t_TyChar >::_TyTransportVar;
+
+// Adaptors to allow access to single switch endian types. Yes, this is annoying but mostly the _xml_var_get_var_transport would be used to access this functionality one would think.
+template < class t_TyChar >
+using xml_get_switch_endian_transport_file_t = typename _l_transport_file< t_TyChar, true >;
+template < class t_TyChar >
+using xml_get_switch_endian_transport_mapped_t = typename _l_transport_mapped< t_TyChar, true >;
+template < class t_TyChar >
+using xml_get_switch_endian_transport_fixed_t = typename _l_transport_fixed< t_TyChar, true >;
+
+// When we actually support DTD and validation (if ever because they aren't that important to me) then we might have to make this more complex.
+template < class t_TyTransport >
+using TGetXmlTraitsDefault = xml_traits< t_TyTransport, false, false >;
+
+// xml_parser_var:
+// Templatized by transport template and set of characters types to support. To create a _l_transport_var use xml_var_get_var_transport_t<> or something like it.
+template < template < class t_TyChar > t_TempTyTransport, class t_TyTpCharPack = tuple< char32_t, char16_t, char8_t > >
+class xml_parser_var
+{
+  typedef xml_parser_var _TyThis;
+public:
+  typedef t_TyTpCharPack _TyTpCharPack;
+  typedef MultiplexTuplePack_t< t_TempTyTransport, _TyTpCharPack > _TyTpTransports;
+  typedef MultiplexTuplePack_t< TGetXmlTraitsDefault, _TyTpTransports > _TyTpXmlTraits;
+  // Now get the variant type:
+  typedef MultiplexTuplePack_t< xml_parser, _TyTpXmlTraits, variant > _TyParserVariant;
+
+protected:
+  _TyParserVariant m_varParser;
+};
+
 __XMLP_END_NAMESPACE
