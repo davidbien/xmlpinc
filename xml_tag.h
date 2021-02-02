@@ -113,7 +113,7 @@ public:
   typedef typename _TyXmlTraits::_TyChar _TyChar;
   typedef typename _TyXmlTraits::_TyTransport _TyTransport;
   typedef typename _TyXmlTraits::_TyLexUserObj _TyLexUserObj;
-  typedef typename _TyXmlTraits::_TyUriAndPrefixMap _TyUriAndPrefixMap;
+  typedef typename _xml_namespace_map_traits< _TyChar >::_TyUriAndPrefixMap _TyUriAndPrefixMap;
   typedef xml_read_cursor< _TyXmlTraits > _TyReadCursor;
   typedef XMLDeclProperties< _TyChar > _TyXMLDeclProperties;
 

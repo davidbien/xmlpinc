@@ -5,6 +5,9 @@
 // 06JAN2021
 // Types definitions and predeclares for XML parser.
 
+#include <unordered_set>
+#include <unordered_map>
+#include "upslist.h"
 #include "xml_ns.h"
 #include "_l_types.h"
 
@@ -22,15 +25,15 @@ static const vtyDataType s_kdtPEReference = 4;
 #define STR_XML_WHITESPACE_TOKEN "\n\r\x20\t"
 
 // xml_user.h:
-template < class t_TyEntityMap, bool t_kfSupportDTD >
+template < class t_tyChar, bool t_kfSupportDTD >
 class _xml_user_obj_base_dtd;
-template < class t_TyEntityMap, bool t_kfSupportDTD >
+template < class t_tyChar, bool t_kfSupportDTD >
 class xml_user_obj;
 
 // xml_namespace.h
-template < class t_TyUriMap >
+template < class t_TyChar >
 class _xml_namespace_uri;
-template < class t_TyNamespaceMap, class t_TyUriAndPrefixMaps >
+template < class t_TyChar >
 class xml_namespace_value_wrap;
 
 // xml_cursor.h:
@@ -55,6 +58,23 @@ class xml_parser;
 
 // xml_exc.h:
 class xml_parse_exception;
+
+// _xml_namespace_map_traits:
+// This just organizes the types for the namespace map in one place because we reference it in a couple of places and we don't want to templatize by the full type because it results in unreadable log messages, etc.
+template < class t_TyChar >
+struct _xml_namespace_map_traits
+{
+  typedef t_TyChar _TyChar;
+  typedef basic_string< _TyChar > _TyStdStr;
+  typedef basic_string_view< _TyChar > _TyStrView;
+  typedef StringTransparentHash< _TyChar > _TyStringTransparentHash; // Allow lookup by string_view without creating a string.
+  typedef unordered_set< _TyStdStr, _TyStringTransparentHash, std::equal_to<void> > _TyUriAndPrefixMap;
+  typedef _xml_namespace_uri< _TyChar > _TyNamespaceUri;
+  typedef UniquePtrSList< _TyNamespaceUri > _TyUpListNamespaceUris;
+  // first is a pointer to a PrefixMap value for the prefix, second is the current list of namespace URIs for that prefix.
+  typedef pair< const typename _TyUriAndPrefixMap::value_type *, _TyUpListNamespaceUris > _TyNamespaceMapped;
+  typedef unordered_map< _TyStdStr, _TyNamespaceMapped, _TyStringTransparentHash, std::equal_to<void> > _TyNamespaceMap;
+};
 
 template < class t_TyChar >
 class XMLDeclProperties

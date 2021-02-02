@@ -279,10 +279,10 @@ public:
   typedef typename _TyXmlTraits::_TyChar _TyChar;
   typedef typename _TyXmlTraits::_TyStdStr _TyStdStr;
   typedef typename _TyXmlTraits::_TyStrView _TyStrView;
-  typedef typename _TyXmlTraits::_TyNamespaceMap _TyNamespaceMap;
-  typedef typename _TyXmlTraits::_TyUriAndPrefixMap _TyUriAndPrefixMap;  
-  typedef typename _TyXmlTraits::_TyXmlNamespaceValueWrap _TyXmlNamespaceValueWrap;
-  typedef typename _TyXmlTraits::_TyNamespaceUri _TyNamespaceUri;
+  typedef typename _xml_namespace_map_traits< _TyChar >::_TyUriAndPrefixMap _TyUriAndPrefixMap;
+  typedef typename _xml_namespace_map_traits< _TyChar >::_TyNamespaceUri _TyNamespaceUri;
+  typedef typename _xml_namespace_map_traits< _TyChar >::_TyNamespaceMap _TyNamespaceMap;
+  typedef xml_namespace_value_wrap< _TyChar > _TyXmlNamespaceValueWrap;
   typedef _l_value< _TyLexTraits > _TyLexValue;
   typedef _l_user_context< _TyLexTraits > _TyUserContext;
   typedef _l_data< _TyChar > _TyData;

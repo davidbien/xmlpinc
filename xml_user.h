@@ -18,16 +18,17 @@ __XMLP_BEGIN_NAMESPACE
 
 // _xml_user_obj_base_dtd:
 // Contains some infrastructure to support the DTD if desired.
-template < class t_TyEntityMap, bool t_kfSupportDTD >
+template < class t_TyChar, bool t_kfSupportDTD >
 class _xml_user_obj_base_dtd
 {
   typedef _xml_user_obj_base_dtd _TyThis;
 public:
-  typedef t_TyEntityMap _TyEntityMap;
+  typedef t_TyChar _TyChar;
   static constexpr bool s_kfSupportDTD = true;
-  typedef typename _TyEntityMap::key_type _TyStdStr;
-  typedef typename _TyStdStr::value_type _TyChar;
+  typedef basic_string< _TyChar > _TyStdStr;
   typedef basic_string_view< _TyChar > _TyStrView;
+  typedef StringTransparentHash< _TyChar > _TyStringTransparentHash; // Allow lookup by string_view without creating a string.
+  typedef unordered_map< _TyStdStr, _TyStdStr, _TyStringTransparentHash, std::equal_to<void> > _TyEntityMap;
 
   _TyEntityMap m_mapParameterEntities{};
 
@@ -57,16 +58,18 @@ public:
   }
 };
 // Non-DTD base.
-template < class t_TyEntityMap >
-class _xml_user_obj_base_dtd< t_TyEntityMap, false >
+template < class t_TyChar >
+class _xml_user_obj_base_dtd< t_TyChar, false >
 {
   typedef _xml_user_obj_base_dtd _TyThis;
 public:
-  typedef t_TyEntityMap _TyEntityMap;
+  typedef t_TyChar _TyChar;
   static constexpr bool s_kfSupportDTD = false;
-  typedef typename _TyEntityMap::key_type _TyStdStr;
-  typedef typename _TyStdStr::value_type _TyChar;
+  typedef basic_string< _TyChar > _TyStdStr;
   typedef basic_string_view< _TyChar > _TyStrView;
+  typedef StringTransparentHash< _TyChar > _TyStringTransparentHash; // Allow lookup by string_view without creating a string.
+  typedef unordered_map< _TyStdStr, _TyStdStr, _TyStringTransparentHash, std::equal_to<void> > _TyEntityMap;
+
   void swap( _TyThis & _r )
   {
   }
@@ -79,7 +82,6 @@ public:
     // no-op - just here so that things compile.
     return *(_TyStdStr*)0;
   }
-
 };
 
 // char32_t:
@@ -115,18 +117,18 @@ struct _TGetCharRefConvertBuffer<wchar_t>
 template < class t_TyChar >
 using TGetCharRefConvertBuffer = typename _TGetCharRefConvertBuffer< t_TyChar >::type;
 
-template < class t_TyEntityMap, bool t_kfSupportDTD >
+template < class t_TyChar, bool t_kfSupportDTD >
 class xml_user_obj 
-  : public _xml_user_obj_base_dtd< t_TyEntityMap, t_kfSupportDTD >
+  : public _xml_user_obj_base_dtd< t_TyChar, t_kfSupportDTD >
 {
   typedef xml_user_obj _TyThis;
-  typedef _xml_user_obj_base_dtd< t_TyEntityMap, t_kfSupportDTD > _TyBase;
+  typedef _xml_user_obj_base_dtd< t_TyChar, t_kfSupportDTD > _TyBase;
 public:
-  typedef t_TyEntityMap _TyEntityMap;
   using _TyBase::s_kfSupportDTD;
   using typename _TyBase::_TyChar;
   using typename _TyBase::_TyStdStr;
   using typename _TyBase::_TyStrView;
+  using typename _TyBase::_TyEntityMap;
   typedef _l_data< _TyChar > _TyData;
   typedef _l_action_object_base< _TyChar, false > _TyAxnObjBase;
   typedef TGetCharRefConvertBuffer< _TyChar > _TyCharRefConvertBuffer;

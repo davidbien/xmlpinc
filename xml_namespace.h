@@ -15,17 +15,17 @@ __XMLP_BEGIN_NAMESPACE
 
 // _xml_namespace_uri:
 // This holds the current URI associated with the key which maps to this.
-template < class t_TyUriMap >
+template < class t_TyChar >
 class _xml_namespace_uri
 {
   typedef _xml_namespace_uri _TyThis;
 public:
-  typedef t_TyUriMap _TyUriMap;
-  typedef typename _TyUriMap::key_type _TyUriKey;
-  typedef typename _TyUriMap::value_type _TyUriValue;
-  typedef _TyUriKey _TyStdStr;
-  typedef typename _TyUriKey::value_type _TyChar;
-  typedef basic_string_view< _TyChar > _TyStdStrView;
+  typedef t_TyChar _TyChar;
+  typedef typename _xml_namespace_map_traits< _TyChar >::_TyStdStr _TyStdStr;
+  typedef typename _xml_namespace_map_traits< _TyChar >::_TyStrView _TyStrView;
+  typedef typename _xml_namespace_map_traits< _TyChar >::_TyUriAndPrefixMap _TyUriAndPrefixMap;
+  typedef typename _TyUriAndPrefixMap::key_type _TyUriKey;
+  typedef typename _TyUriAndPrefixMap::value_type _TyUriValue;
 
   ~_xml_namespace_uri() = default;
   _xml_namespace_uri( const _TyUriValue * _pvtUriMap )
@@ -49,26 +49,26 @@ protected:
 };
 
 // Define a wrapper for namespace map value of some type.
-template < class t_TyNamespaceMap, class t_TyUriAndPrefixMaps >
+template < class t_TyChar >
 class xml_namespace_value_wrap
 {
   typedef xml_namespace_value_wrap _TyThis;
 public:
-  typedef t_TyNamespaceMap _TyNamespaceMap;
-  typedef typename _TyNamespaceMap::key_type _TyKey;
-  typedef typename _TyKey::value_type _TyChar;
-  typedef _TyKey _TyStdStr;
-  typedef typename _TyNamespaceMap::mapped_type _TyMapped; // pair< const typename _TyUriAndPrefixMap::value_type *, _TyUpListNamespaceUris >
-  typedef _xml_namespace_uri< t_TyUriAndPrefixMaps > _TyNamespaceUri;
-  typedef typename _TyNamespaceMap::value_type _TyMapValue;
-  typedef typename t_TyUriAndPrefixMaps::value_type _TyUriAndPrefixValueType;
+  typedef t_TyChar _TyChar;
+  typedef typename _xml_namespace_map_traits< _TyChar >::_TyStdStr _TyStdStr;
+  typedef typename _xml_namespace_map_traits< _TyChar >::_TyStrView _TyStrView;
+  typedef typename _xml_namespace_map_traits< _TyChar >::_TyUriAndPrefixMap _TyUriAndPrefixMap;
+  typedef typename _xml_namespace_map_traits< _TyChar >::_TyNamespaceUri _TyNamespaceUri;
+  typedef typename _xml_namespace_map_traits< _TyChar >::_TyNamespaceMap _TyNamespaceMap;
+  typedef typename _TyNamespaceMap::value_type _TyNamespaceMapValue;
+  typedef typename _TyUriAndPrefixMap::value_type _TyUriAndPrefixValue;
 
   ~xml_namespace_value_wrap()
   {
     ResetNamespaceDecls();
   }
   xml_namespace_value_wrap() = default;
-  xml_namespace_value_wrap(  _TyMapValue & _rvt, _TyNamespaceMap * _pmapReleaseOnDestruct  )
+  xml_namespace_value_wrap(  _TyNamespaceMapValue & _rvt, _TyNamespaceMap * _pmapReleaseOnDestruct  )
     : m_pvtNamespaceMap( !_pmapReleaseOnDestruct ? nullptr : &_rvt ),
       m_pmapReleaseOnDestruct( _pmapReleaseOnDestruct ),
       m_pvtUri( &_rvt.second.second.front().RStrUri() ),
@@ -125,7 +125,7 @@ public:
     AssertValid();
     return !!m_pmapReleaseOnDestruct;
   }
-  const _TyMapValue * PVtNamespaceMapValue() const
+  const _TyNamespaceMapValue * PVtNamespaceMapValue() const
   {
     return m_pvtNamespaceMap;
   }
@@ -257,10 +257,10 @@ public:
 protected:
   // If these are non-null then destruction of this object will pop the top of m_pvtNamespaceMap->second's list.
   // These are only non-null for namespace declaration attributes.
-  _TyMapValue * m_pvtNamespaceMap{nullptr};
+  _TyNamespaceMapValue * m_pvtNamespaceMap{nullptr};
   _TyNamespaceMap * m_pmapReleaseOnDestruct{nullptr};
-  const typename t_TyUriAndPrefixMaps::value_type * m_pvtUri{nullptr};
-  const typename t_TyUriAndPrefixMaps::value_type * m_pvtPrefix{nullptr};
+  const typename _TyUriAndPrefixValue * m_pvtUri{nullptr};
+  const typename _TyUriAndPrefixValue * m_pvtPrefix{nullptr};
 };
 
 __XMLP_END_NAMESPACE

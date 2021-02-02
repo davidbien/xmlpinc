@@ -26,13 +26,14 @@ class xml_parser
   friend xml_read_cursor< t_TyXmlTraits >;
 public:
   typedef t_TyXmlTraits _TyXmlTraits;
+  typedef typename _TyXmlTraits::_TyChar _TyChar;
   typedef typename _TyXmlTraits::_TyLexTraits _TyLexTraits;
   typedef _lexical_analyzer< _TyLexTraits > _TyLexicalAnalyzer;
   typedef _l_stream< _TyLexTraits > _TyStream;
   typedef typename _TyLexTraits::_TyUserObj _TyUserObj;
   typedef typename _TyLexTraits::_TyPtrUserObj _TyPtrUserObj;
   typedef typename _TyLexTraits::_TyTransport _TyTransport;
-  typedef typename _TyXmlTraits::_TyUriAndPrefixMap _TyUriAndPrefixMap;
+  typedef typename _xml_namespace_map_traits< _TyChar >::_TyUriAndPrefixMap _TyUriAndPrefixMap;
   typedef typename _TyXmlTraits::_TyStdStr _TyStdStr;
   typedef typename _TyXmlTraits::_TyStrView _TyStrView;
   typedef xml_read_cursor< _TyXmlTraits > _TyReadCursor;
