@@ -59,6 +59,11 @@ class xml_parser;
 // xml_exc.h:
 class xml_parse_exception;
 
+// When we actually support DTD and validation (if ever because they aren't that important to me) then we might have to make this more complex.
+// This is an adaptor for use with MultiplexTuplePack_t<>.
+template < class t_TyTransport >
+using TGetXmlTraitsDefault = xml_traits< t_TyTransport, false, false >;
+
 // _xml_namespace_map_traits:
 // This just organizes the types for the namespace map in one place because we reference it in a couple of places and we don't want to templatize by the full type because it results in unreadable log messages, etc.
 template < class t_TyChar >

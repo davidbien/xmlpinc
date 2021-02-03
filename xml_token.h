@@ -116,4 +116,29 @@ protected:
   _TyLexToken m_tokToken;
 };
 
+// As with all tokens: No default constructor, which translates to a variant: No monostate.
+template < class ... t_TyTpTransports >
+class xml_token_var
+{
+  typedef xml_token_var _TyThis;
+public:
+  typedef t_TyTpTransports _TyTpTransports;
+  typedef MultiplexTuplePack_t< TGetXmlTraitsDefault, _TyTpTransports > _TyTpXmlTraits;
+  // Define our variant type - there is no monostate for this.
+  typedef MultiplexTuplePack_t< xml_token, _TyTpXmlTraits, variant > _TyVariant;
+
+  vtyTokenIdent GetTokenId() const
+  {
+    return std::visit( _VisitHelpOverloadFCall {
+      [this]( auto _tXmlToken ) -> vtyTokenIdent
+      {
+        return _tXmlToken.GetTokenId();
+      }
+    }, m_varXmlToken );
+  }
+
+protected:
+  _TyVariant m_varXmlToken;
+};
+
 __XMLP_END_NAMESPACE

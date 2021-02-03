@@ -65,7 +65,6 @@ public:
   {
     m_lexXml.template emplaceVarTransport< t_TyTransport >( std::forward< t_TysArgs >( _args )... );
   }
-
   _TyLexicalAnalyzer & GetLexicalAnalyzer()
   {
     return m_lexXml;
@@ -117,6 +116,13 @@ public:
   const _TyUriAndPrefixMap & GetPrefixMap() const
   {
     return m_mapPrefixes;
+  }
+  // This method will create and attach a read cursor.
+  _TyReadCursor GetReadCursor()
+  {
+    _TyReadCursor xrc;
+    AttachReadCursor( xrc );
+    return xrc;
   }
   // Attaching a read cursor starts the parsing process - the first token is parsed when a read cursor is attached.
   void AttachReadCursor( _TyReadCursor & _xrc )
@@ -190,10 +196,6 @@ using xml_get_switch_endian_transport_mapped_t = typename _l_transport_mapped< t
 template < class t_TyChar >
 using xml_get_switch_endian_transport_fixed_t = typename _l_transport_fixed< t_TyChar, true >;
 
-// When we actually support DTD and validation (if ever because they aren't that important to me) then we might have to make this more complex.
-template < class t_TyTransport >
-using TGetXmlTraitsDefault = xml_traits< t_TyTransport, false, false >;
-
 // xml_parser_var:
 // Templatized by transport template and set of characters types to support. To create a _l_transport_var use xml_var_get_var_transport_t<> or something like it.
 template < template < class t_TyChar > t_TempTyTransport, class t_TyTpCharPack = tuple< char32_t, char16_t, char8_t > >
@@ -204,9 +206,46 @@ public:
   typedef t_TyTpCharPack _TyTpCharPack;
   typedef MultiplexTuplePack_t< t_TempTyTransport, _TyTpCharPack > _TyTpTransports;
   typedef MultiplexTuplePack_t< TGetXmlTraitsDefault, _TyTpTransports > _TyTpXmlTraits;
-  // Now get the variant type:
-  typedef MultiplexTuplePack_t< xml_parser, _TyTpXmlTraits, variant > _TyParserVariant;
+  // Now get the variant type - include a monostate so that we can default initialize:
+  typedef MultiplexMonostateTuplePack_t< xml_parser, _TyTpXmlTraits, variant > _TyParserVariant;
+  // For the cursor we don't need a monostate because we will deliver the fully created type from a local method.
+  typedef xml_cursor_var< _TyTpTransports > _TyXmlCursorVar;
 
+  ~xml_parser_var() = default;
+  xml_parser_var() = default;
+  xml_parser_var( xml_parser_var const & ) = delete;
+  xml_parser_var & operator=( xml_parser_var const & ) = delete;
+  xml_parser_var( xml_parser_var && ) = default;
+  xml_parser_var & operator=( xml_parser_var && ) = default;
+  void swap( _TyThis & _r )
+  {
+    m_varParser.swap( _r );
+  }
+
+  bool FIsNull() const
+  {
+    return FIsA< monostate >();
+  }
+  template < class t_TyParser >
+  bool FIsA() const
+  {
+    return holds_alternative< t_TyParser >();
+  }
+  // Create and return an attached read cursor.
+  _TyXmlCursorVar GetReadCursor()
+  {
+    Assert( !FIsNull() );
+    return std::visit( _VisitHelpOverloadFCall {
+      [](monostate) 
+      {
+        THROWNAMEDBADVARIANTACCESSEXCEPTION("Need to create a parser first.");
+      },
+      [this]( auto _tParser ) -> _TyXmlCursorVar
+      {
+        return _TyXmlCursorVar( _tParser.GetReadCursor() );
+      }
+    }, m_varParser );
+  }
 protected:
   _TyParserVariant m_varParser;
 };

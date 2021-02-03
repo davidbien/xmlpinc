@@ -527,6 +527,7 @@ public:
     Assert( m_lContexts.size() == 1 );
     return false;
   }
+protected:
   bool _FProcessNextTag()
   {
     if ( !m_pltokLookahead )
@@ -583,7 +584,6 @@ public:
     m_pXp->_SetFilterAllTokenData( false );
     m_fSkippingTags = false; // This optimizes processing a bit.
   }
-protected:
   void _InitStartStates()
     requires( is_same_v< _TyChar, char32_t > )
   {
@@ -1195,6 +1195,83 @@ protected:
   bool m_fSkipComments{false};
   bool m_fSkipPI{false};
   _TyXMLDeclProperties m_XMLDeclProperties;
+};
+
+// xml_read_cursor_var:
+// A variant that is able to hold multiple *character types* of same transports.
+// t_TyTpTransports: Is a tuple<> pack of transport types that the cursor will support.
+template < class t_TyTpTransports >
+class xml_read_cursor_var
+{
+  typedef xml_read_cursor_var _TyThis;
+public:
+  typedef t_TyTpTransports _TyTpTransports;
+  typedef MultiplexTuplePack_t< TGetXmlTraitsDefault, _TyTpTransports > _TyTpXmlTraits;
+  // Define our variant type - there is no monostate for this (currently - we'll see if we need it).
+  typedef MultiplexTuplePack_t< xml_read_cursor, _TyTpXmlTraits, variant > _TyVariant;
+  typedef xml_token_var< _TyTpTransports > _TyXmlTokenVar;
+  typedef optional< _TyXmlTokenVar > _TyOptXmlTokenVar;
+
+  ~xml_read_cursor_var() = default;
+  xml_read_cursor_var() = delete; // We have no monostate in our variant. We could still allow this, but I'd prefer not to.
+  template < class t_TyXmlReadCursor >
+  explicit xml_read_cursor_var( t_TyXmlReadCursor && _rrxrc )
+    : m_varCursor( std::move( __rrxrc ) )
+  {
+  }
+  xml_read_cursor_var( xml_read_cursor_var const & ) = delete;
+  xml_read_cursor_var& operator =( xml_read_cursor_var const & ) = delete;
+  xml_read_cursor_var( xml_read_cursor_var && ) = default;
+  xml_read_cursor_var& operator =( xml_read_cursor_var && ) = default;
+  void swap( xml_read_cursor_var & _r )
+  {
+    m_varCursor.swap( _r.m_varCursor );
+  }
+
+  bool FMoveDown()
+  {
+    return std::visit( _VisitHelpOverloadFCall {
+      [this]( auto _tCursor ) -> bool
+      {
+        return _tCursor.FMoveDown();
+      }
+    }, m_varCursor );
+  }
+  bool FMoveUp()
+  {
+    return std::visit( _VisitHelpOverloadFCall {
+      [this]( auto _tCursor ) -> bool
+      {
+        return _tCursor.FMoveUp();
+      }
+    }, m_varCursor );
+  }
+  bool FNextTag( _TyOptXmlTokenVar * _popttokRtnSpentTag = nullptr )
+  {
+    return std::visit( _VisitHelpOverloadFCall {
+      [this,_popttokRtnSpentTag]( auto _tCursor ) -> bool
+      {
+        return _FNextTag( _tCursor, _popttokRtnSpentTag )
+      }
+    }, m_varCursor );    
+  }
+protected:
+  template < class t_TyXmlReadCursor >
+  bool _FNextTag( t_TyXmlReadCursor & _rxrc, _TyOptXmlTokenVar * _popttokRtnSpentTag )
+  {
+    typedef typename t_TyXmlReadCursor::_TyOptXmlToken _TyOptXmlToken;
+    _TyOptXmlToken opttokRtnSpentTag;
+    bool fNextTag = _rxrc.FNextTag( _popttokRtnSpentTag ? &opttokRtnSpentTag : nullptr );
+    if ( _popttokRtnSpentTag )
+    {
+      if ( !opttokRtnSpentTag.has_value() )
+        _popttokRtnSpentTag->reset();
+      else
+        _popttokRtnSpentTag->emplace( std::move( *opttokRtnSpentTag ) );
+    }
+    return fNextTag;
+  }
+  _TyVariant m_varCursor;
 };
 
 __XMLP_END_NAMESPACE
