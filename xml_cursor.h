@@ -292,6 +292,7 @@ public:
   typedef _xml_read_context< _TyXmlTraits > _TyXmlReadContext;
   typedef list< _TyXmlReadContext > _TyListReadContexts;
   typedef XMLDeclProperties< _TyChar > _TyXMLDeclProperties;
+  typedef _xml_document_context< _TyTraits > _TyXmlDocumentContext;
 
   ~xml_read_cursor() = default;
   xml_read_cursor() = default;
@@ -438,6 +439,23 @@ public:
       *_pXMLDeclProperties = m_XMLDeclProperties;
     return m_lContexts.front().GetTag();
   }
+  _TyXmlToken & XMLDeclAcquireDocumentContext( _TyXmlDocumentContext & _rxdcDocumentContext )
+  {
+    _rxdcDocumentContext.m_XMLDeclProperties = std::move( m_XMLDeclProperties );
+    // Now transfer/copy over the various objects from the parser to allow this object to exist solo - while,
+    //  of course, messing with the parser state. So we must make sure to disconnect the parser after we are done
+    //  with this.
+    // The UserObj must be transferred because each token has a context which has a reference to this user object - i.e. the user object cannot be copied.
+    _rxdcDocumentContext.m_upUserObj = std::move( GetXmlParser().GetUserObjPtr() );
+    // We can bopy both the uri map and the prefix map but since the parser will be useless for parsing after this why not just transfer them:
+    _rxdcDocumentContext.m_mapUris = std::move( GetXmlParser().GetUriMap() );
+    _rxdcDocumentContext.m_mapPrefixes = std::move( GetXmlParser().GetPrefixMap() );
+    // Some transports don't require moving. Also the var_transport will report if it's current transport requires moving. We won't touch the transport but we may need it to remain open.
+    if ( GetXmlParser().GetTransport().FDependentTransportContexts() )
+      _rxdcDocumentContext.m_opttpImpl.emplace( std::move( GetXmlParser().GetTransport() ) );
+    return m_lContexts.front().GetTag();
+  }
+
 // Navigation:
   // Move down - i.e. to the next subtag.
   // If the context is already present - i.e. we are not at the end of the context list - then we just move the context pointer and return true.
@@ -527,6 +545,17 @@ public:
     Assert( m_lContexts.size() == 1 );
     return false;
   }
+  template < class t_TyFunctor >
+  void ApplyAllContent( t_TyFunctor && _rrftor )
+  {
+    _TyXmlReadContext & rxrcxt = GetContextCur();
+    rxrcxt.ApplyContent( 0, rxrcxt.NContentTokens(), std::forward( _rrftor ) );
+  }
+  void ClearContent()
+  {
+    GetContextCur().ClearContent();
+  }
+  
 protected:
   bool _FProcessNextTag()
   {
@@ -1228,10 +1257,46 @@ public:
     m_varCursor.swap( _r.m_varCursor );
   }
 
+  bool FInsideDocumentTag() const
+  {
+    return std::visit( _VisitHelpOverloadFCall {
+      []( auto _tCursor ) -> bool
+      {
+        return _tCursor.FInsideDocumentTag();
+      }
+    }, m_varCursor );
+  }
+  bool FInProlog() const
+  {
+    return std::visit( _VisitHelpOverloadFCall {
+      []( auto _tCursor ) -> bool
+      {
+        return _tCursor.FInProlog();
+      }
+    }, m_varCursor );
+  }
+  bool FInEpilog() const
+  {
+    return std::visit( _VisitHelpOverloadFCall {
+      []( auto _tCursor ) -> bool
+      {
+        return _tCursor.FInEpilog();
+      }
+    }, m_varCursor );
+  }
+  bool FAtEOF() const
+  {
+    return std::visit( _VisitHelpOverloadFCall {
+      []( auto _tCursor ) -> bool
+      {
+        return _tCursor.FAtEOF();
+      }
+    }, m_varCursor );
+  }
   bool FMoveDown()
   {
     return std::visit( _VisitHelpOverloadFCall {
-      [this]( auto _tCursor ) -> bool
+      []( auto _tCursor ) -> bool
       {
         return _tCursor.FMoveDown();
       }
@@ -1240,7 +1305,7 @@ public:
   bool FMoveUp()
   {
     return std::visit( _VisitHelpOverloadFCall {
-      [this]( auto _tCursor ) -> bool
+      []( auto _tCursor ) -> bool
       {
         return _tCursor.FMoveUp();
       }
@@ -1252,6 +1317,35 @@ public:
       [this,_popttokRtnSpentTag]( auto _tCursor ) -> bool
       {
         return _FNextTag( _tCursor, _popttokRtnSpentTag )
+      }
+    }, m_varCursor );    
+  }
+  template < class t_TyFunctor >
+  void ApplyAllContent( t_TyFunctor && _rrftor )
+  {
+    std::visit( _VisitHelpOverloadFCall {
+      [ _rrftor = FWD_CAPTURE(_rrftor) ]( auto _tCursor )
+      {
+        _tCursor.ApplyAllContent( access_fwd( _rrftor ) );
+      }
+    }, m_varCursor );    
+  }
+  void ClearContent()
+  {
+    std::visit( _VisitHelpOverloadFCall {
+      [ _rrftor = FWD_CAPTURE(_rrftor) ]( auto _tCursor )
+      {
+        _tCursor.ClearContent();
+      }
+    }, m_varCursor );    
+  }
+  // This transfers the lifetime of the XMLDecl xml_token - can only be called once to obtain that token. Could return a copy but the object is spent anyway so...
+  _TyXmlTokenVar XMLDeclAcquireDocumentContext( _TyXmlDocumentContextVar & _rxdcDocumentContextVar )
+  {
+    return std::visit( _VisitHelpOverloadFCall {
+      [&_rxdcDocumentContextVar]( auto _tCursor ) -> _TyXmlTokenVar
+      {
+        return _XMLDeclAcquireDocumentContext( _tCursor, _rxdcDocumentContextVar );
       }
     }, m_varCursor );    
   }
@@ -1271,6 +1365,18 @@ protected:
     }
     return fNextTag;
   }
+  template < class t_TyXmlReadCursor >
+  _TyXmlTokenVar _XMLDeclAcquireDocumentContext( t_TyXmlReadCursor & _rxrc, _TyXmlDocumentContextVar & _rxdcDocumentContextVar )
+  {
+    typedef typename t_TyXmlReadCursor::_TyTraits _TyTraits;
+    typedef _xml_document_context< _TyTraits > _TyXmlDocumentContext;
+    typedef xml_token< _TyXmlTraits > _TyXmlToken;
+    _TyXmlDocumentContext xdc;
+    _TyXmlToken & rtokXMLDecl = m_varCursor.XMLDeclAcquireDocumentContext( xdc );
+    _rxdcDocumentContextVar.emplace( std::move( xdc ) );
+    return _TyXmlTokenVar( std::move( rtokXMLDecl ) );
+  }
+  
   _TyVariant m_varCursor;
 };
 

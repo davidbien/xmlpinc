@@ -116,6 +116,7 @@ public:
   typedef typename _xml_namespace_map_traits< _TyChar >::_TyUriAndPrefixMap _TyUriAndPrefixMap;
   typedef xml_read_cursor< _TyXmlTraits > _TyReadCursor;
   typedef XMLDeclProperties< _TyChar > _TyXMLDeclProperties;
+  typedef _xml_document_context< _TyTraits > _TyXmlDocumentContext;
 
   xml_document() = default;
   xml_document( xml_document const & ) = default;
@@ -129,10 +130,8 @@ public:
   }
   void swap( _TyThis & _r )
   {
-    m_upUserObj.swap( _r.m_upUserObj );
-    m_mapUris.swap( _r.m_mapUris );
-    m_mapPrefixes.swap( _r.m_mapPrefixes );
-    m_opttpImpl.swap( _r.m_opttpImpl );
+    _TyBase::swap( _r );
+    m_xdcxtDocumentContext.swap( _r.m_xdcxtDocumentContext );
   }
 
   // Read from this read cursor into this object.
@@ -164,30 +163,11 @@ public:
       Assert( _rxrc.FInEpilog() );
       _AcquireContent( _rxrc.GetContextCur() );
     }
-    // We always obtain the XMLDecl node from the read cursor specially.
-    _TyBase::AcquireTag( std::move( _rxrc.GetXMLDeclToken( &m_XMLDeclProperties ) ) );
-
-    // Now transfer/copy over the various objects from the parser to allow this object to exist solo - while,
-    //  of course, messing with the parser state. So we must make sure to disconnect the parser after we are done
-    //  with this.
-    // The UserObj must be transferred because each token has a context which has a reference to this user object - i.e. the user object cannot be copied.
-    m_upUserObj = std::move( _rxrc.GetXmlParser().GetUserObjPtr() );
-    // We can bopy both the uri map and the prefix map but since the parser will be useless for parsing after this why not just transfer them:
-    m_mapUris = std::move( _rxrc.GetXmlParser().GetUriMap() );
-    m_mapPrefixes = std::move( _rxrc.GetXmlParser().GetPrefixMap() );
-    // Some transports don't require moving. Also the var_transport will report if it's current transport requires moving. We won't touch the transport but we may need it to remain open.
-    if ( _rxrc.GetXmlParser().GetTransport().FDependentTransportContexts() )
-      m_opttpImpl.emplace( std::move( _rxrc.GetXmlParser().GetTransport() ) );
+    // Since we are done we can obtain the root tag: The XMLDecl pseudo-tag.
+    _TyBase::AcquireTag( std::move( _rxrc.XMLDeclAcquireDocumentContext( m_xdcxtDocumentContext ) ) );
   }
 protected:
-  unique_ptr< _TyLexUserObj > m_upUserObj; // The user object. Contains all entity references.
-  _TyUriAndPrefixMap m_mapUris; // set of unqiue URIs.
-  _TyUriAndPrefixMap m_mapPrefixes; // set of unique prefixes.
-  _TyXMLDeclProperties m_XMLDeclProperties;
-  // For some transports where the backing is mapped memory it is convenient to store the transport here because it
-  //  allows the parser object to go away entirely.
-  typedef optional< _TyTransport > _TyOptTransport;
-  _TyOptTransport m_opttpImpl;
+  _TyXmlDocumentContext m_xdcxtDocumentContext;
 };
 
 __XMLP_END_NAMESPACE

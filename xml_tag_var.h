@@ -2,19 +2,15 @@
 
 // xml_tag_var.h
 // Simple XML object model based on the XML parser - variant version.
-// This is similar to xml_tag.h but the impl is different enough that it needs to be it's own set of types.
+// Can't just wrap xml_tag objects because we have to store variant objects inside the xml_tag collection.
 // dbien
 // 03FEB2021
 
-// The root tag is always an XMLDecl "tag" - even if there was no XMLDecl declaration in the XML file.
-// Then, as with all tags, there may be some content nodes, then the main document tag, and then subtags.
-// Trouble must be taken to ensure that only a single document tag is ever within the XMLDecl "tag" since
-//  all other tags have freeform contents in that regard.
 #include "xml_types.h"
 
 __XMLP_BEGIN_NAMESPACE
 
-template < class ... t_TyTpTransports >
+template < class t_TyTpTransports >
 class xml_tag_var
 {
   typedef xml_tag_var _TyThis;
@@ -69,7 +65,7 @@ public:
         _AcquireContent( std::move( xmlTag ) );
         if ( !fNextTag )
         {
-          _AcquireContent( _rxrc.GetContextCur() );
+          _AcquireContent( _rxrc );
           fNextTag = _rxrc.FMoveDown();
         }
       }
@@ -79,9 +75,9 @@ public:
 
 protected:
   // Add all the current content from passed context.
-  void _AcquireContent( _TyReadContext & _rctxt )
+  void _AcquireContent( _TyReadCursorVar & _rxrc )
   {
-    _rctxt.ApplyContent( 0, _rctxt.NContentTokens(),
+    _rxrc.ApplyAllContent(
       [this]( _TyXmlToken * _pxtBegin, _TyXmlToken * _pxtEnd )
       {
         for ( _TyXmlToken * pxtCur = _pxtBegin; _pxtEnd != pxtCur; ++pxtCur )
@@ -95,28 +91,24 @@ protected:
   {
     m_rgTokens.emplace_back( std::move( _rrtag ) );
   }
-  typedef optional< _TyXmlToken > _TyOptXmlToken; // Need this because token is not default constructible.
-  _TyOptXmlToken m_opttokTag; // The token corresponding to the tag. This is either an XMLDecl token or 
+  typedef optional< _TyXmlTokenVar > _TyOptXmlTokenVar; // Need this because token is not default constructible.
+  _TyOptXmlTokenVar m_opttokTag; // The token corresponding to the tag. This is either an XMLDecl token or a tag.
   _TyRgTokens m_rgTokens; // The content for this token.
 };
 
 // xml_document_var:
 // This contains the root xml_tag_var as well as the namespace URI and Prefix maps and the user object.
-template < class t_TyXmlTraits >
-class xml_document_var : protected xml_tag_var< t_TyXmlTraits >
+template < class t_TyTpTransports >
+class xml_document_var : protected xml_tag_var< t_TyTpTransports >
 {
   typedef xml_document_var _TyThis;
-  typedef xml_tag_var< t_TyXmlTraits > _TyBase;
+  typedef xml_tag_var< t_TyTpTransports > _TyBase;
 protected:
    using _TyBase::_AcquireContent;
 public:
-  typedef t_TyXmlTraits _TyXmlTraits;
-  typedef typename _TyXmlTraits::_TyChar _TyChar;
-  typedef typename _TyXmlTraits::_TyTransport _TyTransport;
-  typedef typename _TyXmlTraits::_TyLexUserObj _TyLexUserObj;
-  typedef typename _xml_namespace_map_traits< _TyChar >::_TyUriAndPrefixMap _TyUriAndPrefixMap;
-  typedef xml_read_cursor< _TyXmlTraits > _TyReadCursor;
-  typedef XMLDeclProperties< _TyChar > _TyXMLDeclProperties;
+  typedef t_TyTpTransports _TyTpTransports;
+  typedef MultiplexTuplePack_t< TGetXmlTraitsDefault, _TyTpTransports > _TyTpXmlTraits;
+  typedef xml_read_cursor_var< _TyTpTransports > _TyReadCursorVar;
 
   xml_document_var() = default;
   xml_document_var( xml_document_var const & ) = default;
@@ -130,14 +122,13 @@ public:
   }
   void swap( _TyThis & _r )
   {
-    m_upUserObj.swap( _r.m_upUserObj );
-    m_mapUris.swap( _r.m_mapUris );
-    m_mapPrefixes.swap( _r.m_mapPrefixes );
-    m_opttpImpl.swap( _r.m_opttpImpl );
+    if ( this == &_r )
+      return;
+    _TyBase::swap( _r );
+    m_varDocumentContext.swap( _r.m_varDocumentContext );
   }
-
   // Read from this read cursor into this object.
-  void FromXmlStream( _TyReadCursor & _rxrc )
+  void FromXmlStream( _TyReadCursorVar & _rxrc )
   {
     Assert( _rxrc.FInProlog() || _rxrc.FInsideDocumentTag() );
     VerifyThrowSz( _rxrc.FInProlog() || _rxrc.FInsideDocumentTag(), "Read cursor is in an invalid state." );
@@ -147,7 +138,7 @@ public:
     bool fStartedInProlog = _rxrc.FInProlog();
     // We only read the top-level content tokens if we are currently at the XMLDecl tag.
     if ( fStartedInProlog )
-      _AcquireContent( _rxrc.GetContextCur() );
+      _AcquireContent( _rxrc );
 
     // We will move down into the next tag and that is the only tag we will capture into the xml_document_var... necessarily.
     VerifyThrowSz( _rxrc.FMoveDown(), "No tag to copy.");
@@ -163,32 +154,13 @@ public:
     if ( fStartedInProlog )
     {
       Assert( _rxrc.FInEpilog() );
-      _AcquireContent( _rxrc.GetContextCur() );
+      _AcquireContent( _rxrc );
     }
-    // We always obtain the XMLDecl node from the read cursor specially.
-    _TyBase::AcquireTag( std::move( _rxrc.GetXMLDeclToken( &m_XMLDeclProperties ) ) );
-
-    // Now transfer/copy over the various objects from the parser to allow this object to exist solo - while,
-    //  of course, messing with the parser state. So we must make sure to disconnect the parser after we are done
-    //  with this.
-    // The UserObj must be transferred because each token has a context which has a reference to this user object - i.e. the user object cannot be copied.
-    m_upUserObj = std::move( _rxrc.GetXmlParser().GetUserObjPtr() );
-    // We can bopy both the uri map and the prefix map but since the parser will be useless for parsing after this why not just transfer them:
-    m_mapUris = std::move( _rxrc.GetXmlParser().GetUriMap() );
-    m_mapPrefixes = std::move( _rxrc.GetXmlParser().GetPrefixMap() );
-    // Some transports don't require moving. Also the var_transport will report if it's current transport requires moving. We won't touch the transport but we may need it to remain open.
-    if ( _rxrc.GetXmlParser().GetTransport().FDependentTransportContexts() )
-      m_opttpImpl.emplace( std::move( _rxrc.GetXmlParser().GetTransport() ) );
+    // Done. Get the pseudo-tag XMLDecl from the root of the cursor.
+    _TyBase::AcquireTag( _rxrc.XMLDeclAcquireDocumentContext( m_varDocumentContext ) );
   }
 protected:
-  unique_ptr< _TyLexUserObj > m_upUserObj; // The user object. Contains all entity references.
-  _TyUriAndPrefixMap m_mapUris; // set of unqiue URIs.
-  _TyUriAndPrefixMap m_mapPrefixes; // set of unique prefixes.
-  _TyXMLDeclProperties m_XMLDeclProperties;
-  // For some transports where the backing is mapped memory it is convenient to store the transport here because it
-  //  allows the parser object to go away entirely.
-  typedef optional< _TyTransport > _TyOptTransport;
-  _TyOptTransport m_opttpImpl;
+  _TyXmlDocumentContextVar m_varDocumentContext;
 };
 
 __XMLP_END_NAMESPACE

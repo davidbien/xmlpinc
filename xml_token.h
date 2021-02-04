@@ -117,7 +117,7 @@ protected:
 };
 
 // As with all tokens: No default constructor, which translates to a variant: No monostate.
-template < class ... t_TyTpTransports >
+template < class t_TyTpTransports >
 class xml_token_var
 {
   typedef xml_token_var _TyThis;
@@ -126,6 +126,22 @@ public:
   typedef MultiplexTuplePack_t< TGetXmlTraitsDefault, _TyTpTransports > _TyTpXmlTraits;
   // Define our variant type - there is no monostate for this.
   typedef MultiplexTuplePack_t< xml_token, _TyTpXmlTraits, variant > _TyVariant;
+
+  template < class t_TyXmlToken >
+  xml_token_var( t_TyXmlToken && _rrtok )
+    : m_varXmlToken( std::move( _rrtok ) )
+  {
+  }
+  ~xml_token_var() = default;
+  xml_token_var() = delete; // no monostate and variant types aren't default constructible.
+  xml_token_var( xml_token_var const & ) = default;
+  xml_token_var & operator =( xml_token_var const & ) = default;
+  xml_token_var( xml_token_var && ) = default;
+  xml_token_var & operator =( xml_token_var && ) = default;
+  void swap( xml_token_var & _r )
+  {
+    m_varXmlToken.swap( _r.m_varXmlToken );
+  }
 
   vtyTokenIdent GetTokenId() const
   {
