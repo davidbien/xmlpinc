@@ -190,14 +190,14 @@ using xml_var_get_var_transport_t = typename _xml_var_get_var_transport< t_TyCha
 
 // xml_parser_var:
 // Templatized by transport template and set of characters types to support. To create a _l_transport_var use xml_var_get_var_transport_t<> or something like it.
-template <  template < class t_TyChar > t_TempTyTransport, 
+template <  template < class t_TyChar > t_tempTyTransport, 
             class t_TyTp2DCharPack = tuple< tuple< char32_t, true_type >, tuple< char32_t, false_type >, tuple< char16_t, true_type >, tuple< char16_t, false_type >, tuple< char8_t, false_type > > >
 class xml_parser_var
 {
   typedef xml_parser_var _TyThis;
 public:
   typedef t_TyTp2DCharPack _TyTp2DCharPack;
-  typedef MultiplexTuplePack2D_t< t_TempTyTransport, _TyTp2DCharPack > _TyTpTransports;
+  typedef MultiplexTuplePack2D_t< t_tempTyTransport, _TyTp2DCharPack > _TyTpTransports;
   typedef MultiplexTuplePack_t< TGetXmlTraitsDefault, _TyTpTransports > _TyTpXmlTraits;
   // Now get the variant type - include a monostate so that we can default initialize:
   typedef MultiplexMonostateTuplePack_t< xml_parser, _TyTpXmlTraits, variant > _TyParserVariant;
@@ -225,7 +225,6 @@ public:
     return holds_alternative< t_TyParser >();
   }
   // This will open the file with transport t_tempTyTransport<>
-  template < template < class ... > class t_tempTyTransport >
   _TyXmlCursorVar OpenFile( const char * _pszFileName )
   {
     VerifyThrow( !!_pszFileName );
@@ -265,34 +264,22 @@ public:
       break;
       case efceUTF16BE:
       {
-        if ( FMachineIsBigEndian() )
-          return _OpenFileCheckParserType< t_tempTyTransport< char16_t, false_type > >( fo, efceEncoding );
-        else
-          return _OpenFileCheckParserType< t_tempTyTransport< char16_t, true_type > >( fo, efceEncoding );
+        return _OpenFileCheckParserType< t_tempTyTransport< char16_t, integral_constant< bool, vkfIsLittleEndian > > >( fo, efceEncoding );
       }
       break;
       case efceUTF16LE:
       {
-        if ( FMachineIsBigEndian() )
-          return _OpenFileCheckParserType< t_tempTyTransport< char16_t, true_type > >( fo, efceEncoding );
-        else
-          return _OpenFileCheckParserType< t_tempTyTransport< char16_t, false_type > >( fo, efceEncoding );
+        return _OpenFileCheckParserType< t_tempTyTransport< char16_t, integral_constant< bool, vkfIsBigEndian > > >( fo, efceEncoding );
       }
       break;
       case efceUTF32BE:
       {
-        if ( FMachineIsBigEndian() )
-          return _OpenFileCheckParserType< t_tempTyTransport< char32_t, false_type > >( fo, efceEncoding );
-        else
-          return _OpenFileCheckParserType< t_tempTyTransport< char32_t, true_type > >( fo, efceEncoding );
+        return _OpenFileCheckParserType< t_tempTyTransport< char32_t, integral_constant< bool, vkfIsLittleEndian > > >( fo, efceEncoding );
       }
       break;
       case efceUTF32LE:
       {
-        if ( FMachineIsBigEndian() )
-          return _OpenFileCheckParserType< t_tempTyTransport< char32_t, true_type > >( fo, efceEncoding );
-        else
-          return _OpenFileCheckParserType< t_tempTyTransport< char32_t, false_type > >( fo, efceEncoding );        
+        return _OpenFileCheckParserType< t_tempTyTransport< char32_t, integral_constant< bool, vkfIsBigEndian > > >( fo, efceEncoding );
       }
       break;
     }
