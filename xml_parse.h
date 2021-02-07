@@ -179,8 +179,8 @@ struct _xml_var_get_var_transport
   typedef _l_transport_file< t_TyChar, true_type > _TyTransportFileSwitchEndian;
   typedef _l_transport_mapped< t_TyChar, false_type > _TyTransportMapped;
   typedef _l_transport_mapped< t_TyChar, true_type > _TyTransportMappedSwitchEndian;
-  typedef _l_transport_fixed< t_TyChar, false_type > _TyTransportFixed;
-  typedef _l_transport_fixed< t_TyChar, true_type > _TyTransportFixedSwitchEndian;
+  typedef _l_transport_fixedmem< t_TyChar, false_type > _TyTransportFixed;
+  typedef _l_transport_fixedmem< t_TyChar, true_type > _TyTransportFixedSwitchEndian;
   // For char8_t we don't include the switch endian types...
   using _TyTransportVar = typename std::conditional< is_same_v< t_TyChar, char8_t >, _l_transport_var< _TyTransportFile, _TyTransportMapped, _TyTransportFixed >,
     _l_transport_var< _TyTransportFile, _TyTransportFileSwitchEndian, _TyTransportMapped, _TyTransportMappedSwitchEndian, _TyTransportFixed, _TyTransportFixedSwitchEndian > >::type;
@@ -190,8 +190,7 @@ using xml_var_get_var_transport_t = typename _xml_var_get_var_transport< t_TyCha
 
 // xml_parser_var:
 // Templatized by transport template and set of characters types to support. To create a _l_transport_var use xml_var_get_var_transport_t<> or something like it.
-template <  template < class t_TyChar > t_tempTyTransport, 
-            class t_TyTp2DCharPack = tuple< tuple< char32_t, true_type >, tuple< char32_t, false_type >, tuple< char16_t, true_type >, tuple< char16_t, false_type >, tuple< char8_t, false_type > > >
+template <  template < class ... > class t_tempTyTransport, class t_TyTp2DCharPack >
 class xml_parser_var
 {
   typedef xml_parser_var _TyThis;
@@ -202,7 +201,7 @@ public:
   // Now get the variant type - include a monostate so that we can default initialize:
   typedef MultiplexMonostateTuplePack_t< xml_parser, _TyTpXmlTraits, variant > _TyParserVariant;
   // For the cursor we don't need a monostate because we will deliver the fully created type from a local method.
-  typedef xml_cursor_var< _TyTpTransports > _TyXmlCursorVar;
+  typedef xml_read_cursor_var< _TyTpTransports > _TyXmlCursorVar;
 
   ~xml_parser_var() = default;
   xml_parser_var() = default;
@@ -222,17 +221,17 @@ public:
   template < class t_TyParser >
   bool FIsA() const
   {
-    return holds_alternative< t_TyParser >();
+    return holds_alternative< t_TyParser >( m_varParser );
   }
   // This will open the file with transport t_tempTyTransport<>
   _TyXmlCursorVar OpenFile( const char * _pszFileName )
   {
     VerifyThrow( !!_pszFileName );
-    m_strFileName = _pszFilaName;
+    m_strFileName = _pszFileName;
     // First we must determine the type of the file and if there is a BOM then we have to not send the BOM to the transport.
     // In the case where there is a BOM then we will pass the open file handle which is seek()'d to the correct starting position
     //  past the BOM.
-    VerifyThrowSz( FFileExists( m_strFileName ), "File[%s] doesn't exist.", m_strFileName.c_str() );
+    VerifyThrowSz( FFileExists( m_strFileName.c_str() ), "File[%s] doesn't exist.", m_strFileName.c_str() );
     FileObj fo( OpenReadOnlyFile( m_strFileName.c_str() ) );
     VerifyThrowSz( fo.FIsOpen(), "Couldn't open file [%s]", m_strFileName.c_str() );
     uint8_t rgbyBOM[vknBytesBOM];
@@ -259,27 +258,27 @@ public:
     {
       case efceUTF8:
       {
-        return _OpenFileCheckParserType< t_tempTyTransport< char8_t, false_type > >( fo, efceEncoding );
+        _OpenFileCheckParserType< t_tempTyTransport< char8_t, false_type > >( fo, efceEncoding );
       }
       break;
       case efceUTF16BE:
       {
-        return _OpenFileCheckParserType< t_tempTyTransport< char16_t, integral_constant< bool, vkfIsLittleEndian > > >( fo, efceEncoding );
+        _OpenFileCheckParserType< t_tempTyTransport< char16_t, integral_constant< bool, vkfIsLittleEndian > > >( fo, efceEncoding );
       }
       break;
       case efceUTF16LE:
       {
-        return _OpenFileCheckParserType< t_tempTyTransport< char16_t, integral_constant< bool, vkfIsBigEndian > > >( fo, efceEncoding );
+        _OpenFileCheckParserType< t_tempTyTransport< char16_t, integral_constant< bool, vkfIsBigEndian > > >( fo, efceEncoding );
       }
       break;
       case efceUTF32BE:
       {
-        return _OpenFileCheckParserType< t_tempTyTransport< char32_t, integral_constant< bool, vkfIsLittleEndian > > >( fo, efceEncoding );
+        _OpenFileCheckParserType< t_tempTyTransport< char32_t, integral_constant< bool, vkfIsLittleEndian > > >( fo, efceEncoding );
       }
       break;
       case efceUTF32LE:
       {
-        return _OpenFileCheckParserType< t_tempTyTransport< char32_t, integral_constant< bool, vkfIsBigEndian > > >( fo, efceEncoding );
+        _OpenFileCheckParserType< t_tempTyTransport< char32_t, integral_constant< bool, vkfIsBigEndian > > >( fo, efceEncoding );
       }
       break;
     }
@@ -290,38 +289,40 @@ public:
   {
     Assert( !FIsNull() );
     return std::visit( _VisitHelpOverloadFCall {
-      [](monostate) 
+      [](monostate) -> _TyXmlCursorVar
       {
         THROWNAMEDBADVARIANTACCESSEXCEPTION("Need to create a parser first.");
+        return _TyXmlCursorVar();
       },
-      [this]( auto _tParser ) -> _TyXmlCursorVar
+      [this]( auto & _tParser ) -> _TyXmlCursorVar
       {
         return _TyXmlCursorVar( _tParser.GetReadCursor() );
       }
     }, m_varParser );
   }
 protected:
-  template < t_TyTransport >
-  _TyXmlCursorVar _OpenFileCheckParserType( FileObj & _rfo, EFileCharacterEncoding _efceEncoding )
+  template < class t_TyTransport >
+  void _OpenFileCheckParserType( FileObj & _rfo, EFileCharacterEncoding _efceEncoding )
   {
     typedef t_TyTransport _TyTransport;
     typedef TGetXmlTraitsDefault< _TyTransport > _TyXmlTraits;
     typedef xml_parser< _TyXmlTraits > _TyXmlParser;
     typedef conditional_t< has_type_v< _TyXmlParser, _TyParserVariant >, _TyXmlParser, false_type > _TyXmlParserInVariant;
-    return _OpenFileParser< _TyXmlParserInVariant >( _rfo, _efceEncoding );
+    _OpenFileParser< _TyXmlParserInVariant >( _rfo, _efceEncoding );
   }
-  template < t_TyParser >
-  _TyXmlCursorVar _OpenFileParser( FileObj & _rfo, EFileCharacterEncoding )
+  template < class t_TyParser >
+  void _OpenFileParser( FileObj & _rfo, EFileCharacterEncoding )
   {
     typedef t_TyParser _TyParser;
     // We have a type, now, that is present in the variant...
     _TyParser & rp = m_varParser.emplace< t_TyParser >();
     rp.emplaceTransport( _rfo );
+
   }
   template <>
-  _TyXmlCursorVar _OpenFileParser< false_type >( FileObj & _rfo, EFileCharacterEncoding _efceEncoding )
+  void _OpenFileParser< false_type >( FileObj & _rfo, EFileCharacterEncoding _efceEncoding )
   {
-    VerifyThrowSz( false, "Encoding [%s] not supported by the variant object in this xml_parser_var<>.", PszHumanReadableCharacterEncoding() );
+    VerifyThrowSz( false, "Encoding [%s] not supported by the variant object in this xml_parser_var<>.", PszCharacterEncodingShort( _efceEncoding ) );
   }
   string m_strFileName; // Record this because it doesn't cost much.
   _TyParserVariant m_varParser;

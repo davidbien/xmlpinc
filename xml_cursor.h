@@ -292,7 +292,7 @@ public:
   typedef _xml_read_context< _TyXmlTraits > _TyXmlReadContext;
   typedef list< _TyXmlReadContext > _TyListReadContexts;
   typedef XMLDeclProperties< _TyChar > _TyXMLDeclProperties;
-  typedef _xml_document_context< _TyTraits > _TyXmlDocumentContext;
+  typedef _xml_document_context< _TyXmlTraits > _TyXmlDocumentContext;
 
   ~xml_read_cursor() = default;
   xml_read_cursor() = default;
@@ -549,7 +549,7 @@ public:
   void ApplyAllContent( t_TyFunctor && _rrftor )
   {
     _TyXmlReadContext & rxrcxt = GetContextCur();
-    rxrcxt.ApplyContent( 0, rxrcxt.NContentTokens(), std::forward( _rrftor ) );
+    rxrcxt.ApplyContent( 0, rxrcxt.NContentTokens(), std::forward< t_TyFunctor >( _rrftor ) );
   }
   void ClearContent()
   {
@@ -1240,12 +1240,13 @@ public:
   typedef MultiplexTuplePack_t< xml_read_cursor, _TyTpXmlTraits, variant > _TyVariant;
   typedef xml_token_var< _TyTpTransports > _TyXmlTokenVar;
   typedef optional< _TyXmlTokenVar > _TyOptXmlTokenVar;
+  typedef _xml_document_context_var< _TyTpTransports > _TyXmlDocumentContextVar;
 
   ~xml_read_cursor_var() = default;
-  xml_read_cursor_var() = delete; // We have no monostate in our variant. We could still allow this, but I'd prefer not to.
+  xml_read_cursor_var() = default; // We have no monostate in our variant. We could still allow this, but I'd prefer not to. REVIEW<dbien>: Need it for the compile...
   template < class t_TyXmlReadCursor >
   explicit xml_read_cursor_var( t_TyXmlReadCursor && _rrxrc )
-    : m_varCursor( std::move( __rrxrc ) )
+    : m_varCursor( std::move( _rrxrc ) )
   {
   }
   xml_read_cursor_var( xml_read_cursor_var const & ) = delete;
@@ -1260,7 +1261,7 @@ public:
   bool FInsideDocumentTag() const
   {
     return std::visit( _VisitHelpOverloadFCall {
-      []( auto _tCursor ) -> bool
+      []( auto & _tCursor ) -> bool
       {
         return _tCursor.FInsideDocumentTag();
       }
@@ -1269,7 +1270,7 @@ public:
   bool FInProlog() const
   {
     return std::visit( _VisitHelpOverloadFCall {
-      []( auto _tCursor ) -> bool
+      []( auto & _tCursor ) -> bool
       {
         return _tCursor.FInProlog();
       }
@@ -1278,7 +1279,7 @@ public:
   bool FInEpilog() const
   {
     return std::visit( _VisitHelpOverloadFCall {
-      []( auto _tCursor ) -> bool
+      []( auto & _tCursor ) -> bool
       {
         return _tCursor.FInEpilog();
       }
@@ -1287,7 +1288,7 @@ public:
   bool FAtEOF() const
   {
     return std::visit( _VisitHelpOverloadFCall {
-      []( auto _tCursor ) -> bool
+      []( auto & _tCursor ) -> bool
       {
         return _tCursor.FAtEOF();
       }
@@ -1296,7 +1297,7 @@ public:
   bool FMoveDown()
   {
     return std::visit( _VisitHelpOverloadFCall {
-      []( auto _tCursor ) -> bool
+      []( auto & _tCursor ) -> bool
       {
         return _tCursor.FMoveDown();
       }
@@ -1305,7 +1306,7 @@ public:
   bool FMoveUp()
   {
     return std::visit( _VisitHelpOverloadFCall {
-      []( auto _tCursor ) -> bool
+      []( auto & _tCursor ) -> bool
       {
         return _tCursor.FMoveUp();
       }
@@ -1314,9 +1315,9 @@ public:
   bool FNextTag( _TyOptXmlTokenVar * _popttokRtnSpentTag = nullptr )
   {
     return std::visit( _VisitHelpOverloadFCall {
-      [this,_popttokRtnSpentTag]( auto _tCursor ) -> bool
+      [this,_popttokRtnSpentTag]( auto & _tCursor ) -> bool
       {
-        return _FNextTag( _tCursor, _popttokRtnSpentTag )
+        return _FNextTag( _tCursor, _popttokRtnSpentTag );
       }
     }, m_varCursor );    
   }
@@ -1324,7 +1325,7 @@ public:
   void ApplyAllContent( t_TyFunctor && _rrftor )
   {
     std::visit( _VisitHelpOverloadFCall {
-      [ _rrftor = FWD_CAPTURE(_rrftor) ]( auto _tCursor )
+      [ _rrftor = FWD_CAPTURE(_rrftor) ]( auto & _tCursor )
       {
         _tCursor.ApplyAllContent( access_fwd( _rrftor ) );
       }
@@ -1333,7 +1334,7 @@ public:
   void ClearContent()
   {
     std::visit( _VisitHelpOverloadFCall {
-      [ _rrftor = FWD_CAPTURE(_rrftor) ]( auto _tCursor )
+      []( auto & _tCursor )
       {
         _tCursor.ClearContent();
       }
@@ -1343,7 +1344,7 @@ public:
   _TyXmlTokenVar XMLDeclAcquireDocumentContext( _TyXmlDocumentContextVar & _rxdcDocumentContextVar )
   {
     return std::visit( _VisitHelpOverloadFCall {
-      [&_rxdcDocumentContextVar]( auto _tCursor ) -> _TyXmlTokenVar
+      [this,&_rxdcDocumentContextVar]( auto & _tCursor ) -> _TyXmlTokenVar
       {
         return _XMLDeclAcquireDocumentContext( _tCursor, _rxdcDocumentContextVar );
       }
@@ -1368,11 +1369,11 @@ protected:
   template < class t_TyXmlReadCursor >
   _TyXmlTokenVar _XMLDeclAcquireDocumentContext( t_TyXmlReadCursor & _rxrc, _TyXmlDocumentContextVar & _rxdcDocumentContextVar )
   {
-    typedef typename t_TyXmlReadCursor::_TyTraits _TyTraits;
-    typedef _xml_document_context< _TyTraits > _TyXmlDocumentContext;
+    typedef typename t_TyXmlReadCursor::_TyXmlTraits _TyXmlTraits;
+    typedef _xml_document_context< _TyXmlTraits > _TyXmlDocumentContext;
     typedef xml_token< _TyXmlTraits > _TyXmlToken;
     _TyXmlDocumentContext xdc;
-    _TyXmlToken & rtokXMLDecl = m_varCursor.XMLDeclAcquireDocumentContext( xdc );
+    _TyXmlToken & rtokXMLDecl = _rxrc.XMLDeclAcquireDocumentContext( xdc );
     _rxdcDocumentContextVar.emplace( std::move( xdc ) );
     return _TyXmlTokenVar( std::move( rtokXMLDecl ) );
   }

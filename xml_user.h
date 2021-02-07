@@ -312,7 +312,7 @@ public:
     if ( !!iTrans )
     {
       Assert( -1 == iTrans );
-      THROWXMLPARSEEXCEPTIONERRNO( ::GetLastErrNo(), "Error translating character reference[%s].", StrConvertString<char>( _rsv ).c_str() );
+      THROWXMLPARSEEXCEPTIONERRNO( GetLastErrNo(), "Error translating character reference[%s].", StrConvertString<char>( _rsv ).c_str() );
     }
     return (_TyChar)tch;
   }
@@ -326,7 +326,7 @@ public:
     if ( !!iTrans )
     {
       Assert( -1 == iTrans );
-      THROWXMLPARSEEXCEPTIONERRNO( ::GetLastErrNo(), "Error translating character reference[%s].", StrConvertString<char>( _rsv ).c_str() );
+      THROWXMLPARSEEXCEPTIONERRNO( GetLastErrNo(), "Error translating character reference[%s].", StrConvertString<char>( _rsv ).c_str() );
     }
     // Now we must convert the character into potentially a string:
     _TyStdStr strConverted;

@@ -24,6 +24,10 @@ static const vtyDataType s_kdtPEReference = 4;
 // The string containing the values from the Production S.
 #define STR_XML_WHITESPACE_TOKEN "\n\r\x20\t"
 
+// xml_traits.h
+template < class t_TyTransport, bool t_kfSupportDTD, bool t_kfValidating >
+struct xml_traits;
+
 // xml_user.h:
 template < class t_tyChar, bool t_kfSupportDTD >
 class _xml_user_obj_base_dtd;
@@ -41,20 +45,32 @@ template < class t_TyXmlTraits >
 class _xml_read_context;
 template < class t_TyXmlTraits >
 class xml_read_cursor;
+template < class t_TyTpTransports >
+class xml_read_cursor_var;
 
 // xml_token.h:
 template < class t_TyXmlTraits >
 class xml_token;
+template < class t_TyTpTransports >
+class xml_token_var;
 
 // xml_tag.h:
 template < class t_TyXmlTraits >
 class xml_tag;
 template < class t_TyXmlTraits >
 class xml_document;
+// xml_tag_var.h:
+template < class t_TyTpTransports >
+class xml_tag_var;
+template < class t_TyTpTransports >
+class xml_document_var;
 
 // xml_parse.h:
 template < class t_TyXmlTraits >
 class xml_parser;
+template <  template < class ... > class t_tempTyTransport, 
+            class t_TyTp2DCharPack = tuple< tuple< char32_t, true_type >, tuple< char32_t, false_type >, tuple< char16_t, true_type >, tuple< char16_t, false_type >, tuple< char8_t, false_type > > >
+class xml_parser_var;
 
 // xml_exc.h:
 class xml_parse_exception;
@@ -126,7 +142,7 @@ public:
 // This organizes all the info from parsing that we need to keep to maintain a valid standalone xml_document. It contains backing memory
 //  for string views on prefixes and URIs, the XMLDecl properties (or synthesized ones), and the transport for those transport types
 //  using a non-backing transport context.
-template < class t_TyTraits >
+template < class t_TyXmlTraits >
 class _xml_document_context
 {
   typedef _xml_document_context _TyThis;

@@ -78,13 +78,14 @@ protected:
   void _AcquireContent( _TyReadCursorVar & _rxrc )
   {
     _rxrc.ApplyAllContent(
-      [this]( _TyXmlToken * _pxtBegin, _TyXmlToken * _pxtEnd )
+      // This is an xml_token<> type that is returned by a non-var xml_read_cursor.
+      [this]( auto * _pxtBegin, auto * _pxtEnd )
       {
-        for ( _TyXmlToken * pxtCur = _pxtBegin; _pxtEnd != pxtCur; ++pxtCur )
+        for ( auto * pxtCur = _pxtBegin; _pxtEnd != pxtCur; ++pxtCur )
           m_rgTokens.emplace_back( std::move( *pxtCur ) );
       }
     );
-    _rctxt.ClearContent(); // The above created a bunch of empty content nodes, and they would go away naturally without ill effect, but clear them to indicate they contain nothing at all.
+    _rxrc.ClearContent(); // The above created a bunch of empty content nodes, and they would go away naturally without ill effect, but clear them to indicate they contain nothing at all.
   }
   // Add _rrtag tag as content of this tag at the current end for m_rgTokens;
   void _AcquireContent( _TyThis && _rrtag )
@@ -109,6 +110,7 @@ public:
   typedef t_TyTpTransports _TyTpTransports;
   typedef MultiplexTuplePack_t< TGetXmlTraitsDefault, _TyTpTransports > _TyTpXmlTraits;
   typedef xml_read_cursor_var< _TyTpTransports > _TyReadCursorVar;
+  typedef _xml_document_context_var< _TyTpTransports > _TyXmlDocumentContextVar;
 
   xml_document_var() = default;
   xml_document_var( xml_document_var const & ) = default;
