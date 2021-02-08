@@ -648,6 +648,7 @@ protected:
       bool fGotXMLDecl = _FGetToken( pltokFirst, m_pspStartXmlDecl );
       if ( !fGotXMLDecl )
       {
+        m_pXp->GetStream().ResetToTokenStart(); // XMLDecl is optional.
         // Then we are going to create a "fake" XMLDecl token because the invariant is that the first
         //  token of the top context is an XMLDecl token. Our fake token will be completely empty.
         _TyUserContext ucxtEmpty( m_pXp->GetUserObj() );

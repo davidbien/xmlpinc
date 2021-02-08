@@ -126,12 +126,15 @@ public:
   {
     typedef typename t_TyLexToken::_TyValue _TyLexValue;
     const _TyLexValue & rrgVals = _rltok.GetValue();
-    Assert( rrgVals.FIsArray() );
-    m_fStandalone = rrgVals[0].template GetVal<bool>();
-    rrgVals[2].GetString( _rltok, m_strEncoding );
-    _TyStdStr strMinorVNum;
-    rrgVals[4].GetString( _rltok, strMinorVNum );
-    m_nVersionMinorNumber = uint8_t( strMinorVNum[0] - _TyChar('0') );
+    if ( !rrgVals.FIsNull() )
+    {
+      Assert( rrgVals.FIsArray() );
+      m_fStandalone = rrgVals[0].template GetVal<bool>();
+      rrgVals[2].GetString( _rltok, m_strEncoding );
+      _TyStdStr strMinorVNum;
+      rrgVals[4].GetString( _rltok, strMinorVNum );
+      m_nVersionMinorNumber = uint8_t( strMinorVNum[0] - _TyChar('0') );
+    }
   }
   _TyStdStr m_strEncoding;
   bool m_fStandalone{false};
