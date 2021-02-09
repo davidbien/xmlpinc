@@ -46,14 +46,54 @@ public:
   xml_parser & operator=( xml_parser && ) = default;
   void swap( _TyThis & _r )
   {
+    if ( this == &_r )
+      return;
     m_lexXml.swap( _r.m_lexXml );
     m_mapUris.swap( _r.m_mapUris );
     m_mapPrefixes.swap( _r.m_mapPrefixes );
+    m_strFileName.swap( _r.m_strFileName );
   }
-
-  // Emplacing the transport will read the byte order mark from the source file.
-  // If that byte order mark isn't compatible with the character type we are using
-  //  to read that file then it will throw a parse exception.
+  // This will attempt to open the file. If it is in the wrong format it will throw an xml_parse_exception.
+  _TyReadCursor OpenFile( const char * _pszFileName )
+  {
+    VerifyThrow( !!_pszFileName );
+    m_strFileName = _pszFileName;
+    // First we must determine the type of the file and if there is a BOM then we have to not send the BOM to the transport.
+    // Also if this parser doesn't support the encoding that we find then we have to throw an error.
+    // In the case where there is a BOM then we will pass the open file handle which is seek()'d to the correct starting position
+    //  past the BOM.
+    VerifyThrowSz( FFileExists( m_strFileName.c_str() ), "File[%s] doesn't exist.", m_strFileName.c_str() );
+    FileObj fo( OpenReadOnlyFile( m_strFileName.c_str() ) );
+    VerifyThrowSz( fo.FIsOpen(), "Couldn't open file [%s]", m_strFileName.c_str() );
+    uint8_t rgbyBOM[vknBytesBOM];
+    size_t nbyRead;
+    int iResult = FileRead( fo.HFileGet(), rgbyBOM, vknBytesBOM, &nbyRead );
+    Assert( !iResult );
+    Assert( nbyRead == vknBytesBOM );
+    EFileCharacterEncoding efceEncoding = efceFileCharacterEncodingCount;
+    if ( !iResult && ( nbyRead == vknBytesBOM ) )
+      efceEncoding = GetCharacterEncodingFromBOM( rgbyBOM, nbyRead ); // sus the encoding and return its length in nbyRead.
+    if ( efceFileCharacterEncodingCount == efceEncoding )
+    {
+      // Since we know we are opening XML we can use an easy heuristic to determine the encoding:
+      efceEncoding = DetectEncodingXmlFile( rgbyBOM, vknBytesBOM );
+      Assert( efceFileCharacterEncodingCount != efceEncoding ); // Unless the source isn't XML the above should succeed.
+      VerifyThrowSz( efceFileCharacterEncodingCount != efceEncoding, "Unclear the encoding of the file - it doesn't begin with a \'<\' in any encoding apparently. That's a bad sign for it being an XML file." );
+      nbyRead = 0; // Start at the beginning of the file.
+    }
+    // If we don't support this type of file then we should set the "invalid argument" error code and throw such an error:
+    EFileCharacterEncoding efceSupported = _TyTransport::GetSupportedCharacterEncoding();
+    if ( efceEncoding != efceSupported )
+    {
+      SetLastErrNo( vkerrInvalidArgument );
+      THROWXMLPARSEEXCEPTIONERRNO( vkerrInvalidArgument, "File [%s] is in [%s] character encoding. This parser only supports the [%s] character encoding.", 
+         m_strFileName.c_str(), PszCharacterEncodingShort( efceEncoding ), PszCharacterEncodingShort( efceSupported )  );
+    }
+    // We read the file - which seeked the read pointer - reset the read point to after any BOM, if any.
+    (void)NFileSeekAndThrow( fo.HFileGet(), nbyRead, vkSeekBegin );
+    emplaceTransport( fo );
+    return GetReadCursor();
+  }
   template < class... t_TysArgs >
   void emplaceTransport( t_TysArgs&&... _args )
   {
@@ -170,6 +210,7 @@ protected:
   _TyLexicalAnalyzer m_lexXml;
   _TyUriAndPrefixMap m_mapUris;
   _TyUriAndPrefixMap m_mapPrefixes;
+  string m_strFileName; // Record this because it doesn't cost much - it may be enpty.
 };
 
 template < class t_TyChar >
@@ -201,7 +242,7 @@ public:
   // Now get the variant type - include a monostate so that we can default initialize:
   typedef MultiplexMonostateTuplePack_t< xml_parser, _TyTpXmlTraits, variant > _TyParserVariant;
   // For the cursor we don't need a monostate because we will deliver the fully created type from a local method.
-  typedef xml_read_cursor_var< _TyTpTransports > _TyXmlCursorVar;
+  typedef xml_read_cursor_var< _TyTpTransports > _TyReadCursorVar;
 
   ~xml_parser_var() = default;
   xml_parser_var() = default;
@@ -224,7 +265,7 @@ public:
     return holds_alternative< t_TyParser >( m_varParser );
   }
   // This will open the file with transport t_tempTyTransport<>
-  _TyXmlCursorVar OpenFile( const char * _pszFileName )
+  _TyReadCursorVar OpenFile( const char * _pszFileName )
   {
     VerifyThrow( !!_pszFileName );
     m_strFileName = _pszFileName;
@@ -285,18 +326,18 @@ public:
     return GetReadCursor();
   }
   // Create and return an attached read cursor. The parser would have already need to have an open transport stream.
-  _TyXmlCursorVar GetReadCursor()
+  _TyReadCursorVar GetReadCursor()
   {
     Assert( !FIsNull() );
     return std::visit( _VisitHelpOverloadFCall {
-      [](monostate) -> _TyXmlCursorVar
+      [](monostate) -> _TyReadCursorVar
       {
         THROWNAMEDBADVARIANTACCESSEXCEPTION("Need to create a parser first.");
-        return _TyXmlCursorVar();
+        return _TyReadCursorVar();
       },
-      [this]( auto & _tParser ) -> _TyXmlCursorVar
+      [this]( auto & _tParser ) -> _TyReadCursorVar
       {
-        return _TyXmlCursorVar( _tParser.GetReadCursor() );
+        return _TyReadCursorVar( _tParser.GetReadCursor() );
       }
     }, m_varParser );
   }
