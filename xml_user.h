@@ -418,9 +418,20 @@ public:
     requires ( TFIsTransportVarCtxt_v< t_TyTransportCtxt > )
   {
     return visit(_VisitHelpOverloadFCall {
-      [&_rsvDest,&_rtok,&_rval]( auto & _rcxtTransport )
+      [this,&_rsvDest,&_rtok,&_rval]( auto & _rcxtTransport )
       {
         GetStringView( _rsvDest, _rcxtTransport, _rtok, _rval );
+      }
+    }, _rcxt.GetVariant() );
+  }
+  template < class t_TyStringView, class t_TyToken, class t_TyTransportCtxt >
+  void KGetStringView( t_TyStringView & _rsvDest, t_TyTransportCtxt & _rcxt, t_TyToken const & _rtok, typename t_TyToken::_TyValue const & _rval ) const
+    requires ( TFIsTransportVarCtxt_v< t_TyTransportCtxt > )
+  {
+    return visit(_VisitHelpOverloadFCall {
+      [this,&_rsvDest,&_rtok,&_rval]( auto & _rcxtTransport )
+      {
+        KGetStringView( _rsvDest, _rcxtTransport, _rtok, _rval );
       }
     }, _rcxt.GetVariant() );
   }
@@ -429,7 +440,7 @@ public:
     requires ( TFIsTransportVarCtxt_v< t_TyTransportCtxt > )
   {
     return visit(_VisitHelpOverloadFCall {
-      [&_rsvDest,&_rstrDest,&_rtok,&_rval]( auto & _rcxtTransport )
+      [this,&_rsvDest,&_rstrDest,&_rtok,&_rval]( auto & _rcxtTransport )
       {
         FGetStringViewOrString( _rsvDest, _rstrDest, _rcxtTransport, _rtok, _rval );
       }
@@ -440,7 +451,7 @@ public:
     requires ( TFIsTransportVarCtxt_v< t_TyTransportCtxt > )
   {
     return visit(_VisitHelpOverloadFCall {
-      [&_rstrDest,&_rtok,&_rval]( auto & _rcxtTransport )
+      [this,&_rstrDest,&_rtok,&_rval]( auto & _rcxtTransport )
       {
         GetString( _rstrDest, _rcxtTransport, _rtok, _rval );
       }

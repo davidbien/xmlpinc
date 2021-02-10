@@ -19,6 +19,37 @@ __XMLPLEX_USING_NAMESPACE
 // 2) Ditto for processing instructions.
 // 3) May want an FNextTag() as well as an FNextToken(). FNextTag() may skip CharData, whereas FNextToken() would not.
 
+inline EFileCharacterEncoding _XmlParserOpenFile( const string & _rstrFileName, FileObj & _rfoResult )
+{
+  // First we must determine the type of the file and if there is a BOM then we have to not send the BOM to the transport.
+  // Also if this parser doesn't support the encoding that we find then we have to throw an error.
+  // In the case where there is a BOM then we will pass the open file handle which is seek()'d to the correct starting position
+  //  past the BOM.
+  VerifyThrowSz( FFileExists( _rstrFileName.c_str() ), "File[%s] doesn't exist.", _rstrFileName.c_str() );
+  FileObj fo( OpenReadOnlyFile( _rstrFileName.c_str() ) );
+  VerifyThrowSz( fo.FIsOpen(), "Couldn't open file [%s]", _rstrFileName.c_str() );
+  uint8_t rgbyBOM[vknBytesBOM];
+  size_t nbyRead;
+  int iResult = FileRead( fo.HFileGet(), rgbyBOM, vknBytesBOM, &nbyRead );
+  Assert( !iResult );
+  Assert( nbyRead == vknBytesBOM );
+  EFileCharacterEncoding efceEncoding = efceFileCharacterEncodingCount;
+  if ( !iResult && ( nbyRead == vknBytesBOM ) )
+    efceEncoding = GetCharacterEncodingFromBOM( rgbyBOM, nbyRead ); // sus the encoding and return its length in nbyRead.
+  if ( efceFileCharacterEncodingCount == efceEncoding )
+  {
+    // Since we know we are opening XML we can use an easy heuristic to determine the encoding:
+    efceEncoding = DetectEncodingXmlFile( rgbyBOM, vknBytesBOM );
+    Assert( efceFileCharacterEncodingCount != efceEncoding ); // Unless the source isn't XML the above should succeed.
+    VerifyThrowSz( efceFileCharacterEncodingCount != efceEncoding, "Unclear the encoding of the file - it doesn't begin with a \'<\' in any encoding apparently. That's a bad sign for it being an XML file." );
+    nbyRead = 0; // Start at the beginning of the file.
+  }
+  // We read the file - which seeked the read pointer - reset the read point to after any BOM, if any.
+  (void)NFileSeekAndThrow( fo.HFileGet(), nbyRead, vkSeekBegin );
+  _rfoResult.swap( fo );
+  return efceEncoding;
+}
+
 template < class t_TyXmlTraits >
 class xml_parser
 {
@@ -53,44 +84,97 @@ public:
     m_mapPrefixes.swap( _r.m_mapPrefixes );
     m_strFileName.swap( _r.m_strFileName );
   }
+
+  // Open this file using the transport template given.
+  // We allow for multiple types of the same transport with different switch endian values because this
+  //  is a configuration that might want to be used since it is a bit smaller (and actually we might
+  //  want to integrate it into the xml_parser_var to make it's binary footprint smaller).
+  template < template < class ... > class t_tempTyTransport >
+  _TyReadCursor OpenFileVar( const char * _pszFileName )
+  {
+    // Produce a hard compiler error if the transport variant doesn't contain at least one possibility of this t_tempTyTransport.
+    typedef typename _TyTransport::_TyVariant _TyTransportVariant;
+    static_assert( has_type_v< t_tempTyTransport< _TyChar, false_type >, _TyTransportVariant >
+                  || has_type_v< t_tempTyTransport< _TyChar, true_type >, _TyTransportVariant > );
+    VerifyThrow( !!_pszFileName );
+    m_strFileName = _pszFileName;
+    FileObj fo;
+    EFileCharacterEncoding efceEncoding = _XmlParserOpenFile( m_strFileName, fo );
+    // First check if we can't possibly support this encoding.
+    size_t bvSupportedEncodings = _TyTransport::GetSupportedEncodingBitVector();
+    if ( !( bvSupportedEncodings & ( 1ull << efceEncoding ) ) )
+    {
+      SetLastErrNo( vkerrInvalidArgument );
+      THROWXMLPARSEEXCEPTIONERRNO( vkerrInvalidArgument, "File [%s] is in [%s] character encoding. This parser type doesn't support that encoding.", 
+          m_strFileName.c_str(), PszCharacterEncodingShort( efceEncoding ) );
+    }
+    // As with the var parser we try to match the encoding to a type that is within the variant.
+    // If it doesn't match then we throw an error.
+    switch( efceEncoding )
+    {
+      case efceUTF8:
+      {
+        _OpenParserCheckTransportType< t_tempTyTransport< char8_t, false_type > >( fo );
+      }
+      break;
+      case efceUTF16BE:
+      {
+        _OpenParserCheckTransportType< t_tempTyTransport< char16_t, integral_constant< bool, vkfIsLittleEndian > > >( fo );
+      }
+      break;
+      case efceUTF16LE:
+      {
+        _OpenParserCheckTransportType< t_tempTyTransport< char16_t, integral_constant< bool, vkfIsBigEndian > > >( fo );
+      }
+      break;
+      case efceUTF32BE:
+      {
+        _OpenParserCheckTransportType< t_tempTyTransport< char32_t, integral_constant< bool, vkfIsLittleEndian > > >( fo );
+      }
+      break;
+      case efceUTF32LE:
+      {
+        _OpenParserCheckTransportType< t_tempTyTransport< char32_t, integral_constant< bool, vkfIsBigEndian > > >( fo );
+      }
+      break;
+    }
+    return GetReadCursor();
+  }
+  template < class t_TyTransport >
+  void _OpenParserCheckTransportType( FileObj & _rfo )
+  {
+    typedef t_TyTransport _TyTransportCheck;
+    typedef typename _TyTransport::_TyVariant _TyTransportVariant;
+    typedef conditional_t< has_type_v< _TyTransportCheck, _TyTransportVariant >, _TyTransportCheck, false_type > _TyTransportResult;
+    _OpenFileVarParser< _TyTransportResult >( _rfo);
+  }
+  template < class t_TyTransport >
+  void _OpenFileVarParser( FileObj & _rfo )
+  {
+    emplaceVarTransport< t_TyTransport >( _rfo );
+  }
+  template <>
+  void _OpenFileVarParser< false_type >( FileObj & _rfo )
+  {
+    Assert( 0 ); // We should never get here because we should never be in the case where we would try to instatiate this type...
+    // But the code won't compile with out it. Our test cases test all possibilites so we don't even need to throw from here.
+  }
+
   // This will attempt to open the file. If it is in the wrong format it will throw an xml_parse_exception.
   _TyReadCursor OpenFile( const char * _pszFileName )
   {
     VerifyThrow( !!_pszFileName );
     m_strFileName = _pszFileName;
-    // First we must determine the type of the file and if there is a BOM then we have to not send the BOM to the transport.
-    // Also if this parser doesn't support the encoding that we find then we have to throw an error.
-    // In the case where there is a BOM then we will pass the open file handle which is seek()'d to the correct starting position
-    //  past the BOM.
-    VerifyThrowSz( FFileExists( m_strFileName.c_str() ), "File[%s] doesn't exist.", m_strFileName.c_str() );
-    FileObj fo( OpenReadOnlyFile( m_strFileName.c_str() ) );
-    VerifyThrowSz( fo.FIsOpen(), "Couldn't open file [%s]", m_strFileName.c_str() );
-    uint8_t rgbyBOM[vknBytesBOM];
-    size_t nbyRead;
-    int iResult = FileRead( fo.HFileGet(), rgbyBOM, vknBytesBOM, &nbyRead );
-    Assert( !iResult );
-    Assert( nbyRead == vknBytesBOM );
-    EFileCharacterEncoding efceEncoding = efceFileCharacterEncodingCount;
-    if ( !iResult && ( nbyRead == vknBytesBOM ) )
-      efceEncoding = GetCharacterEncodingFromBOM( rgbyBOM, nbyRead ); // sus the encoding and return its length in nbyRead.
-    if ( efceFileCharacterEncodingCount == efceEncoding )
-    {
-      // Since we know we are opening XML we can use an easy heuristic to determine the encoding:
-      efceEncoding = DetectEncodingXmlFile( rgbyBOM, vknBytesBOM );
-      Assert( efceFileCharacterEncodingCount != efceEncoding ); // Unless the source isn't XML the above should succeed.
-      VerifyThrowSz( efceFileCharacterEncodingCount != efceEncoding, "Unclear the encoding of the file - it doesn't begin with a \'<\' in any encoding apparently. That's a bad sign for it being an XML file." );
-      nbyRead = 0; // Start at the beginning of the file.
-    }
+    FileObj fo;
+    EFileCharacterEncoding efceEncoding = _XmlParserOpenFile( m_strFileName, fo );
     // If we don't support this type of file then we should set the "invalid argument" error code and throw such an error:
     EFileCharacterEncoding efceSupported = _TyTransport::GetSupportedCharacterEncoding();
     if ( efceEncoding != efceSupported )
     {
       SetLastErrNo( vkerrInvalidArgument );
       THROWXMLPARSEEXCEPTIONERRNO( vkerrInvalidArgument, "File [%s] is in [%s] character encoding. This parser only supports the [%s] character encoding.", 
-         m_strFileName.c_str(), PszCharacterEncodingShort( efceEncoding ), PszCharacterEncodingShort( efceSupported )  );
+          m_strFileName.c_str(), PszCharacterEncodingShort( efceEncoding ), PszCharacterEncodingShort( efceSupported )  );
     }
-    // We read the file - which seeked the read pointer - reset the read point to after any BOM, if any.
-    (void)NFileSeekAndThrow( fo.HFileGet(), nbyRead, vkSeekBegin );
     emplaceTransport( fo );
     return GetReadCursor();
   }
@@ -267,63 +351,14 @@ public:
   // This will open the file with transport t_tempTyTransport<>
   _TyReadCursorVar OpenFile( const char * _pszFileName )
   {
-    VerifyThrow( !!_pszFileName );
-    m_strFileName = _pszFileName;
-    // First we must determine the type of the file and if there is a BOM then we have to not send the BOM to the transport.
-    // In the case where there is a BOM then we will pass the open file handle which is seek()'d to the correct starting position
-    //  past the BOM.
-    VerifyThrowSz( FFileExists( m_strFileName.c_str() ), "File[%s] doesn't exist.", m_strFileName.c_str() );
-    FileObj fo( OpenReadOnlyFile( m_strFileName.c_str() ) );
-    VerifyThrowSz( fo.FIsOpen(), "Couldn't open file [%s]", m_strFileName.c_str() );
-    uint8_t rgbyBOM[vknBytesBOM];
-    size_t nbyRead;
-    int iResult = FileRead( fo.HFileGet(), rgbyBOM, vknBytesBOM, &nbyRead );
-    Assert( !iResult );
-    Assert( nbyRead == vknBytesBOM );
-    EFileCharacterEncoding efceEncoding = efceFileCharacterEncodingCount;
-    if ( !iResult && ( nbyRead == vknBytesBOM ) )
-      efceEncoding = GetCharacterEncodingFromBOM( rgbyBOM, nbyRead ); // sus the encoding and return its length in nbyRead.
-    if ( efceFileCharacterEncodingCount == efceEncoding )
-    {
-      // Since we know we are opening XML we can use an easy heuristic to determine the encoding:
-      efceEncoding = DetectEncodingXmlFile( rgbyBOM, vknBytesBOM );
-      Assert( efceFileCharacterEncodingCount != efceEncoding ); // Unless the source isn't XML the above should succeed.
-      VerifyThrowSz( efceFileCharacterEncodingCount != efceEncoding, "Unclear the encoding of the file - it doesn't begin with a \'<\' in any encoding apparently. That's a bad sign for it being an XML file." );
-      nbyRead = 0; // Start at the beginning of the file.
-    }
-    // We read the file - which seeked the read pointer - reset the read point to after any BOM, if any.
-    (void)NFileSeekAndThrow( fo.HFileGet(), nbyRead, vkSeekBegin );
-    
-    // Now, based on BOM and type, we must try to instantiate but fail with a throw if the type of file we want to instantiate isn't in our variant's type... interesting problem.
-    switch( efceEncoding )
-    {
-      case efceUTF8:
-      {
-        _OpenFileCheckParserType< t_tempTyTransport< char8_t, false_type > >( fo, efceEncoding );
-      }
-      break;
-      case efceUTF16BE:
-      {
-        _OpenFileCheckParserType< t_tempTyTransport< char16_t, integral_constant< bool, vkfIsLittleEndian > > >( fo, efceEncoding );
-      }
-      break;
-      case efceUTF16LE:
-      {
-        _OpenFileCheckParserType< t_tempTyTransport< char16_t, integral_constant< bool, vkfIsBigEndian > > >( fo, efceEncoding );
-      }
-      break;
-      case efceUTF32BE:
-      {
-        _OpenFileCheckParserType< t_tempTyTransport< char32_t, integral_constant< bool, vkfIsLittleEndian > > >( fo, efceEncoding );
-      }
-      break;
-      case efceUTF32LE:
-      {
-        _OpenFileCheckParserType< t_tempTyTransport< char32_t, integral_constant< bool, vkfIsBigEndian > > >( fo, efceEncoding );
-      }
-      break;
-    }
-    return GetReadCursor();
+    return _OpenFile< t_tempTyTransport >( _pszFileName );
+  }
+  // This will open the file with the transport passed which must be within the variant t_tempTyTransport.
+  // If it isn't we want to fail at compile time - not at runtime.
+  template < template < class ... > class t__tempTyTransport >
+  _TyReadCursorVar OpenFileVar( const char * _pszFileName )
+  {
+    return _OpenFile< t__tempTyTransport >( _pszFileName );
   }
   // Create and return an attached read cursor. The parser would have already need to have an open transport stream.
   _TyReadCursorVar GetReadCursor()
@@ -342,6 +377,46 @@ public:
     }, m_varParser );
   }
 protected:
+  // This will open the file with transport t__tempTyTransport. We should be able to share this method between
+  //  single and variant transport implementations if we are sneaky (and I am sneaky).
+  template < template < class ... > class t__tempTyTransport >
+  _TyReadCursorVar _OpenFile( const char * _pszFileName )
+  {
+    VerifyThrow( !!_pszFileName );
+    m_strFileName = _pszFileName;
+    FileObj fo;
+    EFileCharacterEncoding efceEncoding = _XmlParserOpenFile( m_strFileName, fo );
+    // Now, based on BOM and type, we must try to instantiate but fail with a throw if the type of file we want to instantiate isn't in our variant's type... interesting problem.
+    switch( efceEncoding )
+    {
+      case efceUTF8:
+      {
+        _OpenFileCheckParserType< t__tempTyTransport< char8_t, false_type > >( fo, efceEncoding );
+      }
+      break;
+      case efceUTF16BE:
+      {
+        _OpenFileCheckParserType< t__tempTyTransport< char16_t, integral_constant< bool, vkfIsLittleEndian > > >( fo, efceEncoding );
+      }
+      break;
+      case efceUTF16LE:
+      {
+        _OpenFileCheckParserType< t__tempTyTransport< char16_t, integral_constant< bool, vkfIsBigEndian > > >( fo, efceEncoding );
+      }
+      break;
+      case efceUTF32BE:
+      {
+        _OpenFileCheckParserType< t__tempTyTransport< char32_t, integral_constant< bool, vkfIsLittleEndian > > >( fo, efceEncoding );
+      }
+      break;
+      case efceUTF32LE:
+      {
+        _OpenFileCheckParserType< t__tempTyTransport< char32_t, integral_constant< bool, vkfIsBigEndian > > >( fo, efceEncoding );
+      }
+      break;
+    }
+    return GetReadCursor();
+  }
   template < class t_TyTransport >
   void _OpenFileCheckParserType( FileObj & _rfo, EFileCharacterEncoding _efceEncoding )
   {
@@ -358,12 +433,14 @@ protected:
     // We have a type, now, that is present in the variant...
     _TyParser & rp = m_varParser.emplace< t_TyParser >();
     rp.emplaceTransport( _rfo );
-
   }
   template <>
   void _OpenFileParser< false_type >( FileObj & _rfo, EFileCharacterEncoding _efceEncoding )
   {
-    VerifyThrowSz( false, "Encoding [%s] not supported by the variant object in this xml_parser_var<>.", PszCharacterEncodingShort( _efceEncoding ) );
+    SetLastErrNo( vkerrInvalidArgument );
+    THROWXMLPARSEEXCEPTIONERRNO( vkerrInvalidArgument, "File [%s] is in [%s] character encoding." 
+        "This variant parser type doesn't support that character encoding. Add types to the parser to support it", 
+        m_strFileName.c_str(), PszCharacterEncodingShort( efceEncoding ), PszCharacterEncodingShort( efceSupported )  );
   }
   string m_strFileName; // Record this because it doesn't cost much.
   _TyParserVariant m_varParser;
