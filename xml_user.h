@@ -277,6 +277,7 @@ public:
     {
       default:
         Assert( 0 );
+        [[fallthrough]];
       case s_kdtPlainText:
         nLen = _rdr.length();
       break;

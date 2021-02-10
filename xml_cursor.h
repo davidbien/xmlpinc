@@ -298,7 +298,7 @@ public:
   xml_read_cursor() = default;
   xml_read_cursor( xml_read_cursor const & ) = delete;
   xml_read_cursor & operator=( xml_read_cursor const & ) = delete;
-  xml_read_cursor( xml_read_cursor && ) = default;
+  xml_read_cursor( xml_read_cursor && ) noexcept = default;
   xml_read_cursor & operator=( xml_read_cursor && ) = default;
 
 // accessors:
