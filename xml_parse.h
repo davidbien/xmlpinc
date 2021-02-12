@@ -140,26 +140,6 @@ public:
     }
     return GetReadCursor();
   }
-  template < class t_TyTransport >
-  void _OpenParserCheckTransportType( FileObj & _rfo )
-  {
-    typedef t_TyTransport _TyTransportCheck;
-    typedef typename _TyTransport::_TyVariant _TyTransportVariant;
-    typedef conditional_t< has_type_v< _TyTransportCheck, _TyTransportVariant >, _TyTransportCheck, false_type > _TyTransportResult;
-    _OpenFileVarParser< _TyTransportResult >( _rfo);
-  }
-  template < class t_TyTransport >
-  void _OpenFileVarParser( FileObj & _rfo )
-  {
-    emplaceVarTransport< t_TyTransport >( _rfo );
-  }
-  template <>
-  void _OpenFileVarParser< false_type >( FileObj & _rfo )
-  {
-    Assert( 0 ); // We should never get here because we should never be in the case where we would try to instatiate this type...
-    // But the code won't compile with out it. Our test cases test all possibilites so we don't even need to throw from here.
-  }
-
   // This will attempt to open the file. If it is in the wrong format it will throw an xml_parse_exception.
   _TyReadCursor OpenFile( const char * _pszFileName )
   {
@@ -254,6 +234,25 @@ public:
     _xrc._AttachXmlParser( this );
   }
 protected:
+  template < class t_TyTransport >
+  void _OpenParserCheckTransportType( FileObj & _rfo )
+  {
+    typedef t_TyTransport _TyTransportCheck;
+    typedef typename _TyTransport::_TyVariant _TyTransportVariant;
+    typedef conditional_t< has_type_v< _TyTransportCheck, _TyTransportVariant >, _TyTransportCheck, false_type > _TyTransportResult;
+    _OpenFileVarParser< _TyTransportResult >( _rfo);
+  }
+  template < class t_TyTransport >
+  void _OpenFileVarParser( FileObj & _rfo )
+  {
+    emplaceVarTransport< t_TyTransport >( _rfo );
+  }
+  template <>
+  void _OpenFileVarParser< false_type >( FileObj & _rfo )
+  {
+    Assert( 0 ); // We should never get here because we should never be in the case where we would try to instatiate this type...
+    // But the code won't compile with out it. Our test cases test all possibilites so we don't even need to throw from here.
+  }
   // Accessed by xml_read_cursor<>:
   void _SetFilterWhitespaceCharData( bool _fFilterWhitespaceCharData )
   {
@@ -297,6 +296,7 @@ protected:
   string m_strFileName; // Record this because it doesn't cost much - it may be enpty.
 };
 
+// The implementation currently assumes that if you are using a xml_parser_var with three character types and sharing the switch-endian stuff as below as in _xml_var_get_var_transport.
 template < class t_TyChar >
 struct _xml_var_get_var_transport
 {
@@ -327,6 +327,7 @@ public:
   typedef MultiplexMonostateTuplePack_t< xml_parser, _TyTpXmlTraits, variant > _TyParserVariant;
   // For the cursor we don't need a monostate because we will deliver the fully created type from a local method.
   typedef xml_read_cursor_var< _TyTpTransports > _TyReadCursorVar;
+  static constexpr bool t_kfIsVariantTransport = TFIsTransportVar_v< tuple_element<0,_TyTpTransports>::type >;
 
   ~xml_parser_var() = default;
   xml_parser_var() = default;
@@ -350,15 +351,17 @@ public:
   }
   // This will open the file with transport t_tempTyTransport<>
   _TyReadCursorVar OpenFile( const char * _pszFileName )
+    requires( !t_kfIsVariantTransport )
   {
-    return _OpenFile< t_tempTyTransport >( _pszFileName );
+    return _OpenFile( _pszFileName );
   }
   // This will open the file with the transport passed which must be within the variant t_tempTyTransport.
   // If it isn't we want to fail at compile time - not at runtime.
   template < template < class ... > class t__tempTyTransport >
   _TyReadCursorVar OpenFileVar( const char * _pszFileName )
+    requires( t_kfIsVariantTransport )
   {
-    return _OpenFile< t__tempTyTransport >( _pszFileName );
+    return _OpenFileVar< t__tempTyTransport >( _pszFileName );
   }
   // Create and return an attached read cursor. The parser would have already need to have an open transport stream.
   _TyReadCursorVar GetReadCursor()
@@ -377,10 +380,9 @@ public:
     }, m_varParser );
   }
 protected:
-  // This will open the file with transport t__tempTyTransport. We should be able to share this method between
-  //  single and variant transport implementations if we are sneaky (and I am sneaky).
-  template < template < class ... > class t__tempTyTransport >
+  // This will open the file with transport t__tempTyTransport.
   _TyReadCursorVar _OpenFile( const char * _pszFileName )
+    requires( !t_kfIsVariantTransport )
   {
     VerifyThrow( !!_pszFileName );
     m_strFileName = _pszFileName;
@@ -391,27 +393,27 @@ protected:
     {
       case efceUTF8:
       {
-        _OpenFileCheckParserType< t__tempTyTransport< char8_t, false_type > >( fo, efceEncoding );
+        _OpenFileCheckParserType< t_tempTyTransport< char8_t, false_type > >( fo, efceEncoding );
       }
       break;
       case efceUTF16BE:
       {
-        _OpenFileCheckParserType< t__tempTyTransport< char16_t, integral_constant< bool, vkfIsLittleEndian > > >( fo, efceEncoding );
+        _OpenFileCheckParserType< t_tempTyTransport< char16_t, integral_constant< bool, vkfIsLittleEndian > > >( fo, efceEncoding );
       }
       break;
       case efceUTF16LE:
       {
-        _OpenFileCheckParserType< t__tempTyTransport< char16_t, integral_constant< bool, vkfIsBigEndian > > >( fo, efceEncoding );
+        _OpenFileCheckParserType< t_tempTyTransport< char16_t, integral_constant< bool, vkfIsBigEndian > > >( fo, efceEncoding );
       }
       break;
       case efceUTF32BE:
       {
-        _OpenFileCheckParserType< t__tempTyTransport< char32_t, integral_constant< bool, vkfIsLittleEndian > > >( fo, efceEncoding );
+        _OpenFileCheckParserType< t_tempTyTransport< char32_t, integral_constant< bool, vkfIsLittleEndian > > >( fo, efceEncoding );
       }
       break;
       case efceUTF32LE:
       {
-        _OpenFileCheckParserType< t__tempTyTransport< char32_t, integral_constant< bool, vkfIsBigEndian > > >( fo, efceEncoding );
+        _OpenFileCheckParserType< t_tempTyTransport< char32_t, integral_constant< bool, vkfIsBigEndian > > >( fo, efceEncoding );
       }
       break;
     }
@@ -419,6 +421,7 @@ protected:
   }
   template < class t_TyTransport >
   void _OpenFileCheckParserType( FileObj & _rfo, EFileCharacterEncoding _efceEncoding )
+    requires( !t_kfIsVariantTransport )
   {
     typedef t_TyTransport _TyTransport;
     typedef TGetXmlTraitsDefault< _TyTransport > _TyXmlTraits;
@@ -439,9 +442,86 @@ protected:
   {
     SetLastErrNo( vkerrInvalidArgument );
     THROWXMLPARSEEXCEPTIONERRNO( vkerrInvalidArgument, "File [%s] is in [%s] character encoding." 
-        "This variant parser type doesn't support that character encoding. Add types to the parser to support it", 
-        m_strFileName.c_str(), PszCharacterEncodingShort( efceEncoding ), PszCharacterEncodingShort( efceSupported )  );
+        "This variant parser type doesn't support that character encoding. Add types to the parser to support it.", 
+        m_strFileName.c_str(), PszCharacterEncodingShort( _efceEncoding ) );
   }
+  // This will open the file with transport t__tempTyTransport if possible.
+  template < template < class ... > class t__tempTyTransport >
+  _TyReadCursorVar _OpenFileVar( const char * _pszFileName )
+    requires( t_kfIsVariantTransport )
+  {
+    // First we want to fail the compile entirely if the template in question is not present whatsoever for any potential encoding.
+    // To that end we just enumerate all the possibilities:
+    static_assert(find_container_v< t__tempTyTransport< char8_t, false_type >, _TyTpTransports > ||
+                  find_container_v< t__tempTyTransport< char16_t, false_type >, _TyTpTransports > ||
+                  find_container_v< t__tempTyTransport< char16_t, true_type >, _TyTpTransports > ||
+                  find_container_v< t__tempTyTransport< char32_t, false_type >, _TyTpTransports > ||
+                  find_container_v< t__tempTyTransport< char32_t, true_type >, _TyTpTransports > );
+    VerifyThrow( !!_pszFileName );
+    m_strFileName = _pszFileName;
+    FileObj fo;
+    EFileCharacterEncoding efceEncoding = _XmlParserOpenFile( m_strFileName, fo );
+    // Now, based on BOM and type, we must try to instantiate but fail with a throw if the type of file we want to instantiate isn't in our variant's type... interesting problem.
+    switch( efceEncoding )
+    {
+      case efceUTF8:
+      {
+        _OpenFileCheckVarType< t__tempTyTransport< char8_t, false_type > >( fo, efceEncoding );
+      }
+      break;
+      case efceUTF16BE:
+      {
+        _OpenFileCheckVarType< t__tempTyTransport< char16_t, integral_constant< bool, vkfIsLittleEndian > > >( fo, efceEncoding );
+      }
+      break;
+      case efceUTF16LE:
+      {
+        _OpenFileCheckVarType< t__tempTyTransport< char16_t, integral_constant< bool, vkfIsBigEndian > > >( fo, efceEncoding );
+      }
+      break;
+      case efceUTF32BE:
+      {
+        _OpenFileCheckVarType< t__tempTyTransport< char32_t, integral_constant< bool, vkfIsLittleEndian > > >( fo, efceEncoding );
+      }
+      break;
+      case efceUTF32LE:
+      {
+        _OpenFileCheckVarType< t__tempTyTransport< char32_t, integral_constant< bool, vkfIsBigEndian > > >( fo, efceEncoding );
+      }
+      break;
+    }
+    return GetReadCursor();
+  }
+  template < class t_TyTransport >
+  void _OpenFileCheckVarType( FileObj & _rfo, EFileCharacterEncoding _efceEncoding )
+  {
+    typedef t_TyTransport _TyTransport;
+    // Find which transport variant this transport type is container in, if any.
+    typedef find_container_t< _TyTransport, _TyTpTransports, false_type > _TyVarTransport;
+    _OpenFileVarParser< _TyTransport, _TyVarTransport >( _rfo, _efceEncoding );
+  }
+  template < class t_TyTransport, class t_TyVarTransport >
+  void _OpenFileVarParser( FileObj & _rfo, EFileCharacterEncoding )
+    requires ( !is_same_v< t_TyVarTransport, false_type > )
+  {
+    typedef t_TyVarTransport _TyVarTransport;
+    typedef t_TyTransport _TyTransport;
+    typedef TGetXmlTraitsDefault< _TyVarTransport > _TyXmlTraits;
+    typedef xml_parser< _TyXmlTraits > _TyXmlParser;
+    // We have a type, now, that is present in the variant...
+    _TyXmlParser & rp = m_varParser.emplace< _TyXmlParser >();
+    rp.emplaceVarTransport< t_TyTransport >( _rfo );
+  }
+  template < class t_TyTransport, class t_TyVarTransport >
+  void _OpenFileVarParser( FileObj & _rfo, EFileCharacterEncoding _efceEncoding )
+    requires ( is_same_v< t_TyVarTransport, false_type > )
+  {
+    SetLastErrNo( vkerrInvalidArgument );
+    THROWXMLPARSEEXCEPTIONERRNO( vkerrInvalidArgument, "File [%s] is in [%s] character encoding." 
+        "This variant parser type doesn't support that character encoding for the given transport template. Add types to the parser to support it.", 
+        m_strFileName.c_str(), PszCharacterEncodingShort( _efceEncoding ) );
+  }
+
   string m_strFileName; // Record this because it doesn't cost much.
   _TyParserVariant m_varParser;
 };
