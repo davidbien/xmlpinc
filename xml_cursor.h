@@ -285,7 +285,7 @@ public:
   typedef xml_namespace_value_wrap< _TyChar > _TyXmlNamespaceValueWrap;
   typedef _l_value< _TyLexTraits > _TyLexValue;
   typedef _l_user_context< _TyLexTraits > _TyUserContext;
-  typedef _l_data< _TyChar > _TyData;
+  typedef _l_data<> _TyData;
   typedef _l_state_proto< _TyChar > _TyStateProto;
   typedef xml_parser< _TyXmlTraits > _TyXmlParser;
   friend _TyXmlParser;
@@ -466,6 +466,7 @@ public:
   bool FMoveDown()
   {
     AssertValid( true );
+    Assert( !!m_pltokLookahead );
     if ( !_FAtTailContext() )
     {
       ++m_itCurContext;
@@ -474,7 +475,7 @@ public:
     // At the tail context.
     vtyTokenIdent tidLookahead = !m_pltokLookahead ? vktidInvalidIdToken : m_pltokLookahead->GetTokenId();
     vtyTokenIdent tidTail = m_itCurContext->GetTagTokenId();
-    if ( ( s_knTokenEmptyElemTag == tidTail ) || ( tidLookahead == s_knTokenETag ) )
+    if ( ( s_knTokenEmptyElemTag == tidTail ) || ( tidLookahead == s_knTokenETag ) || ( vktidInvalidIdToken == tidLookahead ) )
       return false;
     
     // Able to move down. First process the next tag:
@@ -490,16 +491,31 @@ public:
     ++m_itCurContext;
     return true; // We moved down.
   }
+  // Just return if we could move down if we wanted to.
+  bool FCanMoveDown() const
+  {
+    AssertValid( true );
+    Assert( !!m_pltokLookahead );
+    return !_FAtTailContext() || ( ( m_itCurContext->GetTagTokenId() != s_knTokenEmptyElemTag ) && !!m_pltokLookahead && ( m_pltokLookahead->GetTokenId() != s_knTokenETag ) );
+  }
   // Move up in the context list. This allows moving all the way up to the XMLDecl context at the front of the list.
   bool FMoveUp()
   {
     AssertValid( true );
+    Assert( !!m_pltokLookahead );
     if ( m_itCurContext != m_lContexts.begin() )
     {
       --m_itCurContext;
       return true;
     }
     return false;
+  }
+  // Return if we could move up from our current position.
+  bool FCanMoveUp() const
+  {
+    AssertValid( true );
+    Assert( !!m_pltokLookahead );
+    return m_itCurContext != m_lContexts.begin();
   }
   // This moves to the next tag at the current level of the context iterator. This may result in tags and context being skipped if
   //  we are not located at a leaf tag within the XML document.
@@ -512,6 +528,8 @@ public:
   bool FNextTag( _TyOptXmlToken * _popttokRtnSpentTag = nullptr )
   {
     AssertValid( true );
+    if ( !m_pltokLookahead )
+      return false; // at eof.
     vtyTokenIdent tidCur = m_itCurContext->GetTagTokenId();
     if ( s_knTokenEmptyElemTag == tidCur )
     {
@@ -1304,12 +1322,30 @@ public:
       }
     }, m_varCursor );
   }
+  bool FCanMoveDown()
+  {
+    return std::visit( _VisitHelpOverloadFCall {
+      []( auto & _tCursor ) -> bool
+      {
+        return _tCursor.FCanMoveDown();
+      }
+    }, m_varCursor );
+  }
   bool FMoveUp()
   {
     return std::visit( _VisitHelpOverloadFCall {
       []( auto & _tCursor ) -> bool
       {
         return _tCursor.FMoveUp();
+      }
+    }, m_varCursor );
+  }
+  bool FCanMoveUp()
+  {
+    return std::visit( _VisitHelpOverloadFCall {
+      []( auto & _tCursor ) -> bool
+      {
+        return _tCursor.FCanMoveUp();
       }
     }, m_varCursor );
   }

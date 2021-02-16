@@ -29,7 +29,7 @@ public:
   typedef basic_string_view< _TyChar > _TyStrView;
   typedef pair< _TyStrView, _TyStrView > _TyPrSvTagPrefix; // note that the prefix is second, not first.
   typedef _l_token< _TyLexTraits > _TyLexToken;
-  typedef _l_data< _TyChar > _TyData;
+  typedef _l_data<> _TyData;
   typedef _l_value< _TyLexTraits > _TyValue;
 
   ~xml_token() = default;

@@ -129,7 +129,7 @@ public:
   using typename _TyBase::_TyStdStr;
   using typename _TyBase::_TyStrView;
   using typename _TyBase::_TyEntityMap;
-  typedef _l_data< _TyChar > _TyData;
+  typedef _l_data<> _TyData;
   typedef _l_action_object_base< _TyChar, false > _TyAxnObjBase;
   typedef TGetCharRefConvertBuffer< _TyChar > _TyCharRefConvertBuffer;
 
