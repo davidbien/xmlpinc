@@ -18,17 +18,15 @@ __XMLP_BEGIN_NAMESPACE
 // Allow attribute perusal through lambda only - this simplifies the interface quite nicely.
 // Member functions access the methods of all types of tokens - throw if erroneous method called - ie. asking for the comment text from a non-comment token.
 
-template < class t_TyXmlTraits >
+template < class t_TyTransportCtxt, class t_TyUserObj, class t_TyTpValueTraits >
 class xml_token
 {
   typedef xml_token _TyThis;
 public:
-  typedef t_TyXmlTraits _TyXmlTraits;
-  typedef typename _TyXmlTraits::_TyChar _TyChar;
-  typedef typename _TyXmlTraits::_TyLexTraits _TyLexTraits;
-  typedef typename _TyLexTraits::_TyTpValueTraits _TyTpValueTraits;
-  typedef typename _TyLexTraits::_TyTransportCtxt _TyTransportCtxt;
-  typedef typename _TyLexTraits::_TyUserObj _TyUserObj;
+  typedef t_TyTransportCtxt _TyTransportCtxt;
+  typedef t_TyUserObj _TyUserObj;
+  typedef t_TyTpValueTraits _TyTpValueTraits;
+  typedef typename _TyTransportCtxt::_TyChar _TyChar;
   typedef basic_string_view< _TyChar > _TyStrView;
   typedef pair< _TyStrView, _TyStrView > _TyPrSvTagPrefix; // note that the prefix is second, not first.
   typedef _l_token< _TyTransportCtxt, _TyUserObj, _TyTpValueTraits > _TyLexToken;
@@ -49,6 +47,10 @@ public:
   xml_token & operator=( xml_token const & ) = default;
   xml_token( xml_token && ) = default;
   xml_token & operator=( xml_token && ) = default;
+  void swap( xml_token & _r )
+  {
+    m_tokToken.swap( _r.m_tokToken );
+  }
 
   vtyTokenIdent GetTokenId() const
   {
@@ -119,6 +121,13 @@ protected:
   _TyLexToken m_tokToken;
 };
 
+// When we actually support DTD and validation (if ever because they aren't that important to me) then we might have to make this more complex.
+// This is an adaptor for use with MultiplexTuplePack_t<>.
+template < class t_TyTransport >
+using TGetXmlTokenFromTransport = xml_token<  typename t_TyTransport::_TyTransportCtxt, 
+                                              xml_user_obj< typename t_TyTransport::_TyChar, false >,
+                                              tuple< xml_namespace_value_wrap< typename t_TyTransport::_TyChar > > >;
+
 // As with all tokens: No default constructor, which translates to a variant: No monostate.
 template < class t_TyTpTransports >
 class xml_token_var
@@ -126,9 +135,8 @@ class xml_token_var
   typedef xml_token_var _TyThis;
 public:
   typedef t_TyTpTransports _TyTpTransports;
-  typedef MultiplexTuplePack_t< TGetXmlTraitsDefault, _TyTpTransports > _TyTpXmlTraits;
-  // Define our variant type - there is no monostate for this.
-  typedef MultiplexTuplePack_t< xml_token, _TyTpXmlTraits, variant > _TyVariant;
+  // Define our variant type - there is no monostate for this. We have to filter duplicates because some transports will share the same context.
+  typedef unique_variant_t< MultiplexTuplePack_t< TGetXmlTokenFromTransport, _TyTpTransports, variant > > _TyVariant;
 
   template < class t_TyXmlToken >
   xml_token_var( t_TyXmlToken && _rrtok )
@@ -149,7 +157,7 @@ public:
   vtyTokenIdent GetTokenId() const
   {
     return std::visit( _VisitHelpOverloadFCall {
-      [this]( auto _tXmlToken ) -> vtyTokenIdent
+      []( auto _tXmlToken ) -> vtyTokenIdent
       {
         return _tXmlToken.GetTokenId();
       }
@@ -161,3 +169,19 @@ protected:
 };
 
 __XMLP_END_NAMESPACE
+
+namespace std
+{
+__XMLP_USING_NAMESPACE
+  // override std::swap so that it is efficient:
+  template < class t_TyTransportCtxt, class t_TyUserObj, class t_TyTpValueTraits >
+  void swap(xml_token< t_TyTransportCtxt, t_TyUserObj, t_TyTpValueTraits >& _rl, xml_token< t_TyTransportCtxt, t_TyUserObj, t_TyTpValueTraits >& _rr)
+  {
+    _rl.swap(_rr);
+  }
+template < class t_TyTpTransports >
+  void swap(xml_token_var< t_TyTpTransports >& _rl, xml_token_var< t_TyTpTransports >& _rr)
+  {
+    _rl.swap(_rr);
+  }
+}

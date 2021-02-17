@@ -41,7 +41,7 @@ public:
   typedef typename _TyXmlTraits::_TyStrView _TyStrView;
   typedef typename _TyXmlTraits::_TyLexTraits _TyLexTraits;
   typedef typename _TyLexTraits::_TyToken _TyLexToken;
-  typedef xml_token< _TyXmlTraits > _TyXmlToken;
+  typedef typename _TyXmlTraits::_TyXmlToken _TyXmlToken;
   static constexpr size_t s_knbySegSize = sizeof( _TyXmlToken ) * 16;
 
   ~_xml_read_context() = default;
@@ -273,7 +273,7 @@ class xml_read_cursor
   typedef xml_read_cursor _TyThis;
 public:
   typedef t_TyXmlTraits _TyXmlTraits;
-  typedef xml_token< _TyXmlTraits > _TyXmlToken;
+  typedef typename _TyXmlTraits::_TyXmlToken _TyXmlToken;
   typedef typename _TyXmlTraits::_TyLexTraits _TyLexTraits;
   typedef typename _TyLexTraits::_TyTpValueTraits _TyTpValueTraits;
   typedef typename _TyLexTraits::_TyTransportCtxt _TyTransportCtxt;
@@ -1411,7 +1411,7 @@ protected:
   {
     typedef typename t_TyXmlReadCursor::_TyXmlTraits _TyXmlTraits;
     typedef _xml_document_context< _TyXmlTraits > _TyXmlDocumentContext;
-    typedef xml_token< _TyXmlTraits > _TyXmlToken;
+    typedef typename _TyXmlTraits::_TyXmlToken _TyXmlToken;
     _TyXmlDocumentContext xdc;
     _TyXmlToken & rtokXMLDecl = _rxrc.XMLDeclAcquireDocumentContext( xdc );
     _rxdcDocumentContextVar.emplace( std::move( xdc ) );

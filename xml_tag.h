@@ -21,7 +21,7 @@ class xml_tag
 public:
   typedef t_TyXmlTraits _TyXmlTraits;
   // The content of a tag is a series of tokens and tags.
-  typedef xml_token< t_TyXmlTraits > _TyXmlToken;
+  typedef typename _TyXmlTraits::_TyXmlToken _TyXmlToken;
   typedef _xml_read_context< _TyXmlTraits > _TyReadContext;
   typedef xml_read_cursor< _TyXmlTraits > _TyReadCursor;
   typedef std::variant< _TyThis, _TyXmlToken > _TyVariant;

@@ -27,6 +27,7 @@ private:
 public:
   typedef t_TyTransport _TyTransport;
   typedef typename t_TyTransport::_TyChar _TyChar;
+  typedef typename t_TyTransport::_TyTransportCtxt _TyTransportCtxt;
   typedef basic_string< _TyChar > _TyStdStr;
   typedef basic_string_view< _TyChar > _TyStrView;
 
@@ -38,6 +39,7 @@ public:
   typedef xml_namespace_value_wrap< _TyChar > _TyXmlNamespaceValueWrap;
   typedef tuple< _TyXmlNamespaceValueWrap > _TyTpValueTraitsPack; // We are extending the types in _l_value by this one type currently.
   typedef _l_traits< _TyTransport, _TyLexUserObj, _TyTpValueTraitsPack > _TyLexTraits;
+  typedef xml_token< _TyTransportCtxt, _TyLexUserObj, _TyTpValueTraitsPack > _TyXmlToken;
 };
 
 __XMLP_END_NAMESPACE

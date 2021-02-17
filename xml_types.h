@@ -49,7 +49,7 @@ template < class t_TyTpTransports >
 class xml_read_cursor_var;
 
 // xml_token.h:
-template < class t_TyXmlTraits >
+template < class t_TyTransportCtxt, class t_TyUserObj, class t_TyTpValueTraits >
 class xml_token;
 template < class t_TyTpTransports >
 class xml_token_var;
