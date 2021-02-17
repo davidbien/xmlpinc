@@ -40,7 +40,7 @@ public:
   typedef typename _TyXmlTraits::_TyStdStr _TyStdStr;
   typedef typename _TyXmlTraits::_TyStrView _TyStrView;
   typedef typename _TyXmlTraits::_TyLexTraits _TyLexTraits;
-  typedef _l_token< _TyLexTraits > _TyLexToken;
+  typedef typename _TyLexTraits::_TyToken _TyLexToken;
   typedef xml_token< _TyXmlTraits > _TyXmlToken;
   static constexpr size_t s_knbySegSize = sizeof( _TyXmlToken ) * 16;
 
@@ -275,7 +275,10 @@ public:
   typedef t_TyXmlTraits _TyXmlTraits;
   typedef xml_token< _TyXmlTraits > _TyXmlToken;
   typedef typename _TyXmlTraits::_TyLexTraits _TyLexTraits;
-  typedef _l_token< _TyLexTraits > _TyLexToken;
+  typedef typename _TyLexTraits::_TyTpValueTraits _TyTpValueTraits;
+  typedef typename _TyLexTraits::_TyTransportCtxt _TyTransportCtxt;
+  typedef typename _TyLexTraits::_TyUserObj _TyUserObj;
+  typedef _l_token< _TyTransportCtxt, _TyUserObj, _TyTpValueTraits > _TyLexToken;
   typedef typename _TyXmlTraits::_TyChar _TyChar;
   typedef typename _TyXmlTraits::_TyStdStr _TyStdStr;
   typedef typename _TyXmlTraits::_TyStrView _TyStrView;
@@ -283,8 +286,8 @@ public:
   typedef typename _xml_namespace_map_traits< _TyChar >::_TyNamespaceUri _TyNamespaceUri;
   typedef typename _xml_namespace_map_traits< _TyChar >::_TyNamespaceMap _TyNamespaceMap;
   typedef xml_namespace_value_wrap< _TyChar > _TyXmlNamespaceValueWrap;
-  typedef _l_value< _TyLexTraits > _TyLexValue;
-  typedef _l_user_context< _TyLexTraits > _TyUserContext;
+  typedef _l_value< _TyChar, _TyTpValueTraits > _TyLexValue;
+  typedef _l_user_context< _TyTransportCtxt, _TyUserObj, _TyTpValueTraits > _TyUserContext;
   typedef _l_data<> _TyData;
   typedef _l_state_proto< _TyChar > _TyStateProto;
   typedef xml_parser< _TyXmlTraits > _TyXmlParser;

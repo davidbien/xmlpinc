@@ -24,13 +24,16 @@ class xml_token
   typedef xml_token _TyThis;
 public:
   typedef t_TyXmlTraits _TyXmlTraits;
-  typedef typename _TyXmlTraits::_TyLexTraits _TyLexTraits;
   typedef typename _TyXmlTraits::_TyChar _TyChar;
+  typedef typename _TyXmlTraits::_TyLexTraits _TyLexTraits;
+  typedef typename _TyLexTraits::_TyTpValueTraits _TyTpValueTraits;
+  typedef typename _TyLexTraits::_TyTransportCtxt _TyTransportCtxt;
+  typedef typename _TyLexTraits::_TyUserObj _TyUserObj;
   typedef basic_string_view< _TyChar > _TyStrView;
   typedef pair< _TyStrView, _TyStrView > _TyPrSvTagPrefix; // note that the prefix is second, not first.
-  typedef _l_token< _TyLexTraits > _TyLexToken;
+  typedef _l_token< _TyTransportCtxt, _TyUserObj, _TyTpValueTraits > _TyLexToken;
   typedef _l_data<> _TyData;
-  typedef _l_value< _TyLexTraits > _TyValue;
+  typedef _l_value< _TyChar, _TyTpValueTraits > _TyLexValue;
 
   ~xml_token() = default;
   xml_token( _TyLexToken const & _rtok )
@@ -60,11 +63,11 @@ public:
     return m_tokToken;
   }
   // Shortcut.
-  _TyValue & operator [] ( size_t _nEl )
+  _TyLexValue & operator [] ( size_t _nEl )
   {
     return m_tokToken[_nEl];
   }
-  const _TyValue & operator [] ( size_t _nEl ) const
+  const _TyLexValue & operator [] ( size_t _nEl ) const
   {
     return m_tokToken[_nEl];
   }
