@@ -116,7 +116,7 @@ public:
   typedef typename _xml_namespace_map_traits< _TyChar >::_TyUriAndPrefixMap _TyUriAndPrefixMap;
   typedef xml_read_cursor< _TyXmlTraits > _TyReadCursor;
   typedef XMLDeclProperties< _TyChar > _TyXMLDeclProperties;
-  typedef _xml_document_context< _TyXmlTraits > _TyXmlDocumentContext;
+  typedef _xml_document_context_transport< _TyXmlTraits > _TyXmlDocumentContext;
 
   xml_document() = default;
   xml_document( xml_document const & ) = default;

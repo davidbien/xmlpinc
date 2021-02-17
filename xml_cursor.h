@@ -295,7 +295,7 @@ public:
   typedef _xml_read_context< _TyXmlTraits > _TyXmlReadContext;
   typedef list< _TyXmlReadContext > _TyListReadContexts;
   typedef XMLDeclProperties< _TyChar > _TyXMLDeclProperties;
-  typedef _xml_document_context< _TyXmlTraits > _TyXmlDocumentContext;
+  typedef _xml_document_context_transport< _TyXmlTraits > _TyXmlDocumentContext;
 
   ~xml_read_cursor() = default;
   xml_read_cursor() = default;
@@ -1262,7 +1262,7 @@ public:
   typedef MultiplexTuplePack_t< xml_read_cursor, _TyTpXmlTraits, variant > _TyVariant;
   typedef xml_token_var< _TyTpTransports > _TyXmlTokenVar;
   typedef optional< _TyXmlTokenVar > _TyOptXmlTokenVar;
-  typedef _xml_document_context_var< _TyTpTransports > _TyXmlDocumentContextVar;
+  typedef _xml_document_context_transport_var< _TyTpTransports > _TyXmlDocumentContextVar;
 
   ~xml_read_cursor_var() = default;
   xml_read_cursor_var() = default; // We have no monostate in our variant. We could still allow this, but I'd prefer not to. REVIEW<dbien>: Need it for the compile...
@@ -1410,7 +1410,7 @@ protected:
   _TyXmlTokenVar _XMLDeclAcquireDocumentContext( t_TyXmlReadCursor & _rxrc, _TyXmlDocumentContextVar & _rxdcDocumentContextVar )
   {
     typedef typename t_TyXmlReadCursor::_TyXmlTraits _TyXmlTraits;
-    typedef _xml_document_context< _TyXmlTraits > _TyXmlDocumentContext;
+    typedef _xml_document_context_transport< _TyXmlTraits > _TyXmlDocumentContext;
     typedef typename _TyXmlTraits::_TyXmlToken _TyXmlToken;
     _TyXmlDocumentContext xdc;
     _TyXmlToken & rtokXMLDecl = _rxrc.XMLDeclAcquireDocumentContext( xdc );

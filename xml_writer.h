@@ -86,8 +86,21 @@ public:
 protected:
 };
 
+// xml_write_tag:
+// This is a wrapper which stores a references to a tag that has been started in the associated xml_writer<> object.
+// When the lifetime of this object ends, the tag is ended, so act accordingly. The nice thing is that even in retail
+//  we will throw if you do something wrong - like end a tag early.
 template < class t_TyXmlTransportOut >
-class xml_write_token : protected xml_token<
+class xml_write_tag
+{
+  typedef xml_write_tag _TyThis;
+public:
+  typedef xml_writer< t_TyXmlTransportOut > _TyWriter;
+
+protected:
+  _TyWriter * m_pxwWriter{nullptr};
+  _TyWriterContext * m_pwcxtContext{nullptr}; // The context in the context stack to which this xml_write_tag corresponds.
+};
 
 // TGetPrefixUri (prefix,URI).
 template < class t_TyChar >
@@ -104,7 +117,12 @@ class xml_writer
 public:
   typedef t_TyXmlTransportOut _TyXmlTransportOut;
   typedef typename _TyXmlTransportOut::_TyChar _TyChar;
-  typedef xml_write_token< _TyChar > _TyXmlToken;
+  typedef xml_write_tag< _TyChar > _TyXmlWriteTag;
+  // We need a user object in order to be able to create tokens.
+  typedef xml_user_obj< _TyChar, false > _TyUserObj;
+  // We need to have our own local namespace map which means we need the full on document context:
+  typedef _xml_document_context< _TyUserObj > _TyXmlDocumentContext;
+  typedef typename _xml_namespace_map_traits< _TyChar >::_TyNamespaceMap _TyNamespaceMap;
 
   // Open the given file in the given encoding.
   void OpenFile( const char * _pszFileName )
@@ -141,20 +159,25 @@ public:
   //    prefix will be used if it is a current namespace prefix. If it isn't a current namespace prefix
   //    then an exception will be thrown.
   template < class t_TyChar >
-  _TyXmlToken & StartTag( const t_TyChar * _pszTagName, size_t _stLenTag = (numeric_limits<size_t>::max)(), TGetPrefixUri< t_TyChar > const * _ppuNamespace = nullptr )
+  _TyXmlWriteTag StartTag( const t_TyChar * _pszTagName, size_t _stLenTag = (numeric_limits<size_t>::max)(), TGetPrefixUri< t_TyChar > const * _ppuNamespace = nullptr )
   {
 
   }
-  // Ends the current tag. If _ptokEnd is passed it needs to match the stop of the write stack. If not an exception will be thrown.
+#if 0
+  // Ends the current tag. If _ptokEnd is passed it needs to match the top of the write stack. If not an exception will be thrown.
   // The safest manner of operation is to pass _ptokEnd bask to check - but I don't see a reason to *require* it.
-  void EndTag( _TyXmlToken * _ptokEnd = nullptr )
+  void EndTag( _TyXmlWriteTag * _ptokEnd = nullptr )
   {
 
   }
+#endif //0
 
   // Write a non-tag token to the output transport at the current position.
   // Validation is performed - e.g. only whitespace chardata is allowed before the first tag.
-  void WriteToken( _TyXmlToken const & _rtok )
+  // The token is passed the production to which it correspond's state machine to ensure that it matches.
+  // If a non-match is found that isn't correctable with a CharRef, etc. then we will throw an error.
+  template < class t_tyXmlToken >
+  void WriteToken( t_tyXmlToken const & _rtok )
   {
 
   }
@@ -163,10 +186,13 @@ protected:
   void _InitTransport()
   {
   }
+  _TyXmlDocumentContext m_xdcxtDocumentContext;
+  _TyNamespaceMap m_mapNamespaces; // We maintain this as we go.
 // options:
   bool m_fWriteBOM{true}; // Write a BOM because that's just a nice thing to do.
   bool m_fWriteXMLDecl{true}; // Whether to write an XMLDecl. This is honored in all scenarios.
-// status:
+// state:
+  
   bool m_fWroteFirstTag{false};
 };
 

@@ -110,7 +110,7 @@ public:
   typedef t_TyTpTransports _TyTpTransports;
   typedef MultiplexTuplePack_t< TGetXmlTraitsDefault, _TyTpTransports > _TyTpXmlTraits;
   typedef xml_read_cursor_var< _TyTpTransports > _TyReadCursorVar;
-  typedef _xml_document_context_var< _TyTpTransports > _TyXmlDocumentContextVar;
+  typedef _xml_document_context_transport_var< _TyTpTransports > _TyXmlDocumentContextVar;
 
   xml_document_var() = default;
   xml_document_var( xml_document_var const & ) = default;

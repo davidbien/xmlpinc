@@ -145,15 +145,13 @@ public:
 // This organizes all the info from parsing that we need to keep to maintain a valid standalone xml_document. It contains backing memory
 //  for string views on prefixes and URIs, the XMLDecl properties (or synthesized ones), and the transport for those transport types
 //  using a non-backing transport context.
-template < class t_TyXmlTraits >
+template < class t_TyLexUserObj >
 class _xml_document_context
 {
   typedef _xml_document_context _TyThis;
 public:
-  typedef t_TyXmlTraits _TyXmlTraits;
-  typedef typename _TyXmlTraits::_TyChar _TyChar;
-  typedef typename _TyXmlTraits::_TyTransport _TyTransport;
-  typedef typename _TyXmlTraits::_TyLexUserObj _TyLexUserObj;
+  typedef t_TyLexUserObj _TyLexUserObj;
+  typedef typename _TyLexUserObj::_TyChar _TyChar;
   typedef typename _xml_namespace_map_traits< _TyChar >::_TyUriAndPrefixMap _TyUriAndPrefixMap;
   typedef XMLDeclProperties< _TyChar > _TyXMLDeclProperties;
 
@@ -171,37 +169,63 @@ public:
     m_mapUris.swap( _r.m_mapUris );
     m_mapPrefixes.swap( _r.m_mapPrefixes );
     m_XMLDeclProperties.swap( _r.m_XMLDeclProperties );
-    m_opttpImpl.swap( _r.m_opttpImpl );
   }
 
   unique_ptr< _TyLexUserObj > m_upUserObj; // The user object. Contains all entity references.
   _TyUriAndPrefixMap m_mapUris; // set of unqiue URIs.
   _TyUriAndPrefixMap m_mapPrefixes; // set of unique prefixes.
   _TyXMLDeclProperties m_XMLDeclProperties;
+};
+
+// _xml_document_context_transport: This is a document context that includes the tranport type, etc. 
+//  This isn't necessary nor desired for some instances of _xml_document_context so we will it out.
+template < class t_TyXmlTraits >
+class _xml_document_context_transport : protected _xml_document_context< typename t_TyXmlTraits::_TyLexUserObj >
+{
+  typedef _xml_document_context_transport _TyThis;
+  typedef _xml_document_context< typename t_TyXmlTraits::_TyLexUserObj > _TyBase;
+public:
+  typedef t_TyXmlTraits _TyXmlTraits;
+  typedef typename _TyXmlTraits::_TyTransport _TyTransport;
+  using _TyBase::_TyBase; // This should work.
+  _xml_document_context_transport( _xml_document_context_transport && ) = default;
+  _xml_document_context_transport & operator =( _xml_document_context_transport && ) = default;
+  void swap( _xml_document_context_transport & _r )
+  {
+    if ( &_r == this )
+      return;
+    _TyBase::swap( _r );
+    m_opttpImpl.swap( _r.m_opttpImpl );
+  }
+
+  using _TyBase::m_upUserObj;
+  using _TyBase::m_mapUris;
+  using _TyBase::m_mapPrefixes;
+  using _TyBase::m_XMLDeclProperties;
   // For some transports where the backing is mapped memory it is convenient to store the transport here because it
   //  allows the parser object to go away entirely.
   typedef optional< _TyTransport > _TyOptTransport;
   _TyOptTransport m_opttpImpl;
 };
 
-// _xml_document_context_var: Variant version of the _xml_document_context.
+// _xml_document_context_transport_var: Variant version of the _xml_document_context_transport.
 // We must allow a monostate since we want a default constructor.
 template < class t_TyTpTransports >
-class _xml_document_context_var
+class _xml_document_context_transport_var
 {
-  typedef _xml_document_context_var _TyThis;
+  typedef _xml_document_context_transport_var _TyThis;
 public:
   typedef t_TyTpTransports _TyTpTransports;
   typedef MultiplexTuplePack_t< TGetXmlTraitsDefault, _TyTpTransports > _TyTpXmlTraits;
-  typedef MultiplexMonostateTuplePack_t< _xml_document_context, _TyTpXmlTraits, variant > _TyVariant;
+  typedef MultiplexMonostateTuplePack_t< _xml_document_context_transport, _TyTpXmlTraits, variant > _TyVariant;
 
-  ~_xml_document_context_var() = default;
-  _xml_document_context_var() = default;
-  _xml_document_context_var( _xml_document_context_var const & ) = delete;
-  _xml_document_context_var & operator =( _xml_document_context_var const & ) = delete;
-  _xml_document_context_var( _xml_document_context_var && ) = default;
-  _xml_document_context_var & operator =( _xml_document_context_var && ) = default;
-  void swap( _xml_document_context_var & _r )
+  ~_xml_document_context_transport_var() = default;
+  _xml_document_context_transport_var() = default;
+  _xml_document_context_transport_var( _xml_document_context_transport_var const & ) = delete;
+  _xml_document_context_transport_var & operator =( _xml_document_context_transport_var const & ) = delete;
+  _xml_document_context_transport_var( _xml_document_context_transport_var && ) = default;
+  _xml_document_context_transport_var & operator =( _xml_document_context_transport_var && ) = default;
+  void swap( _xml_document_context_transport_var & _r )
   {
     if ( &_r == this )
       return;
