@@ -24,6 +24,9 @@ static const vtyDataType s_kdtPEReference = 4;
 // The string containing the values from the Production S.
 #define STR_XML_WHITESPACE_TOKEN "\n\r\x20\t"
 
+// Try to propagate this to the current usage areas that merely contain "false" - this flags where we need to change when we support DTDs.
+static constexpr bool vkfSupportDTD = false;
+
 // xml_traits.h
 template < class t_TyTransport, bool t_kfSupportDTD, bool t_kfValidating >
 struct xml_traits;

@@ -1,7 +1,5 @@
 #pragma once
 
-#include <codecvt>
-
 // xml_writer.h
 // XML writer. Uses the defined productions to match supplied strings to ensure correctness.
 // dbien
@@ -34,62 +32,46 @@
 
 __XMLP_BEGIN_NAMESPACE
 
-// xml_write_transport_file:
-// Write XML to a file.
-template < class t_TyChar, class t_TyFSwitchEndian >
-class xml_write_transport_file
+// xml_write_context:
+// There is a stack of write contexts corresponding to the current set of unclosed tags from root to current leaf.
+template < class t_TyXmlTransportOut >
+class xml_write_context
 {
-  typedef xml_write_transport_file _TyThis;
+  typedef xml_write_context _TyThis;
 public:
+  typedef typename t_TyXmlTransportOut::_TyChar _TyChar;
+  typedef xml_writer< t_TyXmlTransportOut > _TyXmlWriter;
+  // We always used backed context transport contexts for our tokens in the writer. We probably won't fill them ever, but could do so.
+  typedef _l_transport_backed_ctxt< _TyChar > _TyTransportCtxt;
+  typedef xml_user_obj< _TyChar, vkfSupportDTD > _TyUserObj;
+  typedef tuple< xml_namespace_value_wrap< _TyChar > > _TyTpValueTraitsPack;
+  typedef xml_token< _TyTransportCtxt, _TyUserObj, _TyTpValueTraitsPack > _TyXmlToken;
+
+  // The data inside of m_xtkToken is complete - write it out to the output stream.
+  // We could then delete the data - except for namespace declarations, but I don't see the
+  //  need to preemptively delete since not too much memory is being taken up.
+  void CommitTagData()
+  {
+    VerifyThrowSz( !m_fCommitted, "Can only CommitTagData() once per tag." );
+    // 
+    m_fCommitted = true;
+  }
 
 
 protected:
-  FileObj m_foFile;
-};
+  _TyXmlWriter * m_pxwWriter;
+  _TyXmlToken m_xtkToken;
+  bool m_fCommitted{false}; // Committed yet?
 
-// xml_write_transport_mapped:
-// Write XML to a mapped file.
-template < class t_TyChar, class t_TyFSwitchEndian >
-class xml_write_transport_mapped
-{
-  typedef xml_write_transport_mapped _TyThis;
-public:
-
-
-protected:
-  FileObj m_foFile;
-  FileMappedObj m_fmoMap;
-};
-
-// xml_write_transport_memstream:
-// Write XML to a memstream.
-template < class t_TyChar, class t_TyFSwitchEndian >
-class xml_write_transport_memstream
-{
-  typedef xml_write_transport_memstream _TyThis;
-public:
-  typedef MemStream< size_t, false > _TyMemStream;
-
-
-protected:
-  _TyMemStream m_msMemStream;
-};
-
-// xml_write_transport_var:
-// Variant transport. Not sure if this is necessary.
-template < class ... T_TysTransports >
-class xml_write_transport_var
-{
-  typedef xml_write_transport_var _TyThis;
-public:
-
-protected:
 };
 
 // xml_write_tag:
 // This is a wrapper which stores a references to a tag that has been started in the associated xml_writer<> object.
 // When the lifetime of this object ends, the tag is ended, so act accordingly. The nice thing is that even in retail
 //  we will throw if you do something wrong - like end a tag early.
+// The Commit() method must be called on this tag before adding another tag. We will throw an error if Commit() hasn't
+//  been called on the top tag on the stack when a new tag as been added.
+// If Commit() hasn't been called when the xml_write_tag's lifetime is ended then Commit() is called automatically.
 template < class t_TyXmlTransportOut >
 class xml_write_tag
 {
@@ -97,8 +79,19 @@ class xml_write_tag
 public:
   typedef xml_writer< t_TyXmlTransportOut > _TyWriter;
 
+  // This is our attribute value/name interface object:
+  // 1) Namespaces might be declared for this tag - default or prefixed.
+  // 2) Attribute/value pairs might be added to this tag.
+  // 3) This tag may already be populated with data that came from an XML stream but now the user wants to modify the values.
+
+  // This causes the data contained within this tag to be written to the transport.
+  // This method may only be called once.
+  void Commit()
+  {
+    m_pwcxtContext->CommitTagData();
+  }
+
 protected:
-  _TyWriter * m_pxwWriter{nullptr};
   _TyWriterContext * m_pwcxtContext{nullptr}; // The context in the context stack to which this xml_write_tag corresponds.
 };
 
@@ -124,10 +117,11 @@ public:
   typedef _xml_document_context< _TyUserObj > _TyXmlDocumentContext;
   typedef typename _xml_namespace_map_traits< _TyChar >::_TyNamespaceMap _TyNamespaceMap;
 
-  // Open the given file in the given encoding.
+  // Open the given file for write in the given encoding.
+  // This will write the BOM if we are to do so, but nothing else until another action is performed.
   void OpenFile( const char * _pszFileName )
   {
-
+    
   }
   template < template < class ... > class t_tempTyXmlTransportOut >
   void OpenFileVar( const char * _pszFileName )
@@ -179,13 +173,48 @@ public:
   template < class t_tyXmlToken >
   void WriteToken( t_tyXmlToken const & _rtok )
   {
+    switch( _rtok.GetTokenId() )
+    {
+      case s_knTokenSTag:
+      case s_knTokenETag:
+      case s_knTokenEmptyElemTag:
+      case s_knTokenXMLDecl: // This included as it is written automagically and shouldn't be written here.
+        VerifyThrowSz( false, "WriteToken() is to be used to write any token except tag-related tokens." );
+      break;
+      case s_knTokenComment:
+        _WriteComment( _rtok );
+      break;
+      case s_knTokenComment:
+        _WriteComment( _rtok );
+      break;
+      case s_knTokenCDataSection:
+        _WriteCDataSection( _rtok );
+      break;
+      case s_knTokenCharData:
+        _WriteCharData( _rtok );
+      break;
+      case s_knTokenProcessingInstruction:
+        _WriteProcessingInstruction( _rtok );
+      break;
+    }
+  }
 
+  template < class... t_TysArgs >
+  _TyXmlTransportOut emplaceTransport( t_TysArgs&&... _args )
+  {
+    return m_optTransportOut.emplace( std::forward< t_TysArgs >(_args) ... );
   }
 
 protected:
-  void _InitTransport()
+  template < class t_tyXmlToken >
+  void _WriteComment(  )
   {
+    // Scenarios:
+    // 1) We match the output character encoding.
+    // 2) We don't match the output character encoding.
+    // 3) We came from an xml_read_cursor: We will have positions and not a string in the _l_value object.
   }
+  typedef optional< _TyXmlTransportOut > m_optTransportOut;
   _TyXmlDocumentContext m_xdcxtDocumentContext;
   _TyNamespaceMap m_mapNamespaces; // We maintain this as we go.
 // options:
