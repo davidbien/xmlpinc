@@ -460,6 +460,7 @@ static const vtyActionIdent s_knTokenProcessingInstruction = 1007;
 template < class t_TyLexTraits, bool t_fInLexGen = true >
 using TyGetTokenProcessingInstruction = _l_action_token< _l_action_save_data_single< s_knTokenProcessingInstruction, TyGetTriggerPITargetEnd<t_TyLexTraits,t_fInLexGen>, TyGetTriggerPITargetMeatBegin<t_TyLexTraits,t_fInLexGen> > >;
 
+#ifdef XMLPGEN_VALIDATION_ACTIONS // We don't need these action objects at all - no reason to litter the impl - but keep them around for now.
 // Write-validation tokens. These are used during writing to:
 // 1) Validate written tokens of various types.
 // 2) Determine the production of CharRefs withing Attribute Values and CharData and CDataSections.
@@ -519,5 +520,6 @@ using TyGetTokenValidPITarget = _l_action_token< _l_trigger_noop< t_TyLexTraits,
 static const vtyActionIdent s_knTokenValidPITargetMeat = 2010;
 template < class t_TyLexTraits, bool t_fInLexGen = true >
 using TyGetTokenValidPITargetMeat = _l_action_token< _l_trigger_noop< t_TyLexTraits, s_knTokenValidPITargetMeat, t_fInLexGen > >;
+#endif //XMLPGEN_VALIDATION_ACTIONS
 
 __XMLP_END_NAMESPACE

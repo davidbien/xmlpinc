@@ -184,9 +184,6 @@ public:
       case s_knTokenComment:
         _WriteComment( _rtok );
       break;
-      case s_knTokenComment:
-        _WriteComment( _rtok );
-      break;
       case s_knTokenCDataSection:
         _WriteCDataSection( _rtok );
       break;
@@ -198,7 +195,6 @@ public:
       break;
     }
   }
-
   template < class... t_TysArgs >
   _TyXmlTransportOut emplaceTransport( t_TysArgs&&... _args )
   {
@@ -206,13 +202,79 @@ public:
   }
 
 protected:
-  template < class t_tyXmlToken >
-  void _WriteComment(  )
+  void _InitValidationStartStates()
+    requires( is_same_v< _TyChar, char32_t > )
   {
+    m_pspStartCommentChars = (const _TyStateProto *)&startUTF32CommentChars;
+    m_pspStartNCName = (const _TyStateProto *)&startUTF32NCName;
+	  m_pspStartCharData = (const _TyStateProto *)&startUTF32CharData;
+	  m_pspStartAttCharDataNoSingleQuote = (const _TyStateProto *)&startUTF32AttCharDataNoSingleQuote;
+	  m_pspStartAttCharDataNoDoubleQuote = (const _TyStateProto *)&startUTF32AttCharDataNoDoubleQuote;
+	  m_pspStartName = (const _TyStateProto *)&startUTF32Name;
+	  m_pspStartCharRefDecData = (const _TyStateProto *)&startUTF32CharRefDecData;
+	  m_pspStartCharRefHexData = (const _TyStateProto *)&startUTF32CharRefHexData;
+	  m_pspStartEncName = (const _TyStateProto *)&startUTF32EncName;
+	  m_pspStartPITarget = (const _TyStateProto *)&startUTF32PITarget;
+	  m_pspStartPITargetMeatOutputValidate = (const _TyStateProto *)&startUTF32PITargetMeatOutputValidate;
+  }
+  void _InitValidationStartStates()
+    requires( is_same_v< _TyChar, char16_t > )
+  {
+    m_pspStartCommentChars = (const _TyStateProto *)&startUTF16CommentChars;
+    m_pspStartNCName = (const _TyStateProto *)&startUTF16NCName;
+	  m_pspStartCharData = (const _TyStateProto *)&startUTF16CharData;
+	  m_pspStartAttCharDataNoSingleQuote = (const _TyStateProto *)&startUTF16AttCharDataNoSingleQuote;
+	  m_pspStartAttCharDataNoDoubleQuote = (const _TyStateProto *)&startUTF16AttCharDataNoDoubleQuote;
+	  m_pspStartName = (const _TyStateProto *)&startUTF16Name;
+	  m_pspStartCharRefDecData = (const _TyStateProto *)&startUTF16CharRefDecData;
+	  m_pspStartCharRefHexData = (const _TyStateProto *)&startUTF16CharRefHexData;
+	  m_pspStartEncName = (const _TyStateProto *)&startUTF16EncName;
+	  m_pspStartPITarget = (const _TyStateProto *)&startUTF16PITarget;
+	  m_pspStartPITargetMeatOutputValidate = (const _TyStateProto *)&startUTF16PITargetMeatOutputValidate;
+  }
+  void _InitValidationStartStates()
+    requires( is_same_v< _TyChar, char8_t > )
+  {
+    m_pspStartCommentChars = (const _TyStateProto *)&startUTF8CommentChars;
+    m_pspStartNCName = (const _TyStateProto *)&startUTF8NCName;
+	  m_pspStartCharData = (const _TyStateProto *)&startUTF8CharData;
+	  m_pspStartAttCharDataNoSingleQuote = (const _TyStateProto *)&startUTF8AttCharDataNoSingleQuote;
+	  m_pspStartAttCharDataNoDoubleQuote = (const _TyStateProto *)&startUTF8AttCharDataNoDoubleQuote;
+	  m_pspStartName = (const _TyStateProto *)&startUTF8Name;
+	  m_pspStartCharRefDecData = (const _TyStateProto *)&startUTF8CharRefDecData;
+	  m_pspStartCharRefHexData = (const _TyStateProto *)&startUTF8CharRefHexData;
+	  m_pspStartEncName = (const _TyStateProto *)&startUTF8EncName;
+	  m_pspStartPITarget = (const _TyStateProto *)&startUTF8PITarget;
+	  m_pspStartPITargetMeatOutputValidate = (const _TyStateProto *)&startUTF8PITargetMeatOutputValidate;
+  }
+
+  template < class t_tyXmlToken >
+  void _WriteComment( t_tyXmlToken const & _rtok )
+  {
+    typedef typename t_tyXmlToken::_TyLexValue _TyLexValue;
     // Scenarios:
-    // 1) We match the output character encoding.
-    // 2) We don't match the output character encoding.
-    // 3) We came from an xml_read_cursor: We will have positions and not a string in the _l_value object.
+    // 1) We do everything in the character type of t_tyXmlToken. There is no reason to convert because we can just convert on output and that doesn't require a buffer.
+    // 2) Validate if necessary and then write.
+    // 3) If we came from an xml_read_cursor: We will have positions and not a string in the _l_value object. In this case validation is not necessary as it was validated on input.
+    // For a comment we should see a single, non-empty, _l_value element. If it is empty we will throw because that is not a valid comment.
+    const _TyLexValue & rval = rtok.GetValue();
+    // We should see either a single data range here or some type of string.
+    VerifyThrow( rval.FHasTypedData() || rval.FIsString() );
+    if ( !rval.FHasTypedData() ) // We assume that if we have data positions then it came from an xml_read_cursor and thereby doesn't need validation.
+    {
+      // Then we need to validate the string in whatever character type it is in - don't matter none.
+      rval.ApplyString( 
+        []< typename t_tyChar >( const t_tyChar * _pcBegin, const t_tyChar * const _pcEnd )
+        {
+          // No anti-accepting states in the the CommentChar production - no need to obtain the accept state. No fancy processing for comments.
+          VerifyThrowSz( _pcEnd == _l_match< t_TyChar >::PszMatch( PspGetCommentCharStart< t_TyChar >(), _pcBegin, ( _pcEnd - _pcBegin ) ), 
+            "Invalid characters in comment - did you put two dashes in a row?" );
+        }
+      );
+    }
+
+    
+
   }
   typedef optional< _TyXmlTransportOut > m_optTransportOut;
   _TyXmlDocumentContext m_xdcxtDocumentContext;

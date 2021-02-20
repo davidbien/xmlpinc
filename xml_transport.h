@@ -23,6 +23,10 @@ public:
     // Leave the file right where it is.
   }
 
+  // Write any character type to the transport - it will do the appropriate translation and it needn't even buffer anything...
+  template < class t_TyChar >
+  void Write( t_TyChar )
+
 protected:
   FileObj m_foFile;
 };

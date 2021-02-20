@@ -64,6 +64,14 @@ public:
   {
     return m_tokToken;
   }
+  _TyLexValue & GetValue()
+  {
+    return m_tokToken.GetValue();
+  }
+  const _TyLexValue & GetValue() const
+  {
+    return m_tokToken.GetValue();
+  }
   // Shortcut.
   _TyLexValue & operator [] ( size_t _nEl )
   {
