@@ -14,6 +14,9 @@ class xml_write_transport_file
 {
   typedef xml_write_transport_file _TyThis;
 public:
+  typedef t_TyChar _TyChar;
+  typedef t_TyFSwitchEndian _TyFSwitchEndian;
+
   xml_write_transport_file( FileObj & _rfoFile, bool _fWriteBOM )
     : m_foFile( std::move( _rfoFile ) )
   {
@@ -24,8 +27,18 @@ public:
   }
 
   // Write any character type to the transport - it will do the appropriate translation and it needn't even buffer anything...
-  template < class t_TyChar >
-  void Write( t_TyChar )
+  template < class t_TyCharWrite >
+  void Write( const t_TyCharWrite * _pcBegin, const t_TyCharWrite * _pcEnd )
+    requires( TAreSameSizeTypes_v< t_TyCharWrite, _TyChar > )
+  {
+
+  }
+  template < class t_TyCharWrite >
+  void Write( const t_TyCharWrite * _pcBegin, const t_TyCharWrite * _pcEnd )
+    requires( !TAreSameSizeTypes_v< t_TyCharWrite, _TyChar > )
+  {
+    // We want to convert as we go so there is no need to buffer.
+  }
 
 protected:
   FileObj m_foFile;
