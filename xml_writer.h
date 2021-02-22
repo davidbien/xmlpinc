@@ -99,6 +99,44 @@ protected:
 template < class t_TyChar >
 using TGetPrefixUri = std::pair< basic_string< t_TyChar >, basic_string< t_TyChar > >;
 
+template < class t_TyChar >
+const _l_state_proto< t_TyChar > * PspGetCommentCharsStart()
+  requires( is_same_v< t_TyChar, char32_t > )
+{
+  return (const _TyStateProto *)&startUTF32CommentChars;
+}
+template < class t_TyChar >
+const _l_state_proto< t_TyChar > * PspGetCommentCharsStart()
+  requires( is_same_v< t_TyChar, char16_t > )
+{
+  return (const _TyStateProto *)&startUTF16CommentChars;
+}
+template < class t_TyChar >
+const _l_state_proto< t_TyChar > * PspGetCommentCharsStart()
+  requires( is_same_v< t_TyChar, char8_t > )
+{
+  return (const _TyStateProto *)&startUTF8CommentChars;
+}
+template < class t_TyChar >
+const _l_state_proto< t_TyChar > * PspGetCDCharsOutputValidateStart()
+  requires( is_same_v< t_TyChar, char32_t > )
+{
+  return (const _TyStateProto *)&startUTF32CDCharsOutputValidate;
+}
+template < class t_TyChar >
+const _l_state_proto< t_TyChar > * PspGetCDCharsOutputValidateStart()
+  requires( is_same_v< t_TyChar, char16_t > )
+{
+  return (const _TyStateProto *)&startUTF16CDCharsOutputValidate;
+}
+template < class t_TyChar >
+const _l_state_proto< t_TyChar > * PspGetCDCharsOutputValidateStart()
+  requires( is_same_v< t_TyChar, char8_t > )
+{
+  return (const _TyStateProto *)&startUTF8CDCharsOutputValidate;
+}
+
+
 // xml_writer:
 // Writes an XML file stream through an XML write transport.
 // The encoding type of t_TyXmlTransportOut is independent of t_TyXmlTraits but we must specify it here to allow splicing, etc.,
@@ -110,6 +148,7 @@ class xml_writer
 public:
   typedef t_TyXmlTransportOut _TyXmlTransportOut;
   typedef typename _TyXmlTransportOut::_TyChar _TyChar;
+  typedef xml_markup_traits< _TyChar > _TyMarkupTraits;
   typedef xml_write_tag< _TyChar > _TyXmlWriteTag;
   // We need a user object in order to be able to create tokens.
   typedef xml_user_obj< _TyChar, false > _TyUserObj;
@@ -202,56 +241,26 @@ public:
   }
 
 protected:
-  void _InitValidationStartStates()
-    requires( is_same_v< _TyChar, char32_t > )
+  template < class t_TyChar >
+  void _WriteTransportRaw( t_TyChar const * _pcBegin, t_TyChar const * _pcEnd )
   {
-    m_pspStartCommentChars = (const _TyStateProto *)&startUTF32CommentChars;
-    m_pspStartNCName = (const _TyStateProto *)&startUTF32NCName;
-	  m_pspStartCharData = (const _TyStateProto *)&startUTF32CharData;
-	  m_pspStartAttCharDataNoSingleQuote = (const _TyStateProto *)&startUTF32AttCharDataNoSingleQuote;
-	  m_pspStartAttCharDataNoDoubleQuote = (const _TyStateProto *)&startUTF32AttCharDataNoDoubleQuote;
-	  m_pspStartName = (const _TyStateProto *)&startUTF32Name;
-	  m_pspStartCharRefDecData = (const _TyStateProto *)&startUTF32CharRefDecData;
-	  m_pspStartCharRefHexData = (const _TyStateProto *)&startUTF32CharRefHexData;
-	  m_pspStartEncName = (const _TyStateProto *)&startUTF32EncName;
-	  m_pspStartPITarget = (const _TyStateProto *)&startUTF32PITarget;
-	  m_pspStartPITargetMeatOutputValidate = (const _TyStateProto *)&startUTF32PITargetMeatOutputValidate;
+    Assert( !!m_optTransportOut );
+    Assert( _pcEnd >=_pcBegin );
+    VerifyThrow( !!m_optTransportOut && ( _pcEnd >=_pcBegin ) );
+    if ( _pcEnd == _pcBegin )
+      return; // no-op.
+    m_optTransportOut->Write( _pcBegin, _pcEnd );
   }
-  void _InitValidationStartStates()
-    requires( is_same_v< _TyChar, char16_t > )
+  template < class t_TyChar >
+  void _WriteTransportRaw( t_TyChar const * _pcBegin, size_t _nchLen )
   {
-    m_pspStartCommentChars = (const _TyStateProto *)&startUTF16CommentChars;
-    m_pspStartNCName = (const _TyStateProto *)&startUTF16NCName;
-	  m_pspStartCharData = (const _TyStateProto *)&startUTF16CharData;
-	  m_pspStartAttCharDataNoSingleQuote = (const _TyStateProto *)&startUTF16AttCharDataNoSingleQuote;
-	  m_pspStartAttCharDataNoDoubleQuote = (const _TyStateProto *)&startUTF16AttCharDataNoDoubleQuote;
-	  m_pspStartName = (const _TyStateProto *)&startUTF16Name;
-	  m_pspStartCharRefDecData = (const _TyStateProto *)&startUTF16CharRefDecData;
-	  m_pspStartCharRefHexData = (const _TyStateProto *)&startUTF16CharRefHexData;
-	  m_pspStartEncName = (const _TyStateProto *)&startUTF16EncName;
-	  m_pspStartPITarget = (const _TyStateProto *)&startUTF16PITarget;
-	  m_pspStartPITargetMeatOutputValidate = (const _TyStateProto *)&startUTF16PITargetMeatOutputValidate;
+    _WriteTransportRaw( _pcBegin, _pcBegin + _nchLen );
   }
-  void _InitValidationStartStates()
-    requires( is_same_v< _TyChar, char8_t > )
-  {
-    m_pspStartCommentChars = (const _TyStateProto *)&startUTF8CommentChars;
-    m_pspStartNCName = (const _TyStateProto *)&startUTF8NCName;
-	  m_pspStartCharData = (const _TyStateProto *)&startUTF8CharData;
-	  m_pspStartAttCharDataNoSingleQuote = (const _TyStateProto *)&startUTF8AttCharDataNoSingleQuote;
-	  m_pspStartAttCharDataNoDoubleQuote = (const _TyStateProto *)&startUTF8AttCharDataNoDoubleQuote;
-	  m_pspStartName = (const _TyStateProto *)&startUTF8Name;
-	  m_pspStartCharRefDecData = (const _TyStateProto *)&startUTF8CharRefDecData;
-	  m_pspStartCharRefHexData = (const _TyStateProto *)&startUTF8CharRefHexData;
-	  m_pspStartEncName = (const _TyStateProto *)&startUTF8EncName;
-	  m_pspStartPITarget = (const _TyStateProto *)&startUTF8PITarget;
-	  m_pspStartPITargetMeatOutputValidate = (const _TyStateProto *)&startUTF8PITargetMeatOutputValidate;
-  }
-
   template < class t_tyXmlToken >
   void _WriteComment( t_tyXmlToken const & _rtok )
   {
     typedef typename t_tyXmlToken::_TyLexValue _TyLexValue;
+    _WriteTransportRaw( _TyMarkupTraits::s_kszCommentBegin, DimensionOf( _TyMarkupTraits::s_kszCommentBegin ) );
     // Scenarios:
     // 1) We do everything in the character type of t_tyXmlToken. There is no reason to convert because we can just convert on output and that doesn't require a buffer.
     // 2) Validate if necessary and then write.
@@ -264,19 +273,136 @@ protected:
     {
       // Then we need to validate the string in whatever character type it is in - don't matter none.
       rval.ApplyString( 
-        []< typename t_tyChar >( const t_tyChar * _pcBegin, const t_tyChar * const _pcEnd )
+        [this]< typename t_TyChar >( const t_TyChar * _pcBegin, const t_TyChar * const _pcEnd )
         {
           // No anti-accepting states in the the CommentChar production - no need to obtain the accept state. No fancy processing for comments.
-          VerifyThrowSz( _pcEnd == _l_match< t_TyChar >::PszMatch( PspGetCommentCharStart< t_TyChar >(), _pcBegin, ( _pcEnd - _pcBegin ) ), 
-            "Invalid characters in comment - did you put two dashes in a row?" );
+          VerifyThrowSz( _pcEnd == _l_match< t_TyChar >::PszMatch( PspGetCommentCharsStart< t_TyChar >(), _pcBegin, ( _pcEnd - _pcBegin ) ), 
+            "Invalid comment - did you put two dashes in a row?" );
+          // While we are here we might as well write the data to the output transport.
+          _WriteTransportRaw( _pcBegin, _pcEnd );
         }
       );
     }
-
-    
-
+    else
+    {
+      // Get a string view in the current token's character type and write that to the output transport.
+      typedef basic_string_view< typename t_TyXmlToken::_TyChar > _TyStrView;
+      _TyStrView svComment;
+      _rtok.KGetStringView( rval, svComment );
+      _WriteTransportRaw( &svComment[0], svComment.length() );
+    }
+    _WriteTransportRaw( _TyMarkupTraits::s_kszCommentEnd, DimensionOf( _TyMarkupTraits::s_kszCommentEnd ) );
   }
-  typedef optional< _TyXmlTransportOut > m_optTransportOut;
+  template < class t_tyXmlToken >
+  void _WriteCDataSection( t_tyXmlToken const & _rtok )
+  {
+    typedef typename t_tyXmlToken::_TyLexValue _TyLexValue;
+    _WriteTransportRaw( _TyMarkupTraits::s_kszCDataSectionBegin, DimensionOf( _TyMarkupTraits::s_kszCDataSectionBegin ) );
+    // If we find illegal characters within a CDATA section then there is no remedy. (Well we could end the CDataSection and put in a CharRef, but we aren't doing that now.)
+    // If we find a "]]>" embedded in the CDataSection then we will appropriately escape it with an overlapping CDataSection. I.e.: "<![CDATA[]]]]><![CDATA[>]]>".
+    const _TyLexValue & rval = rtok.GetValue();
+    // We should see either a single data range here or some type of string.
+    VerifyThrow( rval.FHasTypedData() || rval.FIsString() );
+    if ( !rval.FHasTypedData() ) // We assume that if we have data positions then it came from an xml_read_cursor and thereby doesn't need validation.
+    {
+      // Then we need to validate the string in whatever character type it is in - don't matter none.
+      rval.ApplyString( 
+        [this]< typename t_TyChar >( const t_TyChar * _pcBegin, const t_TyChar * const _pcEnd )
+        {
+          // Move through and appropriately replace each found "]]>" with "]]]]><![CDATA[>", writing as we go.
+          // Since we are using an anti-accepting state in the CDCharsOutputValidate production we need to examine the returned state for anti-accepting.
+          const _TyStateProto * pspCDCharsOutputValidate = PspGetCDCharsOutputValidateStart< t_TyChar >();
+          for ( const t_TyChar * pcCur = _pcBegin; _pcEnd != pcCur;  )
+          {
+            const _TyStateProto * pspAccept;
+            const t_TyChar * pcMatch = _l_match< t_TyChar >::PszMatch( pspCDCharsOutputValidate, pcCur, _pcEnd - pcCur, &pspAccept );
+            // If we find an accepting state that doesn't complete the entire remainder of characters then we are at a failure point:
+            //  there are no transitions from this final accepting state.
+            // However if we find an anti-accepting state then that means we have encountered an embedded "]]>" and we can appropriately escape.
+            VerifyThrowSz( !( !pcMatch || ( !pspAccept->FIsAntiAcceptingState() && ( pcMatch != _pcEnd ) ) ),
+              "Invalid characters found inside of a CDataSection." );
+            // Write what we can. We should be pointing just after the "]]>" so we should be able to write all the way to pcMatch-1:
+            if ( pcMatch == _pcEnd ) // most likely occurence
+            {
+              Assert( !pspAccept->FIsAntiAcceptingState() );
+              _WriteTransportRaw( pcCur, _pcEnd );
+              return; // all done.
+            }
+            Assert( ( pcMatch[-3] == t_TyChar(']') ) && ( pcMatch[-2] == t_TyChar(']') ) && ( pcMatch[-1] == t_TyChar('>') ) );
+            _WriteTransportRaw( pcCur, pcMatch-1 );
+            pcCur = pcMatch - 1;
+            _WriteTransportRaw( _TyMarkupTraits::s_kszCDataSectionReplaceEnd, DimensionOf( _TyMarkupTraits::s_kszCDataSectionReplaceEnd ) );
+          }
+        }
+      );
+    }
+    else
+    {
+      // Get a string view in the current token's character type and write that to the output transport.
+      typedef basic_string_view< typename t_TyXmlToken::_TyChar > _TyStrView;
+      _TyStrView svCDataSection;
+      _rtok.KGetStringView( rval, svCDataSection );
+      _WriteTransportRaw( &svCDataSection[0], svCDataSection.length() );
+    }
+    _WriteTransportRaw( _TyMarkupTraits::s_kszCDataSectionEnd, DimensionOf( _TyMarkupTraits::s_kszCDataSectionEnd ) );
+  }
+  template < class t_tyXmlToken >
+  void _WriteCharData( t_tyXmlToken const & _rtok )
+  {
+    typedef typename t_tyXmlToken::_TyLexValue _TyLexValue;
+    // 1) We must recognize embedded CharRefs and EntityRefs.
+    //    a) We must validate the CharRefs don't overflow.
+    //    b) We must validate the EntityRefs refer to a defined entity.
+    // 2) We must insert predefined entity refs when we find illegal characters.
+    // If we find illegal characters within a CDATA section then there is no remedy. (Well we could end the CDataSection and put in a CharRef, but we aren't doing that now.)
+    // If we find a "]]>" embedded in the CDataSection then we will appropriately escape it with an overlapping CDataSection. I.e.: "<![CDATA[]]]]><![CDATA[>]]>".
+    const _TyLexValue & rval = rtok.GetValue();
+    // We should see either a single data range here or some type of string.
+    VerifyThrow( rval.FHasTypedData() || rval.FIsString() );
+    if ( !rval.FHasTypedData() ) // We assume that if we have data positions then it came from an xml_read_cursor and thereby doesn't need validation.
+    {
+      // Then we need to validate the string in whatever character type it is in - don't matter none.
+      rval.ApplyString( 
+        [this]< typename t_TyChar >( const t_TyChar * _pcBegin, const t_TyChar * const _pcEnd )
+        {
+          // Move through and appropriately replace each found "]]>" with "]]]]><![CDATA[>", writing as we go.
+          // Since we are using an anti-accepting state in the CDCharsOutputValidate production we need to examine the returned state for anti-accepting.
+          const _TyStateProto * pspCDCharsOutputValidate = PspGetCDCharsOutputValidateStart< t_TyChar >();
+          for ( const t_TyChar * pcCur = _pcBegin; _pcEnd != pcCur;  )
+          {
+            const _TyStateProto * pspAccept;
+            const t_TyChar * pcMatch = _l_match< t_TyChar >::PszMatch( pspCDCharsOutputValidate, pcCur, _pcEnd - pcCur, &pspAccept );
+            // If we find an accepting state that doesn't complete the entire remainder of characters then we are at a failure point:
+            //  there are no transitions from this final accepting state.
+            // However if we find an anti-accepting state then that means we have encountered an embedded "]]>" and we can appropriately escape.
+            VerifyThrowSz( !( !pcMatch || ( !pspAccept->FIsAntiAcceptingState() && ( pcMatch != _pcEnd ) ) ),
+              "Invalid characters found inside of a CDataSection." );
+            // Write what we can. We should be pointing just after the "]]>" so we should be able to write all the way to pcMatch-1:
+            if ( pcMatch == _pcEnd ) // most likely occurence
+            {
+              Assert( !pspAccept->FIsAntiAcceptingState() );
+              _WriteTransportRaw( pcCur, _pcEnd );
+              return; // all done.
+            }
+            Assert( ( pcMatch[-3] == t_TyChar(']') ) && ( pcMatch[-2] == t_TyChar(']') ) && ( pcMatch[-1] == t_TyChar('>') ) );
+            _WriteTransportRaw( pcCur, pcMatch-1 );
+            pcCur = pcMatch - 1;
+            _WriteTransportRaw( _TyMarkupTraits::s_kszCDataSectionReplaceEnd, DimensionOf( _TyMarkupTraits::s_kszCDataSectionReplaceEnd ) );
+          }
+        }
+      );
+    }
+    else
+    {
+      // Get a string view in the current token's character type and write that to the output transport.
+      typedef basic_string_view< typename t_TyXmlToken::_TyChar > _TyStrView;
+      _TyStrView svCDataSection;
+      _rtok.KGetStringView( rval, svCDataSection );
+      _WriteTransportRaw( &svCDataSection[0], svCDataSection.length() );
+    }
+  }
+  typedef optional< _TyXmlTransportOut > _TyOptTransportOut;
+  _TyOptTransportOut m_optTransportOut;
   _TyXmlDocumentContext m_xdcxtDocumentContext;
   _TyNamespaceMap m_mapNamespaces; // We maintain this as we go.
 // options:

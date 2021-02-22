@@ -94,6 +94,13 @@ public:
   {
     return s_knTokenComment == m_tokToken.GetTokenId();
   }
+  template< class t_TyStrView >
+  void KGetStringView( _TyLexValue const & _rval, t_TyStrView & _rsv ) const
+  {
+    Assert( _rval.FHasTypedData() );
+    VerifyThrow( _rval.FHasTypedData() );
+    m_tokToken.KGetStringView( _rsv, _rval );
+  }
 // Tag methods:
 #if 0 // later
   _TyStrView SvGetTag( _TyStrView * _svGetNamespacePrefix ) const
