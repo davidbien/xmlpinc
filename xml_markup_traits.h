@@ -19,6 +19,7 @@ struct xml_markup_traits< char32_t >
   static constexpr _TyChar * s_kszCDataSectionBegin = U"<![CDATA[";
   static constexpr _TyChar * s_kszCDataSectionEnd = U"]]>";
   static constexpr _TyChar * s_kszCDataSectionReplaceEnd = U"]]]]><![CDATA[>";
+  static constexpr _TyChar * s_kszCDataSectionReplaceEnd = U"]]]]><![CDATA[>";
   
 };
 

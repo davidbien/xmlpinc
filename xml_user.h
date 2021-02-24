@@ -435,6 +435,17 @@ public:
       }
     }, _rcxt.GetVariant() );
   }
+  template < class t_TyStringView, class t_TyToken, class t_TyTransportCtxt >
+  void KGetStringView( t_TyStringView & _rsvDest, t_TyTransportCtxt & _rcxt, t_TyToken const & _rtok, _l_data_range const & _rdr ) const
+    requires ( TFIsTransportVarCtxt_v< t_TyTransportCtxt > )
+  {
+    return visit(_VisitHelpOverloadFCall {
+      [this,&_rsvDest,&_rtok,&_rdr]( auto & _rcxtTransport )
+      {
+        KGetStringView( _rsvDest, _rcxtTransport, _rtok, _rdr );
+      }
+    }, _rcxt.GetVariant() );
+  }
   template < class t_TyStringView, class t_TyString, class t_TyToken, class t_TyTransportCtxt >
   bool FGetStringViewOrString( t_TyStringView & _rsvDest, t_TyString & _rstrDest, t_TyTransportCtxt & _rcxt, t_TyToken & _rtok, const typename t_TyToken::_TyValue & _rval ) const
     requires ( TFIsTransportVarCtxt_v< t_TyTransportCtxt > )
@@ -491,6 +502,14 @@ public:
     _rcxt.AssertValidDataRange( kdtr );
     VerifyThrowSz( kdtr.FContainsSingleDataRange(s_kdtPlainText), "KGetStringView() is only valid for single data ranges." );
     _rcxt.GetStringView( _rsvDest, kdtr.DataRangeGetSingle() );
+  }
+  template < class t_TyStringView, class t_TyToken, class t_TyTransportCtxt >
+  void KGetStringView( t_TyStringView & _rsvDest, t_TyTransportCtxt & _rcxt, t_TyToken const & _rtok, _l_data_range const & _rdr ) const
+    requires ( ( sizeof( typename t_TyStringView::value_type ) == sizeof( _TyChar ) ) && !TFIsTransportVarCtxt_v< t_TyTransportCtxt > )
+  {
+    Assert( _rsvDest.empty() );
+    _rcxt.AssertValidDataRange( _rdr );
+    _rcxt.GetStringView( _rsvDest, _rdr );
   }
   template < class t_TyStringView, class t_TyString, class t_TyToken, class t_TyTransportCtxt >
   bool FGetStringViewOrString( t_TyStringView & _rsvDest, t_TyString & _rstrDest, t_TyTransportCtxt & _rcxt, t_TyToken const & _rtok, const typename t_TyToken::_TyValue & _rval ) const

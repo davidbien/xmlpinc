@@ -460,71 +460,90 @@ static const vtyActionIdent s_knTokenProcessingInstruction = 1007;
 template < class t_TyLexTraits, bool t_fInLexGen = true >
 using TyGetTokenProcessingInstruction = _l_action_token< _l_action_save_data_single< s_knTokenProcessingInstruction, TyGetTriggerPITargetEnd<t_TyLexTraits,t_fInLexGen>, TyGetTriggerPITargetMeatBegin<t_TyLexTraits,t_fInLexGen> > >;
 
-#ifdef XMLPGEN_VALIDATION_ACTIONS // We don't need these action objects at all - no reason to litter the impl - but keep them around for now.
 // Write-validation tokens. These are used during writing to:
 // 1) Validate written tokens of various types.
 // 2) Determine the production of CharRefs withing Attribute Values and CharData and CDataSections.
 //    We will automatically substitute CharRefs for disallowed characters in these scenarios. Clearly
 //    CDataSections involve a different mechanism than AttrValues and CharData - we will correctly
 //    nest CDataSections to allow for the existences of "]]>" strings in the output.
-static const vtyActionIdent s_knTokenValidCommentChars = 2000;
+static const vtyActionIdent s_knTokenValidSpaces = 2000;
+template < class t_TyLexTraits, bool t_fInLexGen = true >
+using TyGetTokenValidSpaces = _l_action_token_id< t_TyLexTraits, s_knTokenValidSpaces, t_fInLexGen >;
+
+static const vtyActionIdent s_knTokenValidCommentChars = 2001;
 template < class t_TyLexTraits, bool t_fInLexGen = true >
 using TyGetTokenValidCommentChars = _l_action_token_id< t_TyLexTraits, s_knTokenValidCommentChars, t_fInLexGen >;
 
 // CharData: This validates CharData.
-static const vtyActionIdent s_knTokenValidCharData = 2001;
+static const vtyActionIdent s_knTokenValidCharData = 2002;
 template < class t_TyLexTraits, bool t_fInLexGen = true >
 using TyGetTokenValidCharData = _l_action_token_id< t_TyLexTraits, s_knTokenValidCharData, t_fInLexGen >;
 
 // CDCharsOutputValidate: This validates CDataSection contents.
-static const vtyActionIdent s_knTokenValidCDataSection = 2001;
+static const vtyActionIdent s_knTokenValidCDataSection = 2003;
 template < class t_TyLexTraits, bool t_fInLexGen = true >
 using TyGetTokenValidCDataSection = _l_action_token_id< t_TyLexTraits, s_knTokenValidCDataSection, t_fInLexGen >;
 
 // NCName: This validates prefixes and tag and attribute names.
-static const vtyActionIdent s_knTokenValidNCName = 2003;
+static const vtyActionIdent s_knTokenValidNCName = 2004;
 template < class t_TyLexTraits, bool t_fInLexGen = true >
 using TyGetTokenValidNCName = _l_action_token_id< t_TyLexTraits, s_knTokenValidNCName, t_fInLexGen >;
 
 // AttCharDataNoDoubleQuote: This validates and helps to process attribute values.
-static const vtyActionIdent s_knTokenValidAttCharDataNoDoubleQuote = 2004;
+static const vtyActionIdent s_knTokenValidAttCharDataNoDoubleQuote = 2005;
 template < class t_TyLexTraits, bool t_fInLexGen = true >
 using TyGetTokenValidAttCharDataNoDoubleQuote = _l_action_token_id< t_TyLexTraits, s_knTokenValidAttCharDataNoDoubleQuote, t_fInLexGen >;
 
 // AttCharDataNoSingleQuote: This validates and helps to process attribute values.
-static const vtyActionIdent s_knTokenValidAttCharDataNoSingleQuote = 2005;
+static const vtyActionIdent s_knTokenValidAttCharDataNoSingleQuote = 2006;
 template < class t_TyLexTraits, bool t_fInLexGen = true >
 using TyGetTokenValidAttCharDataNoSingleQuote = _l_action_token_id< t_TyLexTraits, s_knTokenValidAttCharDataNoSingleQuote, t_fInLexGen >;
 
 // Name: This validates entity reference names and parameter entity reference names.
-static const vtyActionIdent s_knTokenValidName = 2006;
+static const vtyActionIdent s_knTokenValidName = 2007;
 template < class t_TyLexTraits, bool t_fInLexGen = true >
 using TyGetTokenValidName = _l_action_token_id< t_TyLexTraits, s_knTokenValidName, t_fInLexGen >;
 
 // CharRefDec: This validates decimal character references.
-static const vtyActionIdent s_knTokenValidCharRefDec = 2007;
+static const vtyActionIdent s_knTokenValidCharRefDec = 2008;
 template < class t_TyLexTraits, bool t_fInLexGen = true >
 using TyGetTokenValidCharRefDec = _l_action_token_id< t_TyLexTraits, s_knTokenValidCharRefDec, t_fInLexGen >;
 
 // CharRefHex: This validates hexidecimal character references.
-static const vtyActionIdent s_knTokenValidCharRefHex = 2008;
+static const vtyActionIdent s_knTokenValidCharRefHex = 2009;
 template < class t_TyLexTraits, bool t_fInLexGen = true >
 using TyGetTokenValidCharRefHex = _l_action_token_id< t_TyLexTraits, s_knTokenValidCharRefHex, t_fInLexGen >;
 
 // EncName: This validates an encoding name inside of an XMLDecl statement.
-static const vtyActionIdent s_knTokenValidEncName = 2009;
+static const vtyActionIdent s_knTokenValidEncName = 2010;
 template < class t_TyLexTraits, bool t_fInLexGen = true >
 using TyGetTokenValidEncName = _l_action_token_id< t_TyLexTraits, s_knTokenValidEncName, t_fInLexGen >;
 
 // PITarget: This validates the PITarget production for a Processing Instruction.
-static const vtyActionIdent s_knTokenValidPITarget = 2010;
+static const vtyActionIdent s_knTokenValidPITarget = 2011;
 template < class t_TyLexTraits, bool t_fInLexGen = true >
 using TyGetTokenValidPITarget = _l_action_token_id< t_TyLexTraits, s_knTokenValidPITarget, t_fInLexGen >;
 
 // PITargetMeat: This validates the "meat" of the Processing Instruction which happens to be a sequence of Char productions.
-static const vtyActionIdent s_knTokenValidPITargetMeat = 2011;
+static const vtyActionIdent s_knTokenValidPITargetMeat = 2012;
 template < class t_TyLexTraits, bool t_fInLexGen = true >
 using TyGetTokenValidPITargetMeat = _l_action_token_id< t_TyLexTraits, s_knTokenValidPITargetMeat, t_fInLexGen >;
-#endif //XMLPGEN_VALIDATION_ACTIONS
+
+// These actions recognize References while writing XML files. There is a system in place to automatically recognize
+//  valid references within CharData and attribute data. We use _l_action_token_id<> to generate no Action###() methods
+//  and no m_axn* objects. This allows us not to templatize the state machine generated and thus just use by character type
+//  rather than fully specified lexical analyzer object.
+static const vtyActionIdent s_knTokenEntityRef = 3000;
+template < class t_TyLexTraits, bool t_fInLexGen = true >
+using TyGetTokenEntityRef = _l_action_token_id< t_TyLexTraits, s_knTokenEntityRef, t_fInLexGen >;
+
+static const vtyActionIdent s_knTokenCharRefDec = 3001;
+template < class t_TyLexTraits, bool t_fInLexGen = true >
+using TyGetTokenCharRefDec = _l_action_token_id< t_TyLexTraits, s_knTokenCharRefDec, t_fInLexGen >;
+
+static const vtyActionIdent s_knTokenCharRefHex = 3002;
+template < class t_TyLexTraits, bool t_fInLexGen = true >
+using TyGetTokenCharRefHex = _l_action_token_id< t_TyLexTraits, s_knTokenCharRefHex, t_fInLexGen >;
+
 
 __XMLP_END_NAMESPACE
