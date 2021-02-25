@@ -62,7 +62,6 @@ protected:
   _TyXmlWriter * m_pxwWriter;
   _TyXmlToken m_xtkToken;
   bool m_fCommitted{false}; // Committed yet?
-
 };
 
 // xml_write_tag:
@@ -99,151 +98,6 @@ protected:
 template < class t_TyChar >
 using TGetPrefixUri = std::pair< basic_string< t_TyChar >, basic_string< t_TyChar > >;
 
-template < class t_TyChar >
-const _l_state_proto< t_TyChar > * PspGetSpacesStart()
-  requires( is_same_v< t_TyChar, char32_t > )
-{
-  return (const _TyStateProto *)&startUTF32Spaces;
-}
-template < class t_TyChar >
-const _l_state_proto< t_TyChar > * PspGetSpacesStart()
-  requires( is_same_v< t_TyChar, char16_t > )
-{
-  return (const _TyStateProto *)&startUTF16Spaces;
-}
-template < class t_TyChar >
-const _l_state_proto< t_TyChar > * PspGetSpacesStart()
-  requires( is_same_v< t_TyChar, char8_t > )
-{
-  return (const _TyStateProto *)&startUTF8Spaces;
-}
-template < class t_TyChar >
-const _l_state_proto< t_TyChar > * PspGetCommentCharsStart()
-  requires( is_same_v< t_TyChar, char32_t > )
-{
-  return (const _TyStateProto *)&startUTF32CommentChars;
-}
-template < class t_TyChar >
-const _l_state_proto< t_TyChar > * PspGetCommentCharsStart()
-  requires( is_same_v< t_TyChar, char16_t > )
-{
-  return (const _TyStateProto *)&startUTF16CommentChars;
-}
-template < class t_TyChar >
-const _l_state_proto< t_TyChar > * PspGetCommentCharsStart()
-  requires( is_same_v< t_TyChar, char8_t > )
-{
-  return (const _TyStateProto *)&startUTF8CommentChars;
-}
-template < class t_TyChar >
-const _l_state_proto< t_TyChar > * PspGetCharDataStart()
-  requires( is_same_v< t_TyChar, char32_t > )
-{
-  return (const _TyStateProto *)&startUTF32CharData;
-}
-template < class t_TyChar >
-const _l_state_proto< t_TyChar > * PspGetCharDataStart()
-  requires( is_same_v< t_TyChar, char16_t > )
-{
-  return (const _TyStateProto *)&startUTF16CharData;
-}
-template < class t_TyChar >
-const _l_state_proto< t_TyChar > * PspGetCharDataStart()
-  requires( is_same_v< t_TyChar, char8_t > )
-{
-  return (const _TyStateProto *)&startUTF8CharData;
-}
-template < class t_TyChar >
-const _l_state_proto< t_TyChar > * PspGetCDCharsOutputValidateStart()
-  requires( is_same_v< t_TyChar, char32_t > )
-{
-  return (const _TyStateProto *)&startUTF32CDCharsOutputValidate;
-}
-template < class t_TyChar >
-const _l_state_proto< t_TyChar > * PspGetCDCharsOutputValidateStart()
-  requires( is_same_v< t_TyChar, char16_t > )
-{
-  return (const _TyStateProto *)&startUTF16CDCharsOutputValidate;
-}
-template < class t_TyChar >
-const _l_state_proto< t_TyChar > * PspGetCDCharsOutputValidateStart()
-  requires( is_same_v< t_TyChar, char8_t > )
-{
-  return (const _TyStateProto *)&startUTF8CDCharsOutputValidate;
-}
-template < class t_TyChar >
-const _l_state_proto< t_TyChar > * PspGetAllReferencesStart()
-  requires( is_same_v< t_TyChar, char32_t > )
-{
-  return (const _TyStateProto *)&startUTF32AllReferences;
-}
-template < class t_TyChar >
-const _l_state_proto< t_TyChar > * PspGetAllReferencesStart()
-  requires( is_same_v< t_TyChar, char16_t > )
-{
-  return (const _TyStateProto *)&startUTF16AllReferences;
-}
-template < class t_TyChar >
-const _l_state_proto< t_TyChar > * PspGetAllReferencesStart()
-  requires( is_same_v< t_TyChar, char8_t > )
-{
-  return (const _TyStateProto *)&startUTF8AllReferences;
-}
-
-// GetCharDataStart: CharData output validation token:
-template < class t_TyChar >
-struct GetCharDataStart;
-template < >
-struct GetCharDataStart< char8_t >
-{
-  static const _l_state_proto< char8_t > * s_kpspStart = (const _l_state_proto< char8_t >*)startUTF8CharData;
-}
-template < >
-struct GetCharDataStart< char16_t >
-{
-  static const _l_state_proto< char16_t > * s_kpspStart = (const _l_state_proto< char16_t >*)startUTF16CharData;
-}
-template < >
-struct GetCharDataStart< char32_t >
-{
-  static const _l_state_proto< char32_t > * s_kpspStart = (const _l_state_proto< char32_t >*)startUTF32CharData;
-}
-// GetAttCharDataNoSingleQuoteStart: AttCharDataNoSingleQuote output validation token:
-template < class t_TyChar >
-struct GetAttCharDataNoSingleQuoteStart;
-template < >
-struct GetAttCharDataNoSingleQuoteStart< char8_t >
-{
-  static const _l_state_proto< char8_t > * s_kpspStart = (const _l_state_proto< char8_t >*)startUTF8AttCharDataNoSingleQuote;
-}
-template < >
-struct GetAttCharDataNoSingleQuoteStart< char16_t >
-{
-  static const _l_state_proto< char16_t > * s_kpspStart = (const _l_state_proto< char16_t >*)startUTF16AttCharDataNoSingleQuote;
-}
-template < >
-struct GetAttCharDataNoSingleQuoteStart< char32_t >
-{
-  static const _l_state_proto< char32_t > * s_kpspStart = (const _l_state_proto< char32_t >*)startUTF32AttCharDataNoSingleQuote;
-}
-// GetAttCharDataNoDoubleQuoteStart: AttCharDataNoDoubleQuote output validation token:
-template < class t_TyChar >
-struct GetAttCharDataNoDoubleQuoteStart;
-template < >
-struct GetAttCharDataNoDoubleQuoteStart< char8_t >
-{
-  static const _l_state_proto< char8_t > * s_kpspStart = (const _l_state_proto< char8_t >*)startUTF8AttCharDataNoDoubleQuote;
-}
-template < >
-struct GetAttCharDataNoDoubleQuoteStart< char16_t >
-{
-  static const _l_state_proto< char16_t > * s_kpspStart = (const _l_state_proto< char16_t >*)startUTF16AttCharDataNoDoubleQuote;
-}
-template < >
-struct GetAttCharDataNoDoubleQuoteStart< char32_t >
-{
-  static const _l_state_proto< char32_t > * s_kpspStart = (const _l_state_proto< char32_t >*)startUTF32AttCharDataNoDoubleQuote;
-}
 
 // xml_writer:
 // Writes an XML file stream through an XML write transport.
@@ -266,27 +120,44 @@ public:
 
   // Open the given file for write in the given encoding.
   // This will write the BOM if we are to do so, but nothing else until another action is performed.
-  void OpenFile( const char * _pszFileName )
+  void OpenFile( const char * _pszFileName, bool _fStandalone = true )
   {
     
   }
   template < template < class ... > class t_tempTyXmlTransportOut >
-  void OpenFileVar( const char * _pszFileName )
+  void OpenFileVar( const char * _pszFileName, bool _fStandalone = true )
   {
 
   }
 
+// options:
+  void SetWriteBOM( bool _fWriteBOM )
+  {
+    m_fWriteBOM = _fWriteBOM;
+  }
+  void FSetWriteBOM()) const
+  {
+    return m_fWriteBOM;
+  }
+  void SetWriteXMLDecl( bool _fWriteXMLDecl )
+  {
+    m_fWriteXMLDecl = _fWriteXMLDecl;
+  }
+  void FSetWriteXMLDecl()) const
+  {
+    return m_fWriteXMLDecl;
+  }
+// status:
+  bool FInPrologue()
+  {
+    return !m_fWroteFirstTag;
+  }
 
-  // Write starting at the current tag of the read cursor.
-  // If this is the XMLDecl tag then the XMLDecl tag then we either:
-  // 1) Write the XMLDecl tag is nothing at all has been written to this writer yet.
-  // 2) Skip the XMLDecl tag if we are splicing into the middle of an existing - a writer state for which the XMLDecl tag would have already written.
+  // This will:
+  // 1) Call FMoveDown on _xrc
   template < class t_TyReadCursor >
   void WriteFromReadCursor( t_TyReadCursor & _rxrc )
   {
-    // A few things:
-    // 1) Figure out how to write the XMLDecl appropriately - or how to skip it if it is present and we don't want to write it.
-    // 2) 
   }
 
   // Start the tag. If _ppvNamespace is non-null:
@@ -337,7 +208,7 @@ public:
       case s_knTokenCharData:
       {
         // Must be a single value here:
-        _WriteCharAndAttrData< GetCharDataStart >( _rtok, _rtok.GetValue() );
+        _WriteCharAndAttrData< TGetCharDataStart >( _rtok, _rtok.GetValue() );
       }
       break;
       case s_knTokenProcessingInstruction:
@@ -370,6 +241,8 @@ protected:
   void _WriteTypedData( t_TyToken const & _rtok, typename t_TyToken::_TyValue const & _rval )
   {
     typedef basic_string_view< typename t_TyXmlToken::_TyChar > _TyStrView;
+    if ( _rval.FEmptyTypedData() )
+      return; // no-op.
     _TyStrView sv;
     _rtok.KGetStringView( rval, sv );
     _WriteTransportRaw( &sv[0], sv.length() );
@@ -378,7 +251,7 @@ protected:
   void _WriteComment( t_TyXmlToken const & _rtok )
   {
     typedef typename t_TyXmlToken::_TyLexValue _TyLexValue;
-    _WriteTransportRaw( _TyMarkupTraits::s_kszCommentBegin, DimensionOfPsz( _TyMarkupTraits::s_kszCommentBegin ) );
+    _WriteTransportRaw( _TyMarkupTraits::s_kszCommentBegin, StaticStringLen( _TyMarkupTraits::s_kszCommentBegin ) );
     // Scenarios:
     // 1) We do everything in the character type of t_TyXmlToken. There is no reason to convert because we can just convert on output and that doesn't require a buffer.
     // 2) Validate if necessary and then write.
@@ -405,51 +278,53 @@ protected:
     {
       _WriteTypedData( _rtok, rval );
     }
-    _WriteTransportRaw( _TyMarkupTraits::s_kszCommentEnd, DimensionOfPsz( _TyMarkupTraits::s_kszCommentEnd ) );
+    _WriteTransportRaw( _TyMarkupTraits::s_kszCommentEnd, StaticStringLen( _TyMarkupTraits::s_kszCommentEnd ) );
   }
+  template < template < class t_TyChar > t_tempGetStartToken, class t_TyXmlToken >
+  void _WritePIPortion( t_TyXmlToken const & _rtok, typename t_TyToken::_TyValue const & _rval )
+  {
+    VerifyThrow( _rval.FHasTypedData() || _rval.FIsString() );
+    if ( _rval.FHasTypedData() )
+      _WriteTypedData( _rtok, _rval );
+    else
+    {      
+      _rval.ApplyString( 
+        [this]< typename t_TyChar >( const t_TyChar * _pcBegin, const t_TyChar * const _pcEnd )
+        {
+          const _TyStateProto * const kpspValidateTokenStart = t_tempGetStartToken< t_TyChar >::s_kpspStart;
+          const bool kfIsPITargetMeat = ( kpspValidateTokenStart == PspGetPITargetMeatStart< t_TyChar >() );
+          // In this case there is no remedy to any encountered anti-accept state, but we want to know if we hit one
+          //  so we can give a more informative error message.
+          const _TyStateProto * pspAccept;
+          const t_TyChar * pcMatch = _l_match< t_TyChar >::PszMatch( kpspValidateTokenStart, _pcBegin, _pcEnd - _pcBegin, &pspAccept );
+          VerifyThrowSz( !( !pspAccept || pspAccept->IsAntiAcceptingState() || ( pcMatch != _pcEnd ) ), 
+            kfIsPITargetMeat ? "Invalid characters found in PITargetMeat." : "Invalid characters found in PITarget." );
+          _WriteTransportRaw( _pcBegin, _pcEnd );
+        }
+    }
+  }
+
   template < class t_TyXmlToken >
   void _WriteProcessingInstruction( t_TyXmlToken const & _rtok )
   {
     typedef typename t_TyXmlToken::_TyLexValue _TyLexValue;
-    _WriteTransportRaw( _TyMarkupTraits::s_kszProcessingInstructionBegin, DimensionOfPsz( _TyMarkupTraits::s_kszProcessingInstructionBegin ) );
+    _WriteTransportRaw( _TyMarkupTraits::s_kszProcessingInstructionBegin, StaticStringLen( _TyMarkupTraits::s_kszProcessingInstructionBegin ) );
     const _TyLexValue & rval = rtok.GetValue();
     VerifyThrow( rval.FIsArray() );
-    VerifyThrow( rval[0].FHasTypedData() || rval[0].FIsString() ); // pitarget
-    VerifyThrow( rval[1].FHasTypedData() || rval[1].FIsString() ); // pitargetmeat
-    if ( )
-
-
-    // We should see either a single data range here or some type of string.
-    VerifyThrow( rval.FHasTypedData() || rval.FIsString() );
-    if ( !rval.FHasTypedData() ) // We assume that if we have data positions then it came from an xml_read_cursor and thereby doesn't need validation.
+    // We may have just a PITarget or a PITarget + PITargetMeat.
+    _WritePIPortion< TGetPITargetStart >( _rtok, rval[0] );
+    if ( ( rval.GetSize() > 1 ) && !rval[1].FEmptyTypedData() )
     {
-      // Then we need to validate the string in whatever character type it is in - don't matter none.
-      rval.ApplyString( 
-        [this]< typename t_TyChar >( const t_TyChar * _pcBegin, const t_TyChar * const _pcEnd )
-        {
-          // No anti-accepting states in the the ProcessingInstructionChar production - no need to obtain the accept state. No fancy processing for comments.
-          VerifyThrowSz( _pcEnd == _l_match< t_TyChar >::PszMatch( PspGetProcessingInstructionCharsStart< t_TyChar >(), _pcBegin, ( _pcEnd - _pcBegin ) ), 
-            "Invalid comment - did you put two dashes in a row?" );
-          // While we are here we might as well write the data to the output transport.
-          _WriteTransportRaw( _pcBegin, _pcEnd );
-        }
-      );
+      _WriteTransportRaw( _TyMarkupTraits::s_kszSpace, StaticStringLen( _TyMarkupTraits::s_kszSpace ) );
+      _WritePIPortion< TGetPITargetMeatStart >( _rtok, rval[0] );
     }
-    else
-    {
-      // Get a string view in the current token's character type and write that to the output transport.
-      typedef basic_string_view< typename t_TyXmlToken::_TyChar > _TyStrView;
-      _TyStrView svProcessingInstruction;
-      _rtok.KGetStringView( rval, svProcessingInstruction );
-      _WriteTransportRaw( &svProcessingInstruction[0], svProcessingInstruction.length() );
-    }
-    _WriteTransportRaw( _TyMarkupTraits::s_kszProcessingInstructionEnd, DimensionOfPsz( _TyMarkupTraits::s_kszProcessingInstructionEnd ) );
+    _WriteTransportRaw( _TyMarkupTraits::s_kszProcessingInstructionEnd, StaticStringLen( _TyMarkupTraits::s_kszProcessingInstructionEnd ) );
   }
   template < class t_TyXmlToken >
   void _WriteCDataSection( t_TyXmlToken const & _rtok )
   {
     typedef typename t_TyXmlToken::_TyLexValue _TyLexValue;
-    _WriteTransportRaw( _TyMarkupTraits::s_kszCDataSectionBegin, DimensionOfPsz( _TyMarkupTraits::s_kszCDataSectionBegin ) );
+    _WriteTransportRaw( _TyMarkupTraits::s_kszCDataSectionBegin, StaticStringLen( _TyMarkupTraits::s_kszCDataSectionBegin ) );
     // If we find illegal characters within a CDATA section then there is no remedy. (Well we could end the CDataSection and put in a CharRef, but we aren't doing that now.)
     // If we find a "]]>" embedded in the CDataSection then we will appropriately escape it with an overlapping CDataSection. I.e.: "<![CDATA[]]]]><![CDATA[>]]>".
     const _TyLexValue & rval = rtok.GetValue();
@@ -483,7 +358,7 @@ protected:
             Assert( ( pcMatch[-3] == t_TyChar(']') ) && ( pcMatch[-2] == t_TyChar(']') ) && ( pcMatch[-1] == t_TyChar('>') ) );
             _WriteTransportRaw( pcCur, pcMatch-1 );
             pcCur = pcMatch - 1;
-            _WriteTransportRaw( _TyMarkupTraits::s_kszCDataSectionReplaceEnd, DimensionOfPsz( _TyMarkupTraits::s_kszCDataSectionReplaceEnd ) );
+            _WriteTransportRaw( _TyMarkupTraits::s_kszCDataSectionReplaceEnd, StaticStringLen( _TyMarkupTraits::s_kszCDataSectionReplaceEnd ) );
           }
         }
       );
@@ -492,7 +367,7 @@ protected:
     {
       _WriteTypedData( _rtok, rval );
     }
-    _WriteTransportRaw( _TyMarkupTraits::s_kszCDataSectionEnd, DimensionOfPsz( _TyMarkupTraits::s_kszCDataSectionEnd ) );
+    _WriteTransportRaw( _TyMarkupTraits::s_kszCDataSectionEnd, StaticStringLen( _TyMarkupTraits::s_kszCDataSectionEnd ) );
   }
 
   // Three possibilities:
@@ -515,7 +390,7 @@ protected:
   //     a) If it isn't in the entity map and edrAutoReferenceNoError then we will replace the leading '&' with "&amp;"
   //     b) If it isn't in the enity map and edrAutoReference then we will throw an error for a missing reference.
   // _rval: This is the value that we are currently writing. This may be one of the attribute values of a tag or chardata.
-  // t_tempGetStartToken: This is one of GetCharDataStart<>, GetAttCharDataNoSingleQuoteStart<>, GetAttCharDataNoDoubleQuoteStart<>.
+  // t_tempGetStartToken: This is one of TGetCharDataStart<>, TGetAttCharDataNoSingleQuoteStart<>, TGetAttCharDataNoDoubleQuoteStart<>.
   template < template < class t_TyChar > class t_tempGetStartToken, class t_TyXmlToken >
   void _WriteCharAndAttrData( t_TyXmlToken const & _rtok, typename t_TyXmlToken::_TyLexValue const & _rval, EDetectReferences _edrDetectReferences = edrDetectReferencesCount )
   {
@@ -558,7 +433,7 @@ protected:
               Assert( ( pcMatch[-3] == t_TyChar(']') ) && ( pcMatch[-2] == t_TyChar(']') ) && ( pcMatch[-1] == t_TyChar('>') ) );
               _WriteTransportRaw( pcCur, pcMatch-1 );
               pcCur = pcMatch - 1;
-              _WriteTransportRaw( _TyMarkupTraits::s_kszEntityGreaterThan, DimensionOfPsz( _TyMarkupTraits::s_kszEntityGreaterThan ) );
+              _WriteTransportRaw( _TyMarkupTraits::s_kszEntityGreaterThan, StaticStringLen( _TyMarkupTraits::s_kszEntityGreaterThan ) );
             }
             else
             {
@@ -572,17 +447,17 @@ protected:
                   Assert( false ); // no reason to throw because if things are correct we cannot get here.
                 break;
                 case t_TyChar('\''):
-                  _WriteTransportRaw( _TyMarkupTraits::s_kszEntityApostrophe, DimensionOfPsz( _TyMarkupTraits::s_kszEntityApostrophe ) );
+                  _WriteTransportRaw( _TyMarkupTraits::s_kszEntityApostrophe, StaticStringLen( _TyMarkupTraits::s_kszEntityApostrophe ) );
                 break;
                 case t_TyChar('\"'):
-                  _WriteTransportRaw( _TyMarkupTraits::s_kszEntityDoubleQuote, DimensionOfPsz( _TyMarkupTraits::s_kszEntityDoubleQuote ) );
+                  _WriteTransportRaw( _TyMarkupTraits::s_kszEntityDoubleQuote, StaticStringLen( _TyMarkupTraits::s_kszEntityDoubleQuote ) );
                 break;
                 case t_TyChar('&'):
                 {
                   // Reference. _edrDetectReferences now comes into play:
                   if ( edrNoReferences == _edrDetectReferences )
                   {
-                    _WriteTransportRaw( _TyMarkupTraits::s_kszEntityAmpersand, DimensionOfPsz( _TyMarkupTraits::s_kszEntityAmpersand ) );
+                    _WriteTransportRaw( _TyMarkupTraits::s_kszEntityAmpersand, StaticStringLen( _TyMarkupTraits::s_kszEntityAmpersand ) );
                   }
                   else
                   {
@@ -593,7 +468,7 @@ protected:
                     {
                       Assert( ( edrAutoReference == _edrDetectReferences ) || ( edrAutoReferenceNoError == _edrDetectReferences ) )
                       // Then this doesn't match the Reference production and we are on "auto" - just replace with an amp:
-                      _WriteTransportRaw( _TyMarkupTraits::s_kszEntityAmpersand, DimensionOfPsz( _TyMarkupTraits::s_kszEntityAmpersand ) );
+                      _WriteTransportRaw( _TyMarkupTraits::s_kszEntityAmpersand, StaticStringLen( _TyMarkupTraits::s_kszEntityAmpersand ) );
                     }
                     else
                     {
@@ -614,7 +489,7 @@ protected:
                           else
                           {
                             // escape the bogus entity reference:
-                            _WriteTransportRaw( _TyMarkupTraits::s_kszEntityAmpersand, DimensionOfPsz( _TyMarkupTraits::s_kszEntityAmpersand ) );
+                            _WriteTransportRaw( _TyMarkupTraits::s_kszEntityAmpersand, StaticStringLen( _TyMarkupTraits::s_kszEntityAmpersand ) );
                             _WriteTransportRaw( pcCur, pcMatchReference );
                           }
                           pcCur = pcMatchReference;
@@ -638,7 +513,7 @@ protected:
                           else
                           {
                             // escape the bogus character reference:
-                            _WriteTransportRaw( _TyMarkupTraits::s_kszEntityAmpersand, DimensionOfPsz( _TyMarkupTraits::s_kszEntityAmpersand ) );
+                            _WriteTransportRaw( _TyMarkupTraits::s_kszEntityAmpersand, StaticStringLen( _TyMarkupTraits::s_kszEntityAmpersand ) );
                             _WriteTransportRaw( pcCur, pcMatchReference );
                           }
                           pcCur = pcMatchReference;
@@ -659,7 +534,7 @@ protected:
     else
     {
       // In this case we may have rich data in the typed data - i.e. a series of CharData and interspersed references.
-      // We will peruse and write out according to the tokens present in the typed data. We will have to augment with
+      // We will peruse and write out according to the sub-tokens present in the typed data. We will have to augment with
       //  sub-token (trigger) markup as we go.
       typedef basic_string_view< typename t_TyXmlToken::_TyChar > _TyStrView;
       _TyData const & krdtCharData = _rval.GetTypedData();
@@ -680,29 +555,29 @@ protected:
               break;
               case s_kdtCharDecRef:
               {
-                _WriteTransportRaw( _TyMarkupTraits::s_kszCharDecRefBegin, DimensionOfPsz( _TyMarkupTraits::s_kszCharDecRefBegin ) );
+                _WriteTransportRaw( _TyMarkupTraits::s_kszCharDecRefBegin, StaticStringLen( _TyMarkupTraits::s_kszCharDecRefBegin ) );
                 _TyStrView svCharDecRef;
                 _rtok.KGetStringView( *pdtrCur, svCharDecRef );
                 _WriteTransportRaw( &svCharDecRef[0], svCharDecRef.length() );
-                _WriteTransportRaw( _TyMarkupTraits::s_kszReferenceEnd, DimensionOfPsz( _TyMarkupTraits::s_kszReferenceEnd ) );
+                _WriteTransportRaw( _TyMarkupTraits::s_kszReferenceEnd, StaticStringLen( _TyMarkupTraits::s_kszReferenceEnd ) );
               }
               break;
               case s_kdtCharHexRef:
               {
-                _WriteTransportRaw( _TyMarkupTraits::s_kszCharHexRefBegin, DimensionOfPsz( _TyMarkupTraits::s_kszCharHexRefBegin ) );
+                _WriteTransportRaw( _TyMarkupTraits::s_kszCharHexRefBegin, StaticStringLen( _TyMarkupTraits::s_kszCharHexRefBegin ) );
                 _TyStrView svCharHexRef;
                 _rtok.KGetStringView( *pdtrCur, svCharHexRef );
                 _WriteTransportRaw( &svCharHexRef[0], svCharHexRef.length() );
-                _WriteTransportRaw( _TyMarkupTraits::s_kszReferenceEnd, DimensionOfPsz( _TyMarkupTraits::s_kszReferenceEnd ) );
+                _WriteTransportRaw( _TyMarkupTraits::s_kszReferenceEnd, StaticStringLen( _TyMarkupTraits::s_kszReferenceEnd ) );
               }
               break;
               case s_kdtEntityRef:
               {
-                _WriteTransportRaw( _TyMarkupTraits::s_kszEntityRefRefBegin, DimensionOfPsz( _TyMarkupTraits::s_kszEntityRefRefBegin ) );
+                _WriteTransportRaw( _TyMarkupTraits::s_kszEntityRefRefBegin, StaticStringLen( _TyMarkupTraits::s_kszEntityRefRefBegin ) );
                 _TyStrView svEntityRef;
                 _rtok.KGetStringView( *pdtrCur, svEntityRef );
                 _WriteTransportRaw( &svEntityRef[0], svEntityRef.length() );
-                _WriteTransportRaw( _TyMarkupTraits::s_kszReferenceEnd, DimensionOfPsz( _TyMarkupTraits::s_kszReferenceEnd ) );
+                _WriteTransportRaw( _TyMarkupTraits::s_kszReferenceEnd, StaticStringLen( _TyMarkupTraits::s_kszReferenceEnd ) );
               }
               break;
               default:
