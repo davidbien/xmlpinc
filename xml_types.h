@@ -112,6 +112,16 @@ public:
   XMLDeclProperties & operator=( XMLDeclProperties const & ) = default;
   XMLDeclProperties( XMLDeclProperties && ) = default;
   XMLDeclProperties & operator=( XMLDeclProperties && ) = default;
+  XMLDeclProperties( bool _fStandalone, EFileCharacterEncoding _efce )
+    : m_fStandalone( _fStandalone ),
+      m_strEncoding( PszCharacterEncodingName( _efce ) )
+  {
+  }
+  void Init( bool _fStandalone, EFileCharacterEncoding _efce )
+  {
+    m_fStandalone = _fStandalone;
+    m_strEncoding = PszCharacterEncodingName( _efce );
+  }
   void swap( _TyThis & _r )
   {
     std::swap( m_fStandalone, _r.m_fStandalone );
@@ -157,7 +167,12 @@ public:
   typedef typename _TyLexUserObj::_TyChar _TyChar;
   typedef typename _xml_namespace_map_traits< _TyChar >::_TyUriAndPrefixMap _TyUriAndPrefixMap;
   typedef XMLDeclProperties< _TyChar > _TyXMLDeclProperties;
-
+  void Init( bool _fStandalone, EFileCharacterEncoding _efce )
+  {
+    // Create the user object - it will create all the default entities in its entity map.
+    m_upUserObj = make_unique< _TyLexUserObj >();
+    m_XMLDeclProperties.Init( _fStandalone, _efce );
+  }
   ~_xml_document_context() = default;
   _xml_document_context() = default;
   _xml_document_context( _xml_document_context const & ) = delete;

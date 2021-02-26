@@ -43,9 +43,14 @@ public:
   typedef xml_writer< t_TyXmlTransportOut > _TyXmlWriter;
   // We always used backed context transport contexts for our tokens in the writer. We probably won't fill them ever, but could do so.
   typedef _l_transport_backed_ctxt< _TyChar > _TyTransportCtxt;
-  typedef xml_user_obj< _TyChar, vkfSupportDTD > _TyUserObj;
+  typedef xml_user_obj< _TyChar, vkfSupportDTD > _TyLexUserObj;
   typedef tuple< xml_namespace_value_wrap< _TyChar > > _TyTpValueTraitsPack;
-  typedef xml_token< _TyTransportCtxt, _TyUserObj, _TyTpValueTraitsPack > _TyXmlToken;
+  typedef xml_token< _TyTransportCtxt, _TyLexUserObj, _TyTpValueTraitsPack > _TyXmlToken;
+
+  xml_write_context( _TyLexUserObj & _ruoUserObj, const _TyAxnObjBase * _paobCurToken )
+    : m_xtkToken( _ruoUserObj, _paobCurToken )
+  {
+  }
 
   // The data inside of m_xtkToken is complete - write it out to the output stream.
   // We could then delete the data - except for namespace declarations, but I don't see the
@@ -85,6 +90,7 @@ public:
 
   // This causes the data contained within this tag to be written to the transport.
   // This method may only be called once.
+  // Note that starting another tag under this one will also cause an implicit Commit() to occur ( as a shortcut ).
   void Commit()
   {
     m_pwcxtContext->CommitTagData();
@@ -113,21 +119,53 @@ public:
   typedef xml_markup_traits< _TyChar > _TyMarkupTraits;
   typedef xml_write_tag< _TyChar > _TyXmlWriteTag;
   // We need a user object in order to be able to create tokens.
-  typedef xml_user_obj< _TyChar, false > _TyUserObj;
+  typedef xml_user_obj< _TyChar, false > _TyLexUserObj;
   // We need to have our own local namespace map which means we need the full on document context:
-  typedef _xml_document_context< _TyUserObj > _TyXmlDocumentContext;
+  typedef _xml_document_context< _TyLexUserObj > _TyXmlDocumentContext;
   typedef typename _xml_namespace_map_traits< _TyChar >::_TyNamespaceMap _TyNamespaceMap;
+  typedef xml_write_context< _TyXmlTransportOut > _TyWriteContext;
+  typedef list< _TyWriteContext > _TyListWriteContexts;
+
+  xml_writer()
+  {
+  }
+  ~xml_writer() = default;
 
   // Open the given file for write in the given encoding.
-  // This will write the BOM if we are to do so, but nothing else until another action is performed.
+  // This will also write the XMLDecl if we are to do so, and regardless it will create a
+  //  write context stack containing a single element which is the XMLDecl element regardless
+  //  if we are to write the element.
   void OpenFile( const char * _pszFileName, bool _fStandalone = true )
   {
-    
+    m_xdcxtDocumentContext.Init( _fStandalone, _TyXmlTransportOut::GetCharacterEncoding() );
+    m_strFileName = _pszFileName;
+    FileObj foFile( CreateWriteOnlyFile( _pszFileName ) );
+    VerifyThrowSz( foFile.FIsOpen(), "Unable to open file[%s]", _pszFileName );
+    // emplace the transport - it will write the BOM or not:
+    emplaceTransport( foFile, m_fWriteBOM );
+    _Init(); // This might write the XMLDecl tag to the file, but definitely will init the context stack.
+  }
+  void _Init()
+  {
+    if ( m_fWriteXMLDecl )
+    {
+      // Just write the XML declaration brute force - no reason to get fancy here. Note that this also includes
+      //  ' version="1.0" encoding="'.
+      _WriteTransportRaw( _TyMarkupTraits::s_kszXMLDeclBeginEtc, StaticStringLen( _TyMarkupTraits::s_kszXMLDeclBeginEtc ) );
+      const _TyChar * pszEncoding = PszCharacterEncodingName< _TyChar >( _TyXmlTransportOut::GetCharacterEncoding() );
+      _WriteTransportRaw( pszEncoding, StrNLen( pszEncoding ) );
+      _WriteTransportRaw( _TyMarkupTraits::s_kszStandaloneEtc, StaticStringLen( _TyMarkupTraits::s_kszStandaloneEtc ) );
+      if ( m_fStandalone )
+        _WriteTransportRaw( str_array_cast< _TyChar >( "yes" ).c_str(), 3 );
+      else
+        _WriteTransportRaw( str_array_cast< _TyChar >( "no" ).c_str(), 2 );
+      _WriteTransportRaw( _TyMarkupTraits::s_kszXMLDeclEndEtc, StaticStringLen( _TyMarkupTraits::s_kszXMLDeclEndEtc ) );
+    }
+    m_lContexts.emplace_back( m_xdcxtDocumentContext.GetUserObj(), s_knTokenXMLDecl  ); // create the XMLDecl pseudo-tag.
   }
   template < template < class ... > class t_tempTyXmlTransportOut >
   void OpenFileVar( const char * _pszFileName, bool _fStandalone = true )
   {
-
   }
 
 // options:
@@ -146,6 +184,14 @@ public:
   void FSetWriteXMLDecl()) const
   {
     return m_fWriteXMLDecl;
+  }
+  void SetUseNamespaces( bool _fUseNamespaces )
+  {
+    m_fUseNamespaces = _fUseNamespaces;
+  }
+  void FSetUseNamespaces()) const
+  {
+    return m_fUseNamespaces;
   }
 // status:
   bool FInPrologue()
@@ -171,10 +217,24 @@ public:
   //    prefix will be used if it is a current namespace prefix. If it isn't a current namespace prefix
   //    then an exception will be thrown.
   template < class t_TyChar >
-  _TyXmlWriteTag StartTag( const t_TyChar * _pszTagName, size_t _stLenTag = (numeric_limits<size_t>::max)(), TGetPrefixUri< t_TyChar > const * _ppuNamespace = nullptr )
+  _TyXmlWriteTag StartTag( const t_TyChar * _pszTagName, size_t _stLenTag = 0, TGetPrefixUri< t_TyChar > const * _ppuNamespace = nullptr )
   {
+    Assert( _pszTagName );
+    // First check for any errors before we add to the context.
+    if ( !_stLenTag )
+      _stLenTag = StrNLen(  _pszTagName );
+    VerifyThrow( _stLenTag );
+    if ( _ppuNamespace )
+    {
+      
+      VerifyThrowSz( fDefaultNS || _ppuNamespace->second.length(), "A URI must have non-zero length." );
+
+      m_mapNamespaces.
+
 
   }
+
+  TGetPrefixUri< t_TyChar > const * _ppuNamespace = nullptr
 #if 0
   // Ends the current tag. If _ptokEnd is passed it needs to match the top of the write stack. If not an exception will be thrown.
   // The safest manner of operation is to pass _ptokEnd bask to check - but I don't see a reason to *require* it.
@@ -480,7 +540,8 @@ protected:
                         {
                           // Must be a valid reference:
                           _TyStrView svRef( pcCur, pcMatchReference - 1 );
-                          bool fFoundEntityReference = m_mapEntities.end() != m_mapEntities.find( svRef );
+                          const _TyMapEntities & rmapEntities = GetEntityMap();
+                          bool fFoundEntityReference = ( rmapEntities.end() != rmapEntities.find( svRef ) );
                           VerifyThrowSz( fFoundEntityReference || ( edrAutoReferenceNoError == _edrDetectReferences ), "Entity reference to [%s] not found.", _TyString( svRef ).c_str() );
                           if ( fFoundEntityReference )
                           { // write it out.
@@ -594,10 +655,12 @@ protected:
   _TyOptTransportOut m_optTransportOut;
   _TyXmlDocumentContext m_xdcxtDocumentContext;
   _TyNamespaceMap m_mapNamespaces; // We maintain this as we go.
-  _TyEntityMap m_mapEntities; // This is filled with the standard entities on construction. When we support DTDs we will support adding to this map.
+  string m_strFileName; // Save this since it is cheap - might be enpty.
+  _TyListWriteContexts m_lContexts;
 // options:
   bool m_fWriteBOM{true}; // Write a BOM because that's just a nice thing to do.
   bool m_fWriteXMLDecl{true}; // Whether to write an XMLDecl. This is honored in all scenarios.
+  bool m_fUseNamespaces{true}; // Using namespaces?
 // state:
   
   bool m_fWroteFirstTag{false};

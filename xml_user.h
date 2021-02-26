@@ -134,19 +134,17 @@ public:
   typedef TGetCharRefConvertBuffer< _TyChar > _TyCharRefConvertBuffer;
 
   // Entity reference lookup:
-  // To keep things simple (at least for now) we insert the standard entity references in the constructor.
-  _TyEntityMap m_mapEntities{ { _TyStdStr( str_array_cast<_TyChar>("quot") ), _TyStdStr( str_array_cast<_TyChar>("\"") ) }, 
-                              { _TyStdStr( str_array_cast<_TyChar>("amp") ), _TyStdStr( str_array_cast<_TyChar>("&") ) }, 
-                              { _TyStdStr( str_array_cast<_TyChar>("apos") ), _TyStdStr( str_array_cast<_TyChar>("\'") ) }, 
-                              { _TyStdStr( str_array_cast<_TyChar>("lt") ), _TyStdStr( str_array_cast<_TyChar>("<") ) }, 
-                              { _TyStdStr( str_array_cast<_TyChar>("gt") ), _TyStdStr( str_array_cast<_TyChar>(">") ) } };
+  _TyEntityMap m_mapEntities;
   
   // Then this is true then when s_knTokenCharData is received it is check for be entirely composed of whitespace
   // and if so it is ignored entirely and not retunred to the xml parser.
   bool m_fFilterWhitespaceCharData{false};
   bool m_fFilterAllTokenData{false};
 
-  xml_user_obj() = default;
+  xml_user_obj()
+  {
+    ClearEntities(); // initialize the standard entities.
+  }
   xml_user_obj( xml_user_obj const & _r ) = delete;
   xml_user_obj & operator =( xml_user_obj const & ) = delete;
   xml_user_obj( xml_user_obj && _rr ) = default;

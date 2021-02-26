@@ -39,6 +39,10 @@ public:
     int iResult = FileWrite( m_foFile.HFileGet(), _pcBuf, _nch * sizeof ( _TyChar ) );
     return !iResult;
   }
+  static constexpr EFileCharacterEncoding GetCharacterEncoding()
+  {
+    return GetCharacterEncoding< _TyChar, _TyFSwitchEndian >();
+  }
 protected:
   FileObj m_foFile;
 };

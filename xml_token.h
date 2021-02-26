@@ -42,6 +42,10 @@ public:
     : m_tokToken( std::move( _rrtok ) )
   {
   }
+  xml_token( _TyUserObj & _ruoUserObj, , const _TyAxnObjBase * _paobCurToken )
+    : m_tokToken( _ruoUserObj, _paobCurToken )
+  {
+  }
   xml_token() = delete;
   xml_token( xml_token const & ) = default;
   xml_token & operator=( xml_token const & ) = default;
