@@ -68,15 +68,33 @@ public:
     ResetNamespaceDecls();
   }
   xml_namespace_value_wrap() = default;
-  xml_namespace_value_wrap(  _TyNamespaceMapValue & _rvt, _TyNamespaceMap * _pmapReleaseOnDestruct  )
+  xml_namespace_value_wrap( _TyNamespaceMapValue & _rvt, _TyNamespaceMap * _pmapReleaseOnDestruct )
     : m_pvtNamespaceMap( !_pmapReleaseOnDestruct ? nullptr : &_rvt ),
       m_pmapReleaseOnDestruct( _pmapReleaseOnDestruct ),
       m_pvtUri( &_rvt.second.second.front().RStrUri() ),
       m_pvtPrefix( _rvt.second.first )
   {
   }
-  xml_namespace_value_wrap( xml_namespace_value_wrap const & ) = default;
-  xml_namespace_value_wrap & operator =( xml_namespace_value_wrap const & ) = default;
+  void Init( _TyNamespaceMapValue & _rvt, _TyNamespaceMap * _pmapReleaseOnDestruct )
+  {
+    Assert( FIsNull() );
+    m_pvtNamespaceMap = !_pmapReleaseOnDestruct ? nullptr : &_rvt;
+    m_pmapReleaseOnDestruct = _pmapReleaseOnDestruct;
+    m_pvtUri = &_rvt.second.second.front().RStrUri();
+    m_pvtPrefix = _rvt.second.first;
+  }
+  xml_namespace_value_wrap( xml_namespace_value_wrap const & ) = delete;
+  xml_namespace_value_wrap & operator =( xml_namespace_value_wrap const & ) = delete;
+  xml_namespace_value_wrap( xml_namespace_value_wrap && _rr )
+  {
+    swap( _rr );
+  }
+  xml_namespace_value_wrap & operator =( xml_namespace_value_wrap && _rr )
+  {
+    xml_namespace_value_wrap acquire( std::move( _rr ) );
+    swap( acquire );
+    return *this;
+  }
   void swap( _TyThis & _r )
   {
     std::swap( m_pvtNamespaceMap, _r.m_pvtNamespaceMap );

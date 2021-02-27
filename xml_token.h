@@ -28,10 +28,12 @@ public:
   typedef t_TyTpValueTraits _TyTpValueTraits;
   typedef typename _TyTransportCtxt::_TyChar _TyChar;
   typedef basic_string_view< _TyChar > _TyStrView;
+  typedef basic_string< _TyChar > _TyStdStr;
   typedef pair< _TyStrView, _TyStrView > _TyPrSvTagPrefix; // note that the prefix is second, not first.
   typedef _l_token< _TyTransportCtxt, _TyUserObj, _TyTpValueTraits > _TyLexToken;
   typedef _l_data<> _TyData;
   typedef _l_value< _TyChar, _TyTpValueTraits > _TyLexValue;
+  typedef _xml_document_context< _TyUserObj > _TyXmlDocumentContext;
 
   ~xml_token() = default;
   xml_token( _TyLexToken const & _rtok )
@@ -55,7 +57,6 @@ public:
   {
     m_tokToken.swap( _r.m_tokToken );
   }
-
   vtyTokenIdent GetTokenId() const
   {
     return m_tokToken.GetTokenId();
@@ -105,7 +106,141 @@ public:
     VerifyThrow( _rval.FHasTypedData() );
     m_tokToken.KGetStringView( _rsv, _rval );
   }
-// Tag methods:
+  void _InitTag( _TyXmlDocumentContext & _rcxtDoc )
+  {
+    VerifyThrow( FIsTag() );
+    _TyLexValue & rval = GetValue();
+    if ( rval.FIsNull() )
+    {
+      // Set up tag structure: leave the array of attributes as null for now.
+      rval.SetSize( 2 ); // (tag,rgattr)
+      _TyValue & rvalTag = rval[0];
+      //(name, namespaceWrapper, fUseDoubleQuote )
+      rvalTag.SetSize( 2 );
+      rvalTag.emplace_back( _rcxtDoc->m_optprFormatContext->first.m_fAttributeValuesDoubleQuote );
+    }
+#if ASSERTSENABLED
+    // Check that the structure is correct for a tag.
+    Assert( 2 == _rval.GetSize() );
+#endif //ASSERTSENABLED
+  }
+  // Tag methods:
+  // Set the tag name and potentially the namespace.
+  // 1) If _pszTagName contains a colon:
+  //  a) If we are using namespaces then the _rcxtDoc will contain a namespace map otherwise not.
+  //  b) If we are using namespaces then check that the prefix refers to either an active namespace or the namespace passed in _ppuNamespace.
+  //     If _xml_output_format<>::m_fIncludePrefixesInAttrNames then we won't excide any prefix and colon off the front of the tag name,
+  //     and we'll add the prefix to the front if it isn't present.
+  //  c) If we aren't using namespaces then we just leave things like they are. Note that we cannot read names with two colons in them in this impl.
+  //  If _ppuNamespace is passed and a prefix is present on _pcTagName then they must match. Use another call to add another namespace separately - the
+  //    idea is that _ppuNamespace is the namespace of the tag.
+  template < class t_TyChar >
+  void SetTagName( _TyXmlDocumentContext & _rcxtDoc, const t_TyChar * _pcTagName, size_t _stLenTag = 0, TGetPrefixUri< t_TyChar > const * _ppuNamespace = nullptr )
+  {
+    typedef _l_state_proto< t_TyChar > _TyStateProto;
+    AssertValid();
+    VerifyThrowSz( !_ppuNamespace || _rcxtDoc.FHasNamespaceMap(), "Namespace are not being used but a namespace (prefix,uri) was passed in." );
+    _InitTag();
+    Assert( _pcTagName );
+    if ( !_stLenTag )
+      _stLenTag = StrNLen(  _pcTagName );
+    VerifyThrow( _stLenTag );
+    // Translate everything to our output character type before processing further.
+    _TyStdStr strBufName;
+    _TyStrView svTagName = StrViewConvertString( _pcTagName, _stLenTag, strBufName );
+    _TyStdStr strBufPrefix, strBufUri;
+    _TyStrView svPrefix, svUri;
+    if ( _ppuNamespace )
+    {
+      svPrefix = StrViewConvertString( _ppuNamespace->first, strBufPrefix );
+      svUri = StrViewConvertString( _ppuNamespace->first, strBufUri );
+    }
+    _SetTagName( _rcxtDoc, svTagName, _ppuNamespace ? &svPrefix : nullptr, _ppuNamespace ? &svUri : nullptr );
+  }
+  // _rsvTagName is modifiable if desired.
+  void _SetTagName( _TyXmlDocumentContext & _rcxtDoc, _TyStrView & _rsvTagName, _TyStrView * _psvPrefix, _TyStrView * _psvUri )
+  {
+    typedef typename _TyXmlDocumentContext::_TyUriAndPrefixMap _TyUriAndPrefixMap;
+    typedef typename _TyUriAndPrefixMap::value_type _TyStrUriPrefix;
+    typedef typename _TyXmlDocumentContext::_TyNamespaceMap _TyNamespaceMap;
+    Assert( !_psvPrefix == !_psvUri );
+    size_t nPosColon;
+    {//B
+      const _TyStateProto * pspNCNameStart = PspGetNCNameStart< _TyChar >();
+      const _TyChar * pcTagName = &_rsvTagName[0];
+      const _TyChar * pcMatch = _l_match< t_TyChar >::PszMatch( pspNCNameStart, pcTagName, _rsvTagName.length() );
+      nPosColon = *pcMatch == _TyChar(':') ? ( pcMatch - pcTagName ) : 0;
+      if ( nPosColon )
+        pcMatch = _l_match< t_TyChar >::PszMatch( pspNCNameStart, pcMatch + 1, _rsvTagName.length() - nPosColon - 1 );
+      VerifyThrowSz( ( pcMatch - pcTagName ) == _rsvTagName.length(), "Invalid characters found in tag name[%s]", StrConvertString< char >( _rsvTagName ).c_str() );
+    }//EB
+    if ( _rcxtDoc.FHasNamespaceMap() && ( _ppuNamespace || nPosColon ) )
+    {
+      // If a prefix was present in the name then it must match either a currently active prefix or the prefix passed in in _ppuNamespace.
+      _TyStrView svPrefix( _pcTagName, nPosColon );
+      if ( nPosColon )
+      {
+        VerifyThrowSz( !_psvPrefix || ( *_psvPrefix == svPrefix ), "Tag prefix(when present) must match passed (prefix,URI)." );
+        if ( !_psvPrefix )
+        { // Use the same codepath below.
+          Assert( !_psvUri );
+          _psvPrefix = &svPrefix;
+        }
+      }
+      _TyNamespaceMap::const itNM = _rcxtDoc.MapNamespaces().find( *_psvPrefix );
+      // Throw unless we are declaring a new (prefix,uri).
+      VerifyThrowSz( ( _rcxtDoc.MapNamespaces().end() != itNM ) || !!_psvUri, "Prefix[%s] not found in namespace map.", StrConvertString< char >( *_psvPrefix ).c_str() );
+      typedef xml_namespace_value_wrap< _TyChar > _TyXmlNamespaceValueWrap;
+      _TyXmlNamespaceValueWrap xnvw;
+      if ( !!_psvUri )
+      {
+        // We may be declaring a new (prefix,uri) combo or we may be referencing the active URI for the given
+        //  prefix. There is no need for reference counting so if we are referencing the existing URI then we just
+        //  have to reference the namespace appropriately for the tag but no need to declare it.
+        if (  ( _rcxtDoc.MapNamespaces().end() == itNM ) ||
+              ( itNM->second.second.front().RStrUri() != *_psvUri ) )
+        {
+          if ( _rcxtDoc.MapNamespaces().end() == itNM )
+          {
+            _TyStrUriPrefix const & rstrPrefix = _rcxtDoc.RStrAddPrefix( *_psvPrefix );
+            pair< typename _TyNamespaceMap::iterator, bool > pib = _rcxtDoc.MapNamespaces().emplace( std::piecewise_construct, std::forward_as_tuple(rstrPrefix), std::forward_as_tuple() );
+            Assert( pib.first );
+            pib.first->second.first = &rstrPrefix; // allow single lookup.
+          }
+          _TyStrUriPrefix const & rstrUri = _rcxtDoc.RStrAddUri( *_psvUri );
+          itNM->second.second.push( &rstrUri );
+          xnvw.Init( *it, &m_mapNamespaces ); // squirrel this away but make sure to release if we fail along the way.
+        }
+        else
+        {
+          // We are the same as the existing namespace decl:
+          xnvw.Init( *it, nullptr ); // This doesn't remove the namespace on destruct.
+        }
+      }
+      
+      m_pvtUri( &_rvt.second.second.front().RStrUri() ),
+
+      bool fDefaultNS = !_ppuNamespace->first.length();
+      VerifyThrowSz( fDefaultNS || _ppuNamespace->second.length(), "A non-default-prefix URI must have non-zero length." );
+      _TyNamespaceMap::iterator itNS = _rcxtDoc.MapNamespaces().find( _ppuNamespace->first );
+      if ( m_mapNamespaces.end() == itNS )
+      {
+        // New prefix:
+          pair< typename _TyNamespaceMap::iterator, bool > pib = _rcxtDoc.MapNamespaces().emplace( std::piecewise_construct, std::forward_as_tuple(_ppuNamespace->first), std::forward_as_tuple() );
+          Assert( pib.second );
+          itNS = pib.first;
+          it->second.first = &rvtPrefix; // This allows one lookup to process each attribute.
+        _AddNamespaceDecl( )
+
+      }
+      else
+      {
+
+      }
+    }
+
+  }
+
 #if 0 // later
   _TyStrView SvGetTag( _TyStrView * _svGetNamespacePrefix ) const
   {

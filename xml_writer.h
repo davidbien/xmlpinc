@@ -51,6 +51,14 @@ public:
     : m_xtkToken( _ruoUserObj, _paobCurToken )
   {
   }
+  const _TyXmlToken & GetToken() const
+  {
+    return m_xtkToken;
+  }
+  _TyXmlToken & GetToken()
+  {
+    return m_xtkToken;
+  }
 
   // The data inside of m_xtkToken is complete - write it out to the output stream.
   // We could then delete the data - except for namespace declarations, but I don't see the
@@ -100,10 +108,6 @@ protected:
   _TyWriterContext * m_pwcxtContext{nullptr}; // The context in the context stack to which this xml_write_tag corresponds.
 };
 
-// TGetPrefixUri (prefix,URI).
-template < class t_TyChar >
-using TGetPrefixUri = std::pair< basic_string< t_TyChar >, basic_string< t_TyChar > >;
-
 
 // xml_writer:
 // Writes an XML file stream through an XML write transport.
@@ -124,6 +128,7 @@ public:
   typedef _xml_document_context< _TyLexUserObj > _TyXmlDocumentContext;
   typedef typename _xml_namespace_map_traits< _TyChar >::_TyNamespaceMap _TyNamespaceMap;
   typedef xml_write_context< _TyXmlTransportOut > _TyWriteContext;
+  typedef typename _TyWriteContext::_TyXmlToken _TyXmlToken;
   typedef list< _TyWriteContext > _TyListWriteContexts;
 
   xml_writer()
@@ -219,17 +224,12 @@ public:
   template < class t_TyChar >
   _TyXmlWriteTag StartTag( const t_TyChar * _pszTagName, size_t _stLenTag = 0, TGetPrefixUri< t_TyChar > const * _ppuNamespace = nullptr )
   {
-    Assert( _pszTagName );
-    // First check for any errors before we add to the context.
-    if ( !_stLenTag )
-      _stLenTag = StrNLen(  _pszTagName );
-    VerifyThrow( _stLenTag );
-    if ( _ppuNamespace )
-    {
-      
-      VerifyThrowSz( fDefaultNS || _ppuNamespace->second.length(), "A URI must have non-zero length." );
+    // Add a new tag as the top of the context.
+   _TyWriteContext & rwcxNew m_lContexts.emplace_back( m_xdcxtDocumentContext.GetUserObj(), s_knTokenSTag  );
+   rwcxNew.GetToken().SetTagName( m_xdcxtDocumentContext, _pszTagName, _stLenTag, _ppuNamespace );
 
-      m_mapNamespaces.
+
+    if ( )
 
 
   }
@@ -542,7 +542,7 @@ protected:
                           _TyStrView svRef( pcCur, pcMatchReference - 1 );
                           const _TyMapEntities & rmapEntities = GetEntityMap();
                           bool fFoundEntityReference = ( rmapEntities.end() != rmapEntities.find( svRef ) );
-                          VerifyThrowSz( fFoundEntityReference || ( edrAutoReferenceNoError == _edrDetectReferences ), "Entity reference to [%s] not found.", _TyString( svRef ).c_str() );
+                          VerifyThrowSz( fFoundEntityReference || ( edrAutoReferenceNoError == _edrDetectReferences ), "Entity reference to [%s] not found.", StrConvertString<char>( svRef ).c_str() );
                           if ( fFoundEntityReference )
                           { // write it out.
                             _WriteTransportRaw( pcCur - 1, pcMatchReference );
@@ -654,7 +654,6 @@ protected:
   typedef optional< _TyXmlTransportOut > _TyOptTransportOut;
   _TyOptTransportOut m_optTransportOut;
   _TyXmlDocumentContext m_xdcxtDocumentContext;
-  _TyNamespaceMap m_mapNamespaces; // We maintain this as we go.
   string m_strFileName; // Save this since it is cheap - might be enpty.
   _TyListWriteContexts m_lContexts;
 // options:

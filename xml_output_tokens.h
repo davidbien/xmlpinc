@@ -9,6 +9,7 @@
 
 __XMLP_BEGIN_NAMESPACE
 
+// PspGetSpacesStart:
 template < class t_TyChar >
 const _l_state_proto< t_TyChar > * PspGetSpacesStart()
   requires( is_same_v< t_TyChar, char32_t > )
@@ -27,6 +28,7 @@ const _l_state_proto< t_TyChar > * PspGetSpacesStart()
 {
   return (const _TyStateProto *)&startUTF8Spaces;
 }
+// PspGetCommentCharsStart:
 template < class t_TyChar >
 const _l_state_proto< t_TyChar > * PspGetCommentCharsStart()
   requires( is_same_v< t_TyChar, char32_t > )
@@ -45,6 +47,7 @@ const _l_state_proto< t_TyChar > * PspGetCommentCharsStart()
 {
   return (const _TyStateProto *)&startUTF8CommentChars;
 }
+// PspGetCharDataStart:
 template < class t_TyChar >
 const _l_state_proto< t_TyChar > * PspGetCharDataStart()
   requires( is_same_v< t_TyChar, char32_t > )
@@ -63,6 +66,26 @@ const _l_state_proto< t_TyChar > * PspGetCharDataStart()
 {
   return (const _TyStateProto *)&startUTF8CharData;
 }
+// PspGetNCNameStart:
+template < class t_TyChar >
+const _l_state_proto< t_TyChar > * PspGetNCNameStart()
+  requires( is_same_v< t_TyChar, char32_t > )
+{
+  return (const _TyStateProto *)&startUTF32NCName;
+}
+template < class t_TyChar >
+const _l_state_proto< t_TyChar > * PspGetNCNameStart()
+  requires( is_same_v< t_TyChar, char16_t > )
+{
+  return (const _TyStateProto *)&startUTF16NCName;
+}
+template < class t_TyChar >
+const _l_state_proto< t_TyChar > * PspGetNCNameStart()
+  requires( is_same_v< t_TyChar, char8_t > )
+{
+  return (const _TyStateProto *)&startUTF8NCName;
+}
+// PspGetCDCharsOutputValidateStart:
 template < class t_TyChar >
 const _l_state_proto< t_TyChar > * PspGetCDCharsOutputValidateStart()
   requires( is_same_v< t_TyChar, char32_t > )
@@ -81,6 +104,7 @@ const _l_state_proto< t_TyChar > * PspGetCDCharsOutputValidateStart()
 {
   return (const _TyStateProto *)&startUTF8CDCharsOutputValidate;
 }
+// PspGetAllReferencesStart:
 template < class t_TyChar >
 const _l_state_proto< t_TyChar > * PspGetAllReferencesStart()
   requires( is_same_v< t_TyChar, char32_t > )

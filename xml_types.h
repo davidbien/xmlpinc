@@ -83,6 +83,10 @@ class xml_parse_exception;
 template < class t_TyTransport >
 using TGetXmlTraitsDefault = xml_traits< t_TyTransport, false, false >;
 
+// TGetPrefixUri (prefix,URI).
+template < class t_TyChar >
+using TGetPrefixUri = std::pair< basic_string< t_TyChar >, basic_string< t_TyChar > >;
+
 // _xml_namespace_map_traits:
 // This just organizes the types for the namespace map in one place because we reference it in a couple of places and we don't want to templatize by the full type because it results in unreadable log messages, etc.
 template < class t_TyChar >
@@ -98,176 +102,6 @@ struct _xml_namespace_map_traits
   // first is a pointer to a PrefixMap value for the prefix, second is the current list of namespace URIs for that prefix.
   typedef pair< const typename _TyUriAndPrefixMap::value_type *, _TyUpListNamespaceUris > _TyNamespaceMapped;
   typedef unordered_map< _TyStdStr, _TyNamespaceMapped, _TyStringTransparentHash, std::equal_to<void> > _TyNamespaceMap;
-};
-
-template < class t_TyChar >
-class XMLDeclProperties
-{
-  typedef XMLDeclProperties _TyThis;
-public:
-  typedef t_TyChar _TyChar;
-  typedef basic_string< _TyChar > _TyStdStr;
-  XMLDeclProperties() = default;
-  XMLDeclProperties( XMLDeclProperties const & ) = default;
-  XMLDeclProperties & operator=( XMLDeclProperties const & ) = default;
-  XMLDeclProperties( XMLDeclProperties && ) = default;
-  XMLDeclProperties & operator=( XMLDeclProperties && ) = default;
-  XMLDeclProperties( bool _fStandalone, EFileCharacterEncoding _efce )
-    : m_fStandalone( _fStandalone ),
-      m_strEncoding( PszCharacterEncodingName( _efce ) )
-  {
-  }
-  void Init( bool _fStandalone, EFileCharacterEncoding _efce )
-  {
-    m_fStandalone = _fStandalone;
-    m_strEncoding = PszCharacterEncodingName( _efce );
-  }
-  void swap( _TyThis & _r )
-  {
-    std::swap( m_fStandalone, _r.m_fStandalone );
-    m_strEncoding.swap( _r.m_strEncoding );
-    std::swap( m_nVersionMinorNumber, _r.m_nVersionMinorNumber );
-  }
-  void clear()
-  {
-    m_strEncoding.clear();
-    m_fStandalone = false;
-    m_nVersionMinorNumber = 0;
-  }
-  template < class t_TyLexToken >
-  void FromXMLDeclToken( t_TyLexToken const & _rltok )
-  {
-    typedef typename t_TyLexToken::_TyValue _TyLexValue;
-    const _TyLexValue & rrgVals = _rltok.GetValue();
-    if ( !rrgVals.FIsNull() )
-    {
-      Assert( rrgVals.FIsArray() );
-      m_fStandalone = rrgVals[0].template GetVal<bool>();
-      rrgVals[2].GetString( _rltok, m_strEncoding );
-      _TyStdStr strMinorVNum;
-      rrgVals[4].GetString( _rltok, strMinorVNum );
-      m_nVersionMinorNumber = uint8_t( strMinorVNum[0] - _TyChar('0') );
-    }
-  }
-  _TyStdStr m_strEncoding;
-  bool m_fStandalone{false};
-  uint8_t m_nVersionMinorNumber{0};
-};
-
-// _xml_document_context:
-// This organizes all the info from parsing that we need to keep to maintain a valid standalone xml_document. It contains backing memory
-//  for string views on prefixes and URIs, the XMLDecl properties (or synthesized ones), and the transport for those transport types
-//  using a non-backing transport context.
-template < class t_TyLexUserObj >
-class _xml_document_context
-{
-  typedef _xml_document_context _TyThis;
-public:
-  typedef t_TyLexUserObj _TyLexUserObj;
-  typedef typename _TyLexUserObj::_TyChar _TyChar;
-  typedef typename _xml_namespace_map_traits< _TyChar >::_TyUriAndPrefixMap _TyUriAndPrefixMap;
-  typedef XMLDeclProperties< _TyChar > _TyXMLDeclProperties;
-  void Init( bool _fStandalone, EFileCharacterEncoding _efce )
-  {
-    // Create the user object - it will create all the default entities in its entity map.
-    m_upUserObj = make_unique< _TyLexUserObj >();
-    m_XMLDeclProperties.Init( _fStandalone, _efce );
-  }
-  ~_xml_document_context() = default;
-  _xml_document_context() = default;
-  _xml_document_context( _xml_document_context const & ) = delete;
-  _xml_document_context & operator =( _xml_document_context const & ) = delete;
-  _xml_document_context( _xml_document_context && ) = default;
-  _xml_document_context & operator =( _xml_document_context && ) = default;
-  void swap( _xml_document_context & _r )
-  {
-    if ( &_r == this )
-      return;
-    m_upUserObj.swap( _r.m_upUserObj );
-    m_mapUris.swap( _r.m_mapUris );
-    m_mapPrefixes.swap( _r.m_mapPrefixes );
-    m_XMLDeclProperties.swap( _r.m_XMLDeclProperties );
-  }
-
-  unique_ptr< _TyLexUserObj > m_upUserObj; // The user object. Contains all entity references.
-  _TyUriAndPrefixMap m_mapUris; // set of unqiue URIs.
-  _TyUriAndPrefixMap m_mapPrefixes; // set of unique prefixes.
-  _TyXMLDeclProperties m_XMLDeclProperties;
-};
-
-// _xml_document_context_transport: This is a document context that includes the tranport type, etc. 
-//  This isn't necessary nor desired for some instances of _xml_document_context so we will it out.
-template < class t_TyXmlTraits >
-class _xml_document_context_transport : protected _xml_document_context< typename t_TyXmlTraits::_TyLexUserObj >
-{
-  typedef _xml_document_context_transport _TyThis;
-  typedef _xml_document_context< typename t_TyXmlTraits::_TyLexUserObj > _TyBase;
-public:
-  typedef t_TyXmlTraits _TyXmlTraits;
-  typedef typename _TyXmlTraits::_TyTransport _TyTransport;
-  using _TyBase::_TyBase; // This should work.
-  _xml_document_context_transport( _xml_document_context_transport && ) = default;
-  _xml_document_context_transport & operator =( _xml_document_context_transport && ) = default;
-  void swap( _xml_document_context_transport & _r )
-  {
-    if ( &_r == this )
-      return;
-    _TyBase::swap( _r );
-    m_opttpImpl.swap( _r.m_opttpImpl );
-  }
-
-  using _TyBase::m_upUserObj;
-  using _TyBase::m_mapUris;
-  using _TyBase::m_mapPrefixes;
-  using _TyBase::m_XMLDeclProperties;
-  // For some transports where the backing is mapped memory it is convenient to store the transport here because it
-  //  allows the parser object to go away entirely.
-  typedef optional< _TyTransport > _TyOptTransport;
-  _TyOptTransport m_opttpImpl;
-};
-
-// _xml_document_context_transport_var: Variant version of the _xml_document_context_transport.
-// We must allow a monostate since we want a default constructor.
-template < class t_TyTpTransports >
-class _xml_document_context_transport_var
-{
-  typedef _xml_document_context_transport_var _TyThis;
-public:
-  typedef t_TyTpTransports _TyTpTransports;
-  typedef MultiplexTuplePack_t< TGetXmlTraitsDefault, _TyTpTransports > _TyTpXmlTraits;
-  typedef MultiplexMonostateTuplePack_t< _xml_document_context_transport, _TyTpXmlTraits, variant > _TyVariant;
-
-  ~_xml_document_context_transport_var() = default;
-  _xml_document_context_transport_var() = default;
-  _xml_document_context_transport_var( _xml_document_context_transport_var const & ) = delete;
-  _xml_document_context_transport_var & operator =( _xml_document_context_transport_var const & ) = delete;
-  _xml_document_context_transport_var( _xml_document_context_transport_var && ) = default;
-  _xml_document_context_transport_var & operator =( _xml_document_context_transport_var && ) = default;
-  void swap( _xml_document_context_transport_var & _r )
-  {
-    if ( &_r == this )
-      return;
-    m_var.swap( _r.m_var );
-  }
-  template < class t_TyXmlDocumentContext >
-  t_TyXmlDocumentContext & emplace( t_TyXmlDocumentContext && _rrxdc )
-  {
-    using _TyRemoveRef = remove_reference_t< t_TyXmlDocumentContext >;
-    return m_var.template emplace<_TyRemoveRef>( std::move( _rrxdc ) );
-  }
-
-  bool FIsNull() const
-  {
-    return FIsA< monostate >();
-  }
-  template < class t_TyT >
-  bool FIsA() const
-  {
-    return holds_alternative< t_TyT >();
-  }
-
-protected:
-  _TyVariant m_var;
 };
 
 // Declare all the various types of the triggers and tokens for the XML lexical analyzer.
@@ -368,7 +202,7 @@ using TyGetTriggerSaveTagName = _l_action_save_data_single< s_knTriggerSaveTagNa
 static const vtyActionIdent s_knTriggerSaveAttributes = 24;
 template < class t_TyLexTraits, bool t_fInLexGen = true >
 using TyGetTriggerSaveAttributes = _l_action_save_data_multiple< s_knTriggerSaveAttributes, 
-  TyGetTriggerPrefixEnd<t_TyLexTraits,t_fInLexGen>, TyGetTriggerLocalPartEnd<t_TyLexTraits,t_fInLexGen>, TyGetTriggerCharDataEnd<t_TyLexTraits,t_fInLexGen> >;
+  TyGetTriggerPrefixEnd<t_TyLexTraits,t_fInLexGen>, TyGetTriggerLocalPartEnd<t_TyLexTraits,t_fInLexGen>, TyGetTriggerCharDataEnd<t_TyLexTraits,t_fInLexGen>, TyGetTriggerAttValueDoubleQuote<t_TyLexTraits,t_fInLexGen> >;
 
 #if 0 // The comment production has a problem with triggers due to its nature. It is easy to manage without triggers - impossible to try to stick triggers in - they'll never work.
 static const vtyActionIdent s_knTriggerCommentBegin = 25;
