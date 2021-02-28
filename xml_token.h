@@ -115,14 +115,11 @@ public:
       // Set up tag structure: leave the array of attributes as null for now.
       rval.SetSize( 2 ); // (tag,rgattr)
       _TyValue & rvalTag = rval[0];
-      //(name, namespaceWrapper, fUseDoubleQuote )
+      //( name, namespaceWrapper, nNamespaceDecls )
       rvalTag.SetSize( 2 );
-      rvalTag.emplace_back( _rcxtDoc->m_optprFormatContext->first.m_fAttributeValuesDoubleQuote );
+      rvalTag.emplace_back( vtyDataPosition(0) ); // Set number of namespace decls.
+      rval[1].SetArray(); // make second element an empty array of attributes.
     }
-#if ASSERTSENABLED
-    // Check that the structure is correct for a tag.
-    Assert( 2 == _rval.GetSize() );
-#endif //ASSERTSENABLED
   }
   // Tag methods:
   // Set the tag name and potentially the namespace.
@@ -137,6 +134,7 @@ public:
   template < class t_TyChar >
   void SetTagName( _TyXmlDocumentContext & _rcxtDoc, const t_TyChar * _pcTagName, size_t _stLenTag = 0, TGetPrefixUri< t_TyChar > const * _ppuNamespace = nullptr )
   {
+    AssertValid();
     typedef _l_state_proto< t_TyChar > _TyStateProto;
     AssertValid();
     VerifyThrowSz( !_ppuNamespace || _rcxtDoc.FHasNamespaceMap(), "Namespace are not being used but a namespace (prefix,uri) was passed in." );
@@ -160,12 +158,9 @@ public:
   // _rsvTagName is modifiable if desired.
   void _SetTagName( _TyXmlDocumentContext & _rcxtDoc, _TyStrView & _rsvTagName, _TyStrView * _psvPrefix, _TyStrView * _psvUri )
   {
-    typedef typename _TyXmlDocumentContext::_TyUriAndPrefixMap _TyUriAndPrefixMap;
-    typedef typename _TyUriAndPrefixMap::value_type _TyStrUriPrefix;
-    typedef typename _TyXmlDocumentContext::_TyNamespaceMap _TyNamespaceMap;
     Assert( !_psvPrefix == !_psvUri );
     size_t nPosColon;
-    {//B
+    {//B - test name validity
       const _TyStateProto * pspNCNameStart = PspGetNCNameStart< _TyChar >();
       const _TyChar * pcTagName = &_rsvTagName[0];
       const _TyChar * pcMatch = _l_match< t_TyChar >::PszMatch( pspNCNameStart, pcTagName, _rsvTagName.length() );
@@ -174,7 +169,8 @@ public:
         pcMatch = _l_match< t_TyChar >::PszMatch( pspNCNameStart, pcMatch + 1, _rsvTagName.length() - nPosColon - 1 );
       VerifyThrowSz( ( pcMatch - pcTagName ) == _rsvTagName.length(), "Invalid characters found in tag name[%s]", StrConvertString< char >( _rsvTagName ).c_str() );
     }//EB
-    if ( _rcxtDoc.FHasNamespaceMap() && ( _ppuNamespace || nPosColon ) )
+    _TyLexValue & rvalTag = GetValue()[0];
+    if ( _rcxtDoc.FHasNamespaceMap() && ( _psvPrefix || nPosColon ) )
     {
       // If a prefix was present in the name then it must match either a currently active prefix or the prefix passed in in _ppuNamespace.
       _TyStrView svPrefix( _pcTagName, nPosColon );
@@ -187,58 +183,63 @@ public:
           _psvPrefix = &svPrefix;
         }
       }
-      _TyNamespaceMap::const itNM = _rcxtDoc.MapNamespaces().find( *_psvPrefix );
-      // Throw unless we are declaring a new (prefix,uri).
-      VerifyThrowSz( ( _rcxtDoc.MapNamespaces().end() != itNM ) || !!_psvUri, "Prefix[%s] not found in namespace map.", StrConvertString< char >( *_psvPrefix ).c_str() );
-      typedef xml_namespace_value_wrap< _TyChar > _TyXmlNamespaceValueWrap;
-      _TyXmlNamespaceValueWrap xnvw;
-      if ( !!_psvUri )
+      // Get the namespace value wrap. If this represents a reference to an existing current (prefix,uri)
+      //  pair then we needn't declare the namespace attribute - with no loss of generality.
+      _TyXmlNamespaceValueWrap xnvw = _rcxtDoc.GetNamespaceValueWrap( _psvPrefix, _psvUri );
+      _TyXmlNamespaceValueWrap xnvwRef;
+      _TyXmlNamespaceValueWrap * pxnvwTagRef = &xnvw;
+      if ( xnvw.FIsNamespaceDeclaration() )
       {
-        // We may be declaring a new (prefix,uri) combo or we may be referencing the active URI for the given
-        //  prefix. There is no need for reference counting so if we are referencing the existing URI then we just
-        //  have to reference the namespace appropriately for the tag but no need to declare it.
-        if (  ( _rcxtDoc.MapNamespaces().end() == itNM ) ||
-              ( itNM->second.second.front().RStrUri() != *_psvUri ) )
-        {
-          if ( _rcxtDoc.MapNamespaces().end() == itNM )
-          {
-            _TyStrUriPrefix const & rstrPrefix = _rcxtDoc.RStrAddPrefix( *_psvPrefix );
-            pair< typename _TyNamespaceMap::iterator, bool > pib = _rcxtDoc.MapNamespaces().emplace( std::piecewise_construct, std::forward_as_tuple(rstrPrefix), std::forward_as_tuple() );
-            Assert( pib.first );
-            pib.first->second.first = &rstrPrefix; // allow single lookup.
-          }
-          _TyStrUriPrefix const & rstrUri = _rcxtDoc.RStrAddUri( *_psvUri );
-          itNM->second.second.push( &rstrUri );
-          xnvw.Init( *it, &m_mapNamespaces ); // squirrel this away but make sure to release if we fail along the way.
-        }
-        else
-        {
-          // We are the same as the existing namespace decl:
-          xnvw.Init( *it, nullptr ); // This doesn't remove the namespace on destruct.
-        }
+        // Then we must declare the namespace as an attribute, this will
+        //  add one to the number of namespace decls associated with this element.
+        xnvwRef = _DeclareNamespace( _rcxtDoc, std::move( xnvw ) );
+        pxnvwTagRef = &xnvwRef;
       }
-      
-      m_pvtUri( &_rvt.second.second.front().RStrUri() ),
-
-      bool fDefaultNS = !_ppuNamespace->first.length();
-      VerifyThrowSz( fDefaultNS || _ppuNamespace->second.length(), "A non-default-prefix URI must have non-zero length." );
-      _TyNamespaceMap::iterator itNS = _rcxtDoc.MapNamespaces().find( _ppuNamespace->first );
-      if ( m_mapNamespaces.end() == itNS )
-      {
-        // New prefix:
-          pair< typename _TyNamespaceMap::iterator, bool > pib = _rcxtDoc.MapNamespaces().emplace( std::piecewise_construct, std::forward_as_tuple(_ppuNamespace->first), std::forward_as_tuple() );
-          Assert( pib.second );
-          itNS = pib.first;
-          it->second.first = &rvtPrefix; // This allows one lookup to process each attribute.
-        _AddNamespaceDecl( )
-
-      }
+      // Update the tag's reference to the namespace:
+      rvalTag[1].emplaceVal( std::move( *pxnvwTagRef ) );
+    }
+    else
+    {
+      // The tag is in no namespace:
+      rvalTag[1].emplaceVal( false );
+    }
+    // Now set the tag name according to whether we should include prefixes or not:
+    if ( _rcxtDoc.FIncludePrefixesInAttrNames() == !nPosColon )
+    {
+      if ( nPosColon )
+        rvalTag[0].emplaceArgs< _TyStdStr >( &_rsvTagName[0] + nPosColon + 1, _rsvTagName.length() - nPosColon - 1 );
       else
       {
-
+        _TyStdStr & rstrTagName = rvalTag[0].emplaceArgs< _TyStdStr >( *_psvPrefix );
+        rstrTagName += _TyChar( ': ');
+        rstrTagName += _rsvTagName;
       }
     }
-
+    else
+    {
+      // tag name is already in correct format:
+      rvalTag[0].emplaceArgs< _TyStdStr >( _rsvTagName );
+    }
+    // I think we are done... whew!
+  }
+  // Add the namespace to the set of attributes.
+  _TyXmlNamespaceValueWrap _DeclareNamespace( _TyXmlDocumentContext & _rcxtDoc, _TyXmlNamespaceValueWrap && _rrxnvw )
+  {
+    Assert( _rrxnvw.FIsNamespaceDeclaration() );
+    _TyLexValue & rrgvalAttrs = GetValue()[1];
+    Assert( rrgvalAttrs.FIsArray() );
+    _TyLexValue & rvalAttrNew = rrgvalAttrs.emplace_back();
+    // (name,namespacewrap,value,fusedoublequote)
+    rvalAttrNew.SetSize( 4 );
+    {//B - attr name
+      _TyStdStr & rstrAttrName = rvalAttrNew[0].emplaceArgs< _TyStdStr >( _TyMarkupTraits::s_kszXmlnsEtc, StaticStringLen( _TyMarkupTraits::s_kszXmlnsEtc ) );
+      rstrAttrName += _rrxnvw.RStringPrefix();
+    }//EB
+    // attr value: URI: We can use a string view on the URI from the URI map.
+    rstrAttrValue[2].emplaceArgs< _TyStrView >( _rrxnvw.RStringUri() );
+    _TyXmlNamespaceValueWrap & rxnvw = rstrAttrValue[1].emplaceVal( std::move( _rrxnvw ) ); // Now move the wrapper into place so that when the value is destroyed we remove the namespace.
+    rstrAttrValue[4].emplaceVal( _rcxtDoc.FAttributeValuesDoubleQuote() );
+    return rxnvw.ShedReference();
   }
 
 #if 0 // later

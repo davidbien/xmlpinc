@@ -77,7 +77,8 @@ public:
 // This isn't really an "output" format but it determines what the tags look like while we have them in there.
 // The xml_read_cursor has this same option and thus it is easy to keep things in sync when we are just copying
 //  an entire XML node, etc.
-  bool m_fIncludePrefixesInAttrNames{false};
+// Note that it is faster to write the tag to the file since we have to write any prefix.
+  bool m_fIncludePrefixesInAttrNames{true};
 };
 
 // _xml_output_context:
@@ -102,7 +103,7 @@ public:
   typedef t_TyLexUserObj _TyLexUserObj;
   typedef typename _TyLexUserObj::_TyChar _TyChar;
   typedef typename _xml_namespace_map_traits< _TyChar >::_TyUriAndPrefixMap _TyUriAndPrefixMap;
-  typedef typename _xml_namespace_map_traits< _TyChar >::_TyNamespaceMap _TyNamespaceMap;
+  typedef xml_namespace_map< _TyChar > _TyXmlNamespaceMap;
   typedef XMLDeclProperties< _TyChar > _TyXMLDeclProperties;
   typedef _xml_output_format< _TyChar > _TyXMLOutputFormat;
   typedef _xml_output_context< _TyChar > _TyXMLOutputContext;
@@ -131,7 +132,16 @@ public:
     m_optMapNamespaces.swap( _r.m_optMapNamespaces );
     m_optOutputFormat.swap( _r.m_optOutputFormat );
   }
-
+  bool FAttributeValuesDoubleQuote() const
+  {
+    Assert( !!m_optprFormatContext );
+    return !m_optprFormatContext ? true : m_optprFormatContext->first.m_fAttributeValuesDoubleQuote;
+  }
+  bool FIncludePrefixesInAttrNames() const
+  {
+    Assert( !!m_optprFormatContext );
+    return !m_optprFormatContext ? false : m_optprFormatContext->first.m_fIncludePrefixesInAttrNames;
+  }
   template < class t_TyStrViewOrString >
   typename _TyUriAndPrefixMap::value_type const & RStrAddPrefix( t_TyStrViewOrString const & _rs )
   {
@@ -156,15 +166,27 @@ public:
   {
     return m_optMapNamespaces.has_value();
   }
-  _TyNamespaceMap & MapNamespaces()
+  _TyXmlNamespaceMap & MapNamespaces()
   {
     Assert( FHasNamespaceMap() );
     return *m_optMapNamespaces;
   }
-  const _TyNamespaceMap & MapNamespaces() const
+  const _TyXmlNamespaceMap & MapNamespaces() const
   {
     Assert( FHasNamespaceMap() );
     return *m_optMapNamespaces;
+  }
+  template < class t_TyStrViewOrString >
+  _TyXmlNamespaceValueWrap GetNamespaceValueWrap( const t_TyStrViewOrString * _psvPrefix, const t_TyStrViewOrString * _psvUri )
+    requires TAreSameSizeTypes_v< typename t_TyStrViewOrString::value_type, _TyChar >
+  {
+    return MapNamespaces().GetNamespaceValueWrap( *this, _psvPrefix, _psvUri );
+  }
+  template < class t_TyStrViewOrString >
+  _TyXmlNamespaceValueWrap GetNamespaceValueWrap( const t_TyStrViewOrString & _rsvPrefix )
+    requires TAreSameSizeTypes_v< typename t_TyStrViewOrString::value_type, _TyChar >
+  {
+    return MapNamespaces().GetNamespaceValueWrap( _rsvPrefix );
   }
 
   unique_ptr< _TyLexUserObj > m_upUserObj; // The user object. Contains all entity references.
@@ -172,8 +194,8 @@ public:
   _TyUriAndPrefixMap m_mapPrefixes; // set of unique prefixes.
   _TyXMLDeclProperties m_XMLDeclProperties;
   // This isn't needed in all scenarios but essential to have it here when it is used.
-  typedef optional< _TyNamespaceMap > _TyOptNamespaceMap;
-  _TyOptNamespaceMap m_optMapNamespaces;
+  typedef optional< _TyXmlNamespaceMap > _TyOptXmlNamespaceMap;
+  _TyOptXmlNamespaceMap m_optMapNamespaces;
   // This would only be populated in outputting situations.
   typedef optional< _TyPrFormatContext > m_optprFormatContext;
 };

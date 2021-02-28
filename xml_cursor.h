@@ -284,7 +284,7 @@ public:
   typedef typename _TyXmlTraits::_TyStrView _TyStrView;
   typedef typename _xml_namespace_map_traits< _TyChar >::_TyUriAndPrefixMap _TyUriAndPrefixMap;
   typedef typename _xml_namespace_map_traits< _TyChar >::_TyNamespaceUri _TyNamespaceUri;
-  typedef typename _xml_namespace_map_traits< _TyChar >::_TyNamespaceMap _TyNamespaceMap;
+  typedef xml_namespace_map< _TyChar > _TyXmlNamespaceMap;
   typedef xml_namespace_value_wrap< _TyChar > _TyXmlNamespaceValueWrap;
   typedef _l_value< _TyChar, _TyTpValueTraits > _TyLexValue;
   typedef _l_user_context< _TyTransportCtxt, _TyUserObj, _TyTpValueTraits > _TyUserContext;
@@ -684,13 +684,7 @@ protected:
   void _InitNamespaceMap()
   {
     Assert( !!m_pXp );
-    Assert( !m_mapNamespaces.size() );
-  // The prefix xml is by definition bound to the namespace name http://www.w3.org/XML/1998/namespace
-    typename _TyUriAndPrefixMap::value_type const & rstrPrefix = m_pXp->_RStrAddPrefix( typename _TyUriAndPrefixMap::value_type( str_array_cast<_TyChar>("xml") ) );
-    typename _TyUriAndPrefixMap::value_type const & rstrUri = m_pXp->_RStrAddUri( typename _TyUriAndPrefixMap::value_type( str_array_cast<_TyChar>("http://www.w3.org/XML/1998/namespace") ) );
-    pair< typename _TyNamespaceMap::iterator, bool > pib = m_mapNamespaces.emplace( std::piecewise_construct, std::forward_as_tuple(rstrPrefix), std::forward_as_tuple() );
-    pib.first->second.first = &rstrPrefix;
-    pib.first->second.second.push( &rstrUri );
+    m_mapNamespaces.Init( *m_pXp );
   }
   void _DetachXmlParser()
   {
@@ -961,27 +955,8 @@ protected:
         _TyStrView svUri;
         rrgAttr[2].KGetStringView( _rltok, svUri );
         _ProcessTagName( rrgAttr ); // For xmlns attr names we process the same as we process the tag name. We want to leave both "xmlns" and any colon and prefix in the attr name.
-        // Add the URI to the UriMap:
-        const _TyUriAndPrefixMap::value_type & rvtUri = m_pXp->_RStrAddUri( svUri );
-        bool fDefault = svPrefix.empty();
-        // named prefix:
-        // If the URI mapped to is empty this violates a "namespace constraint":
-        // "Namespace constraint: No Prefix Undeclaring
-        //  In a namespace declaration for a prefix (i.e., where the NSAttName is a PrefixedAttName), the attribute value MUST NOT be empty."
-        // As such we will constrain regardless if we are validating - because we are using namespaces.
-        VerifyThrowSz( fDefault || !svUri.empty(), "Empty URI given for namespace prefix. This violates the Namespace constraint: No Prefix Undeclaring." );
-        // To use transparent key lookup you must use find - not any of the flavors of insert:
-        typename _TyNamespaceMap::iterator it = m_mapNamespaces.find( svPrefix );
-        if ( m_mapNamespaces.end() == it  )
-        {
-          pair< typename _TyNamespaceMap::iterator, bool > pib = m_mapNamespaces.emplace( std::piecewise_construct, std::forward_as_tuple(svPrefix), std::forward_as_tuple() );
-          Assert( pib.second );
-          it = pib.first;
-          it->second.first = &rvtPrefix; // This allows one lookup to process each attribute.
-        }
-        it->second.second.push( &rvtUri );
-        // Now we want to change the value type in the 1th position to xml_namespace_value_wrap. This causes appropriate removal of this namespace when this tag is destroyed.
-        rrgAttr[1].template emplaceArgs< _TyXmlNamespaceValueWrap >( *it, &m_mapNamespaces );
+        // Add the (prefix,uri) pair and put a _TyXmlNamespaceValueWrap in the _l_value to track its lifetime:
+        rrgAttr[1].emplaceVal( m_mapNamespaces.GetNamespaceValueWrap( *m_pXp, svPrefix, svUri ) );
       }
     }
     // Now parse the namespace on the tag:

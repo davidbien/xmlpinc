@@ -225,16 +225,11 @@ public:
   _TyXmlWriteTag StartTag( const t_TyChar * _pszTagName, size_t _stLenTag = 0, TGetPrefixUri< t_TyChar > const * _ppuNamespace = nullptr )
   {
     // Add a new tag as the top of the context.
-   _TyWriteContext & rwcxNew m_lContexts.emplace_back( m_xdcxtDocumentContext.GetUserObj(), s_knTokenSTag  );
-   rwcxNew.GetToken().SetTagName( m_xdcxtDocumentContext, _pszTagName, _stLenTag, _ppuNamespace );
-
-
-    if ( )
-
-
+    _TyWriteContext & rwcxNew m_lContexts.emplace_back( m_xdcxtDocumentContext.GetUserObj(), s_knTokenSTag );
+    rwcxNew.GetToken().SetTagName( m_xdcxtDocumentContext, _pszTagName, _stLenTag, _ppuNamespace );
+    return _TyXmlWriteTag( rwcxNew );
   }
 
-  TGetPrefixUri< t_TyChar > const * _ppuNamespace = nullptr
 #if 0
   // Ends the current tag. If _ptokEnd is passed it needs to match the top of the write stack. If not an exception will be thrown.
   // The safest manner of operation is to pass _ptokEnd bask to check - but I don't see a reason to *require* it.

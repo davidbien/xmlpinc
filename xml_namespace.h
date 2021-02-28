@@ -82,6 +82,13 @@ public:
     m_pmapReleaseOnDestruct = _pmapReleaseOnDestruct;
     m_pvtUri = &_rvt.second.second.front().RStrUri();
     m_pvtPrefix = _rvt.second.first;
+    AssertValid();
+  }
+  xml_namespace_value_wrap( const _TyUriAndPrefixValue * _pvtPrefix, const _TyUriAndPrefixValue * _pvtUri )
+    : m_pvtPrefix( _pvtPrefix ),
+      m_pvtUri( _pvtUri )
+  {
+    AssertValid();
   }
   xml_namespace_value_wrap( xml_namespace_value_wrap const & ) = delete;
   xml_namespace_value_wrap & operator =( xml_namespace_value_wrap const & ) = delete;
@@ -101,6 +108,11 @@ public:
     std::swap( m_pmapReleaseOnDestruct, _r.m_pmapReleaseOnDestruct );
     std::swap( m_pvtUri, _r.m_pvtUri );
     std::swap( m_pvtPrefix, _r.m_pvtPrefix );
+  }
+  // Shed a non-namespace-declaration reference to this same namespace:
+  _TyThis ShedReference() const
+  {
+    return _TyThis( m_pvtPrefix, m_pvtUri );
   }
   bool FIsNull() const
   {
@@ -277,8 +289,125 @@ protected:
   // These are only non-null for namespace declaration attributes.
   _TyNamespaceMapValue * m_pvtNamespaceMap{nullptr};
   _TyNamespaceMap * m_pmapReleaseOnDestruct{nullptr};
-  const typename _TyUriAndPrefixValue * m_pvtUri{nullptr};
-  const typename _TyUriAndPrefixValue * m_pvtPrefix{nullptr};
+  const _TyUriAndPrefixValue * m_pvtUri{nullptr};
+  const _TyUriAndPrefixValue * m_pvtPrefix{nullptr};
 };
+
+// xml_namespace_map:
+// Wrap the namespace map to centralize operations involving it.
+template < class t_TyChar >
+class xml_namespace_map
+{
+  typedef xml_namespace_map _TyThis;
+public:
+  typedef t_TyChar _TyChar;
+  typedef typename _xml_namespace_map_traits< _TyChar >::_TyNamespaceMap _TyNamespaceMap;
+  typedef typename _xml_namespace_map_traits< _TyChar >::_TyUriAndPrefixMap _TyUriAndPrefixMap;
+  typedef typename _xml_namespace_map_traits< _TyChar >::_TyStdStr _TyStdStr;
+  typedef typename _xml_namespace_map_traits< _TyChar >::_TyStrView _TyStrView;
+  typedef xml_namespace_value_wrap< _TyChar > _TyXmlNamespaceValueWrap;
+    typedef xml_markup_traits< _TyChar > _TyMarkupTraits;
+
+  ~xml_namespace_map() = default;
+  xml_namespace_map() = default;
+  // Initialize from the container of the prefix and URI sets.
+  template < class t_TyUriPrefixContainer >
+  xml_namespace_map( t_TyUriPrefixContainer & _rcontUriPrefix )
+  {
+    _InitNamespaceMap( _rcontUriPrefix );
+  }
+  xml_namespace_map( xml_namespace_map const & ) = delete;
+  xml_namespace_map & operator =( xml_namespace_map const & ) = delete;
+  xml_namespace_map( xml_namespace_map && ) = default;
+  xml_namespace_map & operator =( xml_namespace_map const & ) = default;
+  template < class t_TyUriPrefixContainer >
+  void Init( t_TyUriPrefixContainer & _rcontUriPrefix )
+  {
+    _InitNamespaceMap( _rcontUriPrefix );
+  }
+  // Add the (prefix,uri) pair as the current (prefix,uri) pair and return a xml_namespace_value_wrap.
+  // If only _psvPrefix passed then return a xml_namespace_value_wrap that references (*_psvPrefix) in the 
+  //  namespace map or throw.
+  template < class t_TyUriPrefixContainer, class t_TyStrOrStrView >
+  _TyXmlNamespaceValueWrap GetNamespaceValueWrap( t_TyUriPrefixContainer & _rcontUriPrefix, const t_TyStrOrStrView * _psvPrefix, const t_TyStrOrStrView * _psvUri = nullptr )
+    requires TAreSameSizeTypes_v< typename t_TyStrOrStrView::value_type, _TyChar >
+  {
+    VerifyThrowSz( ( !!_psvPrefix && ( ( !!_psvUri && !_psvUri->empty() ) || _psvPrefix->empty() ) ), "Must pass at least a prefix and must pass a non-empty URI unless the prefix is empty." );
+    if ( !_psvUri )
+      return GetNamespaceValueWrap( *_psvPrefix );
+    else
+      return _GetNamespaceValueWrap( *_psvPrefix, *_psvUri );
+  }
+  template < class t_TyUriPrefixContainer, class t_TyStrOrStrView >
+  _TyXmlNamespaceValueWrap GetNamespaceValueWrap( t_TyUriPrefixContainer & _rcontUriPrefix, const t_TyStrOrStrView & _rsvPrefix, const t_TyStrOrStrView & _rsvUri )
+    requires TAreSameSizeTypes_v< typename t_TyStrOrStrView::value_type, _TyChar >
+  {
+    VerifyThrowSz( !_rsvUri.empty() || _rsvPrefix.empty(), "Must pass a non-empty URI unless the prefix is empty." );
+    return _GetNamespaceValueWrap( _rsvPrefix, _rsvUri );
+  }
+  template < class t_TyStrOrStrView >
+  _TyXmlNamespaceValueWrap GetNamespaceValueWrap( const t_TyStrOrStrView & _rsvPrefix ) const
+    requires TAreSameSizeTypes_v< typename t_TyStrOrStrView::value_type, _TyChar >
+  {
+    _TyNamespaceMap::const_iterator itNM = m_mapNamespaces.find( _rsvPrefix );
+    VerifyThrowSz( m_mapNamespaces.end() != itNM );
+    return _TyXmlNamespaceValueWrap( *itNM, nullptr );
+  }
+protected:
+  template < class t_TyUriPrefixContainer, class t_TyStrOrStrView >
+  _TyXmlNamespaceValueWrap _GetNamespaceValueWrap( t_TyUriPrefixContainer & _rcontUriPrefix, const t_TyStrOrStrView & _rsvPrefix, const t_TyStrOrStrView & _rsvUri )
+    requires TAreSameSizeTypes_v< typename t_TyStrOrStrView::value_type, _TyChar >
+  {
+    // in the map by now - add _rsvUri as the current URI for this prefix.
+    pair< _TyNamespaceMap::iterator, bool > pib = _PibAddPrefixUri( _rcontUriPrefix, _rsvPrefix, _rsvUri );
+    return _TyXmlNamespaceValueWrap( *pib.first, pib.second ? &m_mapNamespaces : nullptr );
+  }
+  // Return the iterator for the prefix and whether we had to add the URI as the current URI or if it already was the current
+  //  URI for the given prefix - in which case we didn't add it to the URI stack.
+  template < class t_TyUriPrefixContainer, class t_TyStrOrStrView >
+  pair< _TyNamespaceMap::iterator, bool > _PibAddPrefixUri( t_TyUriPrefixContainer & _rcontUriPrefix, const t_TyStrOrStrView & _rsvPrefix, const t_TyStrOrStrView & _rsvUri )
+  {
+    Assert( !_rsvUri.empty() || _rsvPrefix.empty() ); // error checking above us.
+    _TyNamespaceMap::iterator itNM = m_mapNamespaces.find( _rsvPrefix );
+    if ( !itNM )
+    {
+      // not in map - add it:
+      typename _TyUriAndPrefixMap::value_type const & rstrPrefix = _rcontUriPrefix.RStrAddPrefix( _rsvPrefix );
+      pair< typename _TyNamespaceMap::iterator, bool > pib = m_mapNamespaces.emplace( std::piecewise_construct, std::forward_as_tuple(rstrPrefix), std::forward_as_tuple() );
+      pib.first->second.first = &rstrPrefix;
+    }
+    else
+    {
+      // already in map - check for reserved prefix "xml":
+      if ( _rsvPrefix == _TyStrView( _TyMarkupTraits::s_kszXmlPrefix, StaticStringLen( _TyMarkupTraits::s_kszXmlPrefix ) ) )
+        VerifyThrowSz( _rsvUri == _TyStrView( _TyMarkupTraits::s_kszXmlUri, StaticStringLen( _TyMarkupTraits::s_kszXmlUri ) ),
+          "Only allowed to declare 'xml' prefix as uri 'http://www.w3.org/XML/1998/namespace' not as[%s]",
+          StrConvertString< char >( _rsvUri ).c_str() );
+    }
+    // If the current URI for this prefix is the same as the URI on the top of the stack then
+    //  there is no reason to push the given URI on the stack. In that case we will return false.
+    bool fAddUri = pib.first->second.second.empty() || ( _rvt.second.second.front().RStrUri() != _rsvUri );
+    if ( fAddUri )
+    {
+      typename _TyUriAndPrefixMap::value_type const & rstrUri = _rcontUriPrefix._RStrAddUri( _rsvUri );
+      itNM->second.second.push( &rstrUri );
+    }
+    return pair< typename _TyNamespaceMap::iterator, bool >( itNM, fAddUri );
+  }
+
+  template < class t_TyUriPrefixContainer >
+  void _InitNamespaceMap( t_TyUriPrefixContainer & _rcontUriPrefix )
+  {
+    Assert( !m_mapNamespaces.size() );
+  // The prefix xml is by definition bound to the namespace name http://www.w3.org/XML/1998/namespace
+  // As we add it here with nothing to remove it, even if someone declares it, it will remain in the namespace map.
+    typename _TyUriAndPrefixMap::value_type const & rstrPrefix = _rcontUriPrefix.RStrAddPrefix( typename _TyUriAndPrefixMap::value_type( _TyMarkupTraits::s_kszXmlPrefix, StaticStringLen( _TyMarkupTraits::s_kszXmlPrefix ) ) );
+    typename _TyUriAndPrefixMap::value_type const & rstrUri = _rcontUriPrefix._RStrAddUri( typename _TyUriAndPrefixMap::value_type( _TyMarkupTraits::s_kszXmlUri, StaticStringLen( _TyMarkupTraits::s_kszXmlUri ) ) );
+    pair< typename _TyNamespaceMap::iterator, bool > pib = m_mapNamespaces.emplace( std::piecewise_construct, std::forward_as_tuple(rstrPrefix), std::forward_as_tuple() );
+    pib.first->second.first = &rstrPrefix;
+    pib.first->second.second.push( &rstrUri );
+  }
+  _TyNamespaceMap m_mapNamespaces;
+}
 
 __XMLP_END_NAMESPACE
