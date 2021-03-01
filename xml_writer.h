@@ -73,7 +73,7 @@ public:
 
 protected:
   _TyXmlWriter * m_pxwWriter;
-  _TyXmlToken m_xtkToken;
+  _TyXmlToken m_xtkToken; // This is always a tag token. It really doesn't matter if the id is s_knTokenSTag or s_knTokenEmptyElemTag.
   bool m_fCommitted{false}; // Committed yet?
 };
 
@@ -89,23 +89,54 @@ class xml_write_tag
 {
   typedef xml_write_tag _TyThis;
 public:
-  typedef xml_writer< t_TyXmlTransportOut > _TyWriter;
+  typedef t_TyXmlTransportOut _TyXmlTransportOut;
+  typedef xml_writer< _TyXmlTransportOut > _TyWriter;
+  typedef xml_write_context< _TyXmlTransportOut > _TyWriteContext;
 
   // This is our attribute value/name interface object:
   // 1) Namespaces might be declared for this tag - default or prefixed.
   // 2) Attribute/value pairs might be added to this tag.
   // 3) This tag may already be populated with data that came from an XML stream but now the user wants to modify the values.
 
+  xml_write_tag( _TyWriteContext & _rwcxt )
+    : m_pwcxt( &_rwcxt )
+  {
+
+  }
+
+  // Return if the tag has a namespace or not.
+  bool FHasNamespace() const
+  {
+    Assert( m_pwcxt );
+    return m_pwcxt->GetToken().FHasNamespace();
+  }
+  // Get a namespace reference from this tag - the one that is on the tag itself.
+  _TyXmlNamespaceValueWrap GetNamespaceReference() const
+  {
+    Assert( FHasNamespace() ); // We will throw in the variant accessing the value wrap if it isn't there.
+    return m_pwcxt->GetToken().GetNamespaceReference();
+  }
+  // Add the namespace and return a reference to it that can be used to apply it to attributes.
+  // The namespace will only be declared as an attribute if it has to be. If the (uri)
+  //  is the current namespace for (prefix) then there is no need to declare the namespace.
+  template < class t_TyChar >
+  _TyXmlNamespaceValueWrap AddNamespace( TGetPrefixUri< t_TyChar > const & _rpuNamespace )
+  {
+    return m_pwcxt->GetToken().AddNamespace( m_pwcxt->GetDocumentContext(), _rpuNamespace );
+  }
+
+
   // This causes the data contained within this tag to be written to the transport.
   // This method may only be called once.
   // Note that starting another tag under this one will also cause an implicit Commit() to occur ( as a shortcut ).
   void Commit()
   {
-    m_pwcxtContext->CommitTagData();
+    Assert( m_pwcxt );
+    m_pwcxt->CommitTagData();
   }
 
 protected:
-  _TyWriterContext * m_pwcxtContext{nullptr}; // The context in the context stack to which this xml_write_tag corresponds.
+  _TyWriteContext * m_pwcxt{nullptr}; // The context in the context stack to which this xml_write_tag corresponds.
 };
 
 
@@ -161,9 +192,9 @@ public:
       _WriteTransportRaw( pszEncoding, StrNLen( pszEncoding ) );
       _WriteTransportRaw( _TyMarkupTraits::s_kszStandaloneEtc, StaticStringLen( _TyMarkupTraits::s_kszStandaloneEtc ) );
       if ( m_fStandalone )
-        _WriteTransportRaw( str_array_cast< _TyChar >( "yes" ).c_str(), 3 );
+        _WriteTransportRaw( _TyMarkupTraits::s_kszYes, StaticStringLen( _TyMarkupTraits::s_kszYes ) );
       else
-        _WriteTransportRaw( str_array_cast< _TyChar >( "no" ).c_str(), 2 );
+        _WriteTransportRaw( _TyMarkupTraits::s_kszNo, StaticStringLen( _TyMarkupTraits::s_kszNo ) );
       _WriteTransportRaw( _TyMarkupTraits::s_kszXMLDeclEndEtc, StaticStringLen( _TyMarkupTraits::s_kszXMLDeclEndEtc ) );
     }
     m_lContexts.emplace_back( m_xdcxtDocumentContext.GetUserObj(), s_knTokenXMLDecl  ); // create the XMLDecl pseudo-tag.
@@ -206,6 +237,9 @@ public:
 
   // This will:
   // 1) Call FMoveDown on _xrc
+  // 2) We must check and declare any namespace that we may encounter along the way as
+  //    these may have been declared above the current position of _rxrc, but we will
+  //    only know when we finally encounter a reference to them.
   template < class t_TyReadCursor >
   void WriteFromReadCursor( t_TyReadCursor & _rxrc )
   {
@@ -227,6 +261,16 @@ public:
     // Add a new tag as the top of the context.
     _TyWriteContext & rwcxNew m_lContexts.emplace_back( m_xdcxtDocumentContext.GetUserObj(), s_knTokenSTag );
     rwcxNew.GetToken().SetTagName( m_xdcxtDocumentContext, _pszTagName, _stLenTag, _ppuNamespace );
+    return _TyXmlWriteTag( rwcxNew );
+  }
+  // Once a namespace has been added you can then obtain its _TyXmlNamespaceValueWrap and use that to mark namespace on tags
+  //  and attributes. This is much faster since no namespace lookup needs to be made.
+  template < class t_TyChar >
+  _TyXmlWriteTag StartTag( _TyXmlNamespaceValueWrap const & _rxnvw, const t_TyChar * _pszTagName, size_t _stLenTag = 0 )
+  {
+    // Add a new tag as the top of the context.
+    _TyWriteContext & rwcxNew m_lContexts.emplace_back( m_xdcxtDocumentContext.GetUserObj(), s_knTokenSTag );
+    rwcxNew.GetToken().SetTagName( m_xdcxtDocumentContext, _rxnvw, _pszTagName, _stLenTag );
     return _TyXmlWriteTag( rwcxNew );
   }
 

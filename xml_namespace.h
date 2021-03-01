@@ -109,16 +109,6 @@ public:
     std::swap( m_pvtUri, _r.m_pvtUri );
     std::swap( m_pvtPrefix, _r.m_pvtPrefix );
   }
-  // Shed a non-namespace-declaration reference to this same namespace:
-  _TyThis ShedReference() const
-  {
-    return _TyThis( m_pvtPrefix, m_pvtUri );
-  }
-  bool FIsNull() const
-  {
-    AssertValid();
-    return !m_pvtUri;
-  }
   void AssertValid() const
   {
 #if ASSERTSENABLED
@@ -150,10 +140,28 @@ public:
       m_pvtNamespaceMap = nullptr;
     }
   }
+  // Shed a non-namespace-declaration reference to this same namespace:
+  _TyThis ShedReference() const
+  {
+    return _TyThis( m_pvtPrefix, m_pvtUri );
+  }
+  bool FIsNull() const
+  {
+    AssertValid();
+    return !m_pvtUri;
+  }
+  bool FIsNamespaceReference() const
+  {
+    return !FIsNull() && !m_pmapReleaseOnDestruct;
+  }
   bool FIsNamespaceDeclaration() const
   {
     AssertValid();
     return !!m_pmapReleaseOnDestruct;
+  }
+  const _TyNamespaceMap * PGetNamespaceMap() const
+  {
+    return m_pmapReleaseOnDestruct;
   }
   const _TyNamespaceMapValue * PVtNamespaceMapValue() const
   {
@@ -325,6 +333,27 @@ public:
   {
     _InitNamespaceMap( _rcontUriPrefix );
   }
+  bool FHasDefaultNamespace() const
+  {
+    return m_mapNamespaces.end() != m_mapNamespaces.find( _tyStrView() );
+  }
+  // Check to see that the passed _TyXmlNamespaceValueWrap is the currently active URI for the prefix given.
+  bool FIsActiveNamespace( _TyXmlNamespaceValueWrap const & _rxnvw ) const
+  {
+    // We are going to assume that if the caller has a _rxnvw.FIsNamespaceDeclaration() and the map pointer
+    //  matches then it is an active namespace.
+    if ( _rxnvw.PGetNamespaceMap() == &m_mapNamespaces )
+    {
+      Assert( ( m_mapNamespaces.end() != m_mapNamespaces.find( _rxnvw.RStringPrefix() ) ) &&
+              ( m_mapNamespaces.find( _rxnvw.RStringPrefix() )->second.second.front().RStrUri() == _rxnvw.RStringUri() ) );
+      return true;
+    }
+    Assert( !_rxnvw.FIsNull() );
+    if ( _rxnvw.FIsNull() )
+      return false;
+    _TyNamespaceMap::const_iterator cit = m_mapNamespaces.find( _rxnvw.RStringPrefix() );
+    return ( m_mapNamespaces.end() != cit ) && ( cit->second.second.front().RStrUri() == _rxnvw.RStringUri() );
+  }
   // Add the (prefix,uri) pair as the current (prefix,uri) pair and return a xml_namespace_value_wrap.
   // If only _psvPrefix passed then return a xml_namespace_value_wrap that references (*_psvPrefix) in the 
   //  namespace map or throw.
@@ -332,7 +361,8 @@ public:
   _TyXmlNamespaceValueWrap GetNamespaceValueWrap( t_TyUriPrefixContainer & _rcontUriPrefix, const t_TyStrOrStrView * _psvPrefix, const t_TyStrOrStrView * _psvUri = nullptr )
     requires TAreSameSizeTypes_v< typename t_TyStrOrStrView::value_type, _TyChar >
   {
-    VerifyThrowSz( ( !!_psvPrefix && ( ( !!_psvUri && !_psvUri->empty() ) || _psvPrefix->empty() ) ), "Must pass at least a prefix and must pass a non-empty URI unless the prefix is empty." );
+    // If both are null then we are asking for the current default namespace - and we will throw later if there isn't one.
+    VerifyThrowSz( ( !_psvPrefix && !_psvUri ) || ( !!_psvPrefix && ( ( !!_psvUri && !_psvUri->empty() ) || _psvPrefix->empty() ) ), "Must pass at least a prefix and must pass a non-empty URI unless the prefix is empty." );
     if ( !_psvUri )
       return GetNamespaceValueWrap( *_psvPrefix );
     else
@@ -345,11 +375,12 @@ public:
     VerifyThrowSz( !_rsvUri.empty() || _rsvPrefix.empty(), "Must pass a non-empty URI unless the prefix is empty." );
     return _GetNamespaceValueWrap( _rsvPrefix, _rsvUri );
   }
+  // Return the namespace reference for _rsvPrefix or the default namespace if any - throw if no namespace found.
   template < class t_TyStrOrStrView >
-  _TyXmlNamespaceValueWrap GetNamespaceValueWrap( const t_TyStrOrStrView & _rsvPrefix ) const
+  _TyXmlNamespaceValueWrap GetNamespaceValueWrap( const t_TyStrOrStrView * _psvPrefix = nullptr ) const
     requires TAreSameSizeTypes_v< typename t_TyStrOrStrView::value_type, _TyChar >
   {
-    _TyNamespaceMap::const_iterator itNM = m_mapNamespaces.find( _rsvPrefix );
+    _TyNamespaceMap::const_iterator itNM = m_mapNamespaces.find( !_psvPrefix ? _TyStrView() : *_psvPrefix );
     VerifyThrowSz( m_mapNamespaces.end() != itNM );
     return _TyXmlNamespaceValueWrap( *itNM, nullptr );
   }

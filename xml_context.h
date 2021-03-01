@@ -166,6 +166,16 @@ public:
   {
     return m_optMapNamespaces.has_value();
   }
+  // Return if there is currently an active default namespace.
+  bool FHasDefaultNamespace() const
+  {
+    Assert( FHasNamespaceMap() );
+    return MapNamespaces().FHasDefaultNamespace();
+  }
+  bool FIsActiveNamespace( _TyXmlNamespaceValueWrap const & _rxnvw ) const
+  {
+    return MapNamespaces().FIsActiveNamespace( _rxnvw );
+  }
   _TyXmlNamespaceMap & MapNamespaces()
   {
     Assert( FHasNamespaceMap() );

@@ -42,6 +42,8 @@ template < class t_TyChar >
 class _xml_namespace_uri;
 template < class t_TyChar >
 class xml_namespace_value_wrap;
+template < class t_TyChar >
+class xml_namespace_map;
 
 // xml_cursor.h:
 template < class t_TyXmlTraits >
