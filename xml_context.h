@@ -198,6 +198,24 @@ public:
   {
     return MapNamespaces().GetNamespaceValueWrap( _rsvPrefix );
   }
+// Default attribute namespace support.
+  bool FHasDefaultAttributeNamespace() const
+  {
+    return !m_xnvwDefaultAttributeNamespace.FIsNull();
+  }
+  bool ClearDefaultAttributeNamespace()
+  {
+    m_xnvwDefaultAttributeNamespace.Clear();
+  }
+  void SetDefaultAttributeNamespace( _TyXmlNamespaceValueWrap const & _rxnvw )
+  {
+    VerifyThrowSz( !m_xnvwDefaultAttributeNamespace.FIsDefaultNamespace(), "Attributes cannot use the default namespace." );
+    m_xnvwDefaultAttributeNamespace = _rxnvw.ShedReference();
+  }
+  _TyXmlNamespaceValueWrap const & GetDefaultAttributeNamespace() const
+  {
+    return m_xnvwDefaultAttributeNamespace;
+  }
 
   unique_ptr< _TyLexUserObj > m_upUserObj; // The user object. Contains all entity references.
   _TyUriAndPrefixMap m_mapUris; // set of unqiue URIs.
@@ -208,6 +226,8 @@ public:
   _TyOptXmlNamespaceMap m_optMapNamespaces;
   // This would only be populated in outputting situations.
   typedef optional< _TyPrFormatContext > m_optprFormatContext;
+  // This can be set and it will be used as the default attribute namespace for all declared attributes.
+  _TyXmlNamespaceValueWrap m_xnvwDefaultAttributeNamespace;
 };
 
 // _xml_document_context_transport: This is a document context that includes the tranport type, etc. 

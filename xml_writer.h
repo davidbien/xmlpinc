@@ -124,7 +124,66 @@ public:
   {
     return m_pwcxt->GetToken().AddNamespace( m_pwcxt->GetDocumentContext(), _rpuNamespace );
   }
-
+  // Use this to set the default namespace for any added attributes.
+  void SetDefaultAttributeNamespace( _TyXmlNamespaceValueWrap const & _rxnvw )
+  {
+    m_xnvwAttributes = _rxnvw.ShedReference();
+  }
+  void ClearDefaultAttributeNamespace()
+  {
+    m_xnvwAttributes.Clear();
+  }
+  _TyXmlNamespaceValueWrap * _PGetDefaultAttributeNamespace( _TyXmlNamespaceValueWrap * _pxnvw ) const
+  {
+    _TyXmlDocumentContext const & rdcxt m_pwcxt->GetDocumentContext();
+    return !_pxnvw ? ( m_xnvwAttributes.FIsNull() ? (
+         rdcxt.FHasDefaultAttributeNamespace() ? &rdcxt.GetDefaultAttributeNamespace() : nullptr ) : &m_xnvwAttributes ) : _pxnvw;
+  }
+  template < class t_TyChar >
+  void AddAttribute(  const t_TyChar * _pcAttrName, size_t _stLenAttrName = (numeric_limits< size_t >::max)(),
+                      const t_TyChar * _pcAttrValue = nullptr, size_t _stLenAttrValue = (numeric_limits< size_t >::max)(),
+                      _TyXmlNamespaceValueWrap * _pxnvw = nullptr )
+  {
+     m_pwcxt->GetToken().AddAttribute(  m_pwcxt->GetDocumentContext(), _pcAttrName, _stLenAttrName, _pcAttrValue, _stLenAttrValue, 
+                                        _PGetDefaultAttributeNamespace( _pxnvw ) );
+  }
+  template < class t_TyStrViewOrString >
+  void AddAttribute(  t_TyStrViewOrString const & _strName, t_TyStrViewOrString const & _strValue, _TyXmlNamespaceValueWrap * _pxnvw = nullptr )
+  {
+    m_pwcxt->GetToken().AddAttribute( m_pwcxt->GetDocumentContext(), _strName, _strValue, _PGetDefaultAttributeNamespace( _pxnvw ) );
+  }
+  // We support adding formatted attributes but only for char and wchar_t types. They will be interpreted as UTF-8 and UTF-16/32 depending on platform.
+  template < class t_TyChar >
+  void FormatAttribute( const t_TyChar * _pcAttrName, size_t _stLenAttrName = (numeric_limits< size_t >::max)(),
+                        const t_TyChar * _pcAttrValueFmt = nullptr, size_t _stLenAttrValue = (numeric_limits< size_t >::max)(),
+                        _TyXmlNamespaceValueWrap * _pxnvw = nullptr, ... )
+    requires( 1 == sizeof( _TyChar ) )
+  {
+    va_list ap;
+    va_start( ap, _pxnvw );
+    m_pwcxt->GetToken().FormatAttributeVArg( m_pwcxt->GetDocumentContext(), _pcAttrName, _stLenAttrName, 
+      _pcAttrValueFmt, _stLenAttrValue, _PGetDefaultAttributeNamespace( _pxnvw ), ap );
+    va_end( ap );
+  }
+  // A more succinct format that doesn't allow as many options.
+  template < class t_TyChar >
+  void FormatAttribute( const t_TyChar * _pszAttrName, const t_TyChar * _pszAttrValueFmt, ... )
+  {
+    va_list ap;
+    va_start( ap, _pszAttrValueFmt );
+    m_pwcxt->GetToken().FormatAttributeVArg( m_pwcxt->GetDocumentContext(), _pszAttrName, (numeric_limits< size_t >::max)(), 
+      _pszAttrValueFmt, (numeric_limits< size_t >::max)(), _PGetDefaultAttributeNamespace( nullptr ), ap );
+    va_end( ap );
+  }
+  template < class t_TyChar >
+  void FormatAttribute( _TyXmlNamespaceValueWrap const & _rxnvw, const t_TyChar * _pszAttrName, const t_TyChar * _pszAttrValueFmt, ... )
+  {
+    va_list ap;
+    va_start( ap, _pszAttrValueFmt );
+    m_pwcxt->GetToken().FormatAttributeVArg( m_pwcxt->GetDocumentContext(), _pszAttrName, (numeric_limits< size_t >::max)(), 
+      _pszAttrValueFmt, (numeric_limits< size_t >::max)(), &_rxnvw, ap );
+    va_end( ap );
+  }
 
   // This causes the data contained within this tag to be written to the transport.
   // This method may only be called once.
@@ -137,6 +196,7 @@ public:
 
 protected:
   _TyWriteContext * m_pwcxt{nullptr}; // The context in the context stack to which this xml_write_tag corresponds.
+  _TyXmlNamespaceValueWrap m_xnvwAttributes; // When this is set then it is used for marking any added attributes.
 };
 
 
