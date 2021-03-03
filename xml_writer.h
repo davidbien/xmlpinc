@@ -59,18 +59,16 @@ public:
   {
     return m_xtkToken;
   }
-
   // The data inside of m_xtkToken is complete - write it out to the output stream.
   // We could then delete the data - except for namespace declarations, but I don't see the
   //  need to preemptively delete since not too much memory is being taken up.
   void CommitTagData()
   {
-    VerifyThrowSz( !m_fCommitted, "Can only CommitTagData() once per tag." );
-    // 
-    m_fCommitted = true;
+    if ( m_fCommitted )
+      return; // no-op - valid to call more than once.
+    m_pxwWriter->_CommitTag( m_xtkToken );
+    m_fCommitted = true; // If we throw whilte committing we are not committed - even though it may not be fixable.
   }
-
-
 protected:
   _TyXmlWriter * m_pxwWriter;
   _TyXmlToken m_xtkToken; // This is always a tag token. It really doesn't matter if the id is s_knTokenSTag or s_knTokenEmptyElemTag.
@@ -101,9 +99,7 @@ public:
   xml_write_tag( _TyWriteContext & _rwcxt )
     : m_pwcxt( &_rwcxt )
   {
-
   }
-
   // Return if the tag has a namespace or not.
   bool FHasNamespace() const
   {
@@ -133,23 +129,19 @@ public:
   {
     m_xnvwAttributes.Clear();
   }
-  _TyXmlNamespaceValueWrap * _PGetDefaultAttributeNamespace( _TyXmlNamespaceValueWrap * _pxnvw ) const
-  {
-    _TyXmlDocumentContext const & rdcxt m_pwcxt->GetDocumentContext();
-    return !_pxnvw ? ( m_xnvwAttributes.FIsNull() ? (
-         rdcxt.FHasDefaultAttributeNamespace() ? &rdcxt.GetDefaultAttributeNamespace() : nullptr ) : &m_xnvwAttributes ) : _pxnvw;
-  }
   template < class t_TyChar >
   void AddAttribute(  const t_TyChar * _pcAttrName, size_t _stLenAttrName = (numeric_limits< size_t >::max)(),
                       const t_TyChar * _pcAttrValue = nullptr, size_t _stLenAttrValue = (numeric_limits< size_t >::max)(),
                       _TyXmlNamespaceValueWrap * _pxnvw = nullptr )
   {
+    _CheckCommitted();
      m_pwcxt->GetToken().AddAttribute(  m_pwcxt->GetDocumentContext(), _pcAttrName, _stLenAttrName, _pcAttrValue, _stLenAttrValue, 
                                         _PGetDefaultAttributeNamespace( _pxnvw ) );
   }
   template < class t_TyStrViewOrString >
   void AddAttribute(  t_TyStrViewOrString const & _strName, t_TyStrViewOrString const & _strValue, _TyXmlNamespaceValueWrap * _pxnvw = nullptr )
   {
+    _CheckCommitted();
     m_pwcxt->GetToken().AddAttribute( m_pwcxt->GetDocumentContext(), _strName, _strValue, _PGetDefaultAttributeNamespace( _pxnvw ) );
   }
   // We support adding formatted attributes but only for char and wchar_t types. They will be interpreted as UTF-8 and UTF-16/32 depending on platform.
@@ -157,8 +149,9 @@ public:
   void FormatAttribute( const t_TyChar * _pcAttrName, size_t _stLenAttrName = (numeric_limits< size_t >::max)(),
                         const t_TyChar * _pcAttrValueFmt = nullptr, size_t _stLenAttrValue = (numeric_limits< size_t >::max)(),
                         _TyXmlNamespaceValueWrap * _pxnvw = nullptr, ... )
-    requires( 1 == sizeof( _TyChar ) )
+    requires( TAreSameSizeTypes_v< t_TyChar, char > || TAreSameSizeTypes_v< t_TyChar, wchar_t > )
   {
+    _CheckCommitted();
     va_list ap;
     va_start( ap, _pxnvw );
     m_pwcxt->GetToken().FormatAttributeVArg( m_pwcxt->GetDocumentContext(), _pcAttrName, _stLenAttrName, 
@@ -168,7 +161,9 @@ public:
   // A more succinct format that doesn't allow as many options.
   template < class t_TyChar >
   void FormatAttribute( const t_TyChar * _pszAttrName, const t_TyChar * _pszAttrValueFmt, ... )
+    requires( TAreSameSizeTypes_v< t_TyChar, char > || TAreSameSizeTypes_v< t_TyChar, wchar_t > )
   {
+    _CheckCommitted();
     va_list ap;
     va_start( ap, _pszAttrValueFmt );
     m_pwcxt->GetToken().FormatAttributeVArg( m_pwcxt->GetDocumentContext(), _pszAttrName, (numeric_limits< size_t >::max)(), 
@@ -177,28 +172,42 @@ public:
   }
   template < class t_TyChar >
   void FormatAttribute( _TyXmlNamespaceValueWrap const & _rxnvw, const t_TyChar * _pszAttrName, const t_TyChar * _pszAttrValueFmt, ... )
+    requires( TAreSameSizeTypes_v< t_TyChar, char > || TAreSameSizeTypes_v< t_TyChar, wchar_t > )
   {
+    _CheckCommitted();
+    Assert( !!&_rxnvw ); // shouldn't pass null ref - though we will not crash - but we will not honor any default attribute namespace that have been decalred.
     va_list ap;
     va_start( ap, _pszAttrValueFmt );
     m_pwcxt->GetToken().FormatAttributeVArg( m_pwcxt->GetDocumentContext(), _pszAttrName, (numeric_limits< size_t >::max)(), 
       _pszAttrValueFmt, (numeric_limits< size_t >::max)(), &_rxnvw, ap );
     va_end( ap );
   }
-
   // This causes the data contained within this tag to be written to the transport.
   // This method may only be called once.
   // Note that starting another tag under this one will also cause an implicit Commit() to occur ( as a shortcut ).
+  // Note that writing a token to the when there is a non-committed tag causes an auto-commit.
+  // Calling commit on a committed tag is not an error - it is merely ignored - this takes care of cases where
+  //  the addition of a sub-tag or sub-token causes a commit.
   void Commit()
   {
     Assert( m_pwcxt );
     m_pwcxt->CommitTagData();
   }
-
 protected:
+  void _CheckCommitted() const
+  {
+    VerifyThrowSz( !m_pwcxt->FCommited(), "Trying to edit a tag that has already been committed." );
+  }
+  _TyXmlNamespaceValueWrap * _PGetDefaultAttributeNamespace( _TyXmlNamespaceValueWrap * _pxnvw ) const
+  {
+    // The document-level default atttribute namespace is handled by xml_token.
+    _TyXmlDocumentContext const & rdcxt m_pwcxt->GetDocumentContext();
+    return !_pxnvw ? ( m_xnvwAttributes.FIsNull() ? (
+         rdcxt.FHasDefaultAttributeNamespace() ? &rdcxt.GetDefaultAttributeNamespace() : nullptr ) : &m_xnvwAttributes ) : _pxnvw;
+  }
   _TyWriteContext * m_pwcxt{nullptr}; // The context in the context stack to which this xml_write_tag corresponds.
   _TyXmlNamespaceValueWrap m_xnvwAttributes; // When this is set then it is used for marking any added attributes.
 };
-
 
 // xml_writer:
 // Writes an XML file stream through an XML write transport.
@@ -318,6 +327,7 @@ public:
   template < class t_TyChar >
   _TyXmlWriteTag StartTag( const t_TyChar * _pszTagName, size_t _stLenTag = 0, TGetPrefixUri< t_TyChar > const * _ppuNamespace = nullptr )
   {
+    _CheckCommitCur();
     // Add a new tag as the top of the context.
     _TyWriteContext & rwcxNew m_lContexts.emplace_back( m_xdcxtDocumentContext.GetUserObj(), s_knTokenSTag );
     rwcxNew.GetToken().SetTagName( m_xdcxtDocumentContext, _pszTagName, _stLenTag, _ppuNamespace );
@@ -328,6 +338,7 @@ public:
   template < class t_TyChar >
   _TyXmlWriteTag StartTag( _TyXmlNamespaceValueWrap const & _rxnvw, const t_TyChar * _pszTagName, size_t _stLenTag = 0 )
   {
+    _CheckCommitCur();
     // Add a new tag as the top of the context.
     _TyWriteContext & rwcxNew m_lContexts.emplace_back( m_xdcxtDocumentContext.GetUserObj(), s_knTokenSTag );
     rwcxNew.GetToken().SetTagName( m_xdcxtDocumentContext, _rxnvw, _pszTagName, _stLenTag );
@@ -367,6 +378,7 @@ public:
       case s_knTokenCharData:
       {
         // Must be a single value here:
+        _CheckCommitCur();
         _WriteCharAndAttrData< TGetCharDataStart >( _rtok, _rtok.GetValue() );
       }
       break;
@@ -406,9 +418,49 @@ protected:
     _rtok.KGetStringView( rval, sv );
     _WriteTransportRaw( &sv[0], sv.length() );
   }
+  // This just commits the start of the tag. And we can't write the last ">" or "/>" until
+  //  we know if there will be sub-tag data at all. This is because one invariant is that we
+  //  never seek the output file which allows us to write to stdout, etc.
+  // We will set the variable m_fHaveUnendedTag to true to indicate that either a ">" or "/>"
+  //  needs writing.
+  // Validation:
+  // 1) Tag and attribute names have already been validated as they were accumulated.
+  // 2) Naemspaces were validated for activity at a given usage point, and tag
+  //  declarations which already had a prefix are re-namespaced when that same prefix
+  //  is redeclared on that tag. 
+  // 3) Need to validate that there are no duplicate attribute declarations. This include unique prefixes using the same system.
+  template < class t_TyXmlToken >
+  void _CommitTag( t_TyXmlToken const & _rtok )
+  {
+    _WriteTransportRaw( _TyMarkupTraits::s_kszTagBegin, StaticStringLen( _TyMarkupTraits::s_kszTagBegin ) );
+    m_fHaveUnendedTag = true;
+    const _TyLexValue & rvalRoot = rtok.GetValue();
+    _WriteName( _rtok, rvalRoot[0] );
+
+  }
+  // Write the name - it will have already been validated.
+  // _rvalRgName is a value array containing at least (name,namespacewrap). 
+  // It may contains any number of things beyond that and they don't figure into this method.
+  template < class t_TyXmlToken >
+  void _WriteName( t_TyXmlToken const & _rtok, typename t_TyXmlToken::_TyLexValue const & _rvalRgName )
+  {
+    typedef t_TyXmlToken _TyXmlToken;
+    typedef typename _TyXmlToken::_TyLexValue _TyLexValue;
+    const _TyLexValue & rvalName = _rvalRgName[0];
+    const _TyLexValue & rvalNS = _rvalRgName[1];
+    if ( rvalNS.FIsBool() || m_xdcxtDocumentContext.FIncludePrefixesInAttrNames() )
+    {
+      // Then no need to fuss - the name will just contain the prefix if there is any.
+      
+    }
+    
+
+  }
+
   template < class t_TyXmlToken >
   void _WriteComment( t_TyXmlToken const & _rtok )
   {
+    _CheckCommitCur();
     typedef typename t_TyXmlToken::_TyLexValue _TyLexValue;
     _WriteTransportRaw( _TyMarkupTraits::s_kszCommentBegin, StaticStringLen( _TyMarkupTraits::s_kszCommentBegin ) );
     // Scenarios:
@@ -462,10 +514,10 @@ protected:
         }
     }
   }
-
   template < class t_TyXmlToken >
   void _WriteProcessingInstruction( t_TyXmlToken const & _rtok )
   {
+    _CheckCommitCur();
     typedef typename t_TyXmlToken::_TyLexValue _TyLexValue;
     _WriteTransportRaw( _TyMarkupTraits::s_kszProcessingInstructionBegin, StaticStringLen( _TyMarkupTraits::s_kszProcessingInstructionBegin ) );
     const _TyLexValue & rval = rtok.GetValue();
@@ -482,6 +534,7 @@ protected:
   template < class t_TyXmlToken >
   void _WriteCDataSection( t_TyXmlToken const & _rtok )
   {
+    _CheckCommitCur();
     typedef typename t_TyXmlToken::_TyLexValue _TyLexValue;
     _WriteTransportRaw( _TyMarkupTraits::s_kszCDataSectionBegin, StaticStringLen( _TyMarkupTraits::s_kszCDataSectionBegin ) );
     // If we find illegal characters within a CDATA section then there is no remedy. (Well we could end the CDataSection and put in a CharRef, but we aren't doing that now.)
@@ -528,7 +581,6 @@ protected:
     }
     _WriteTransportRaw( _TyMarkupTraits::s_kszCDataSectionEnd, StaticStringLen( _TyMarkupTraits::s_kszCDataSectionEnd ) );
   }
-
   // Three possibilities:
   // 1) _rtok contains typed data. In this case we won't validate at all and _edrDetectReferences DOES NOT come into play.
   // 2) _rtok contains a single string. In this _edrDetectReferences is used to validate and segment the string, etc.

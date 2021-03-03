@@ -246,6 +246,31 @@ public:
   {
     AddAttribute( _rcxtDoc, &_strName[0], _strName.length(), &_strValue[0], _strValue.length(), _pxnvw );
   }
+  // We can only support printf formatting for the stdc supported character types which are char and wchar_t at this point.
+  // Methods are not available for characters not of these sizes.
+  template < class t_TyChar >
+  void FormatAttribute( _TyXmlDocumentContext & _rcxtDoc, const t_TyChar * _pcAttrName, size_t _stLenAttrName,
+                        const t_TyChar * _pcAttrValue, size_t _stLenAttrValue,
+                        _TyXmlNamespaceValueWrap * _pxnvw, ... )
+    requires( TAreSameSizeTypes_v< t_TyChar, char > || TAreSameSizeTypes_v< t_TyChar, wchar_t > )
+  {
+    va_list ap;
+    va_start( ap, _pxnvw );
+    FormatAttributeVArg( _rcxtDoc, _pcAttrName, _stLenAttrName, _pcAttrValue, _pxnvw, ap );
+    va_end( ap );
+  }
+  template < class t_TyChar >
+  void FormatAttributeVArg( _TyXmlDocumentContext & _rcxtDoc, const t_TyChar * _pcAttrName, size_t _stLenAttrName,
+                            const t_TyChar * _pcAttrValue, size_t _stLenAttrValue,
+                            _TyXmlNamespaceValueWrap * _pxnvw, va_list _ap )
+    requires( TAreSameSizeTypes_v< t_TyChar, char > || TAreSameSizeTypes_v< t_TyChar, wchar_t > )
+  {
+    typedef conditional_t< TAreSameSizeTypes_v< typename t_tyString::value_type, char >, char, wchar_t > _TyChar;
+    typedef basic_string< _TyChar > _TyString;
+    _TyString strValue;
+    VPrintfStdStr( strValue, _stLenAttrValue, _pcAttrValue, _ap );
+    AddAttribute( _rcxtDoc, _pcAttrName, _stLenAttrName, &strValue[0], strValue.length(), _pxnvw );
+  }
 protected:
   void _InitTag( _TyXmlDocumentContext & _rcxtDoc )
   {
@@ -274,21 +299,21 @@ protected:
     VerifyThrowSz( ( pcMatch - pcTagName ) == _nLenName, "Invalid characters found in qaulified name[%s]", StrConvertString< char >( _pcNameTest, _nLenName ).c_str() );
     return nPosColon;
   }
-  void _SetTagName( _TyXmlDocumentContext & _rcxtDoc, _TyStrView & _rsvTagName, _TyStrView * _psvPrefix, _TyStrView * _psvUri, _TyXmlNamespaceValueWrap const * _pnsvw = nullptr )
+  void _SetTagName( _TyXmlDocumentContext & _rcxtDoc, _TyStrView & _rsvTagName, _TyStrView * _psvPrefix, _TyStrView * _psvUri, _TyXmlNamespaceValueWrap const * _pxnvw = nullptr )
   {
     Assert( !_psvPrefix == !_psvUri );
     size_t nPosColon = _NColonValidQualifiedName( &_rsvTagName[0], _rsvTagName.length() );
     _TyLexValue & rvalTag = GetValue()[0];
-    if ( _rcxtDoc.FHasNamespaceMap() && ( _psvPrefix || _pnsvw || nPosColon || _rcxtDoc.HasDefaultNamespace() ) )
+    if ( _rcxtDoc.FHasNamespaceMap() && ( _psvPrefix || _pxnvw || nPosColon || _rcxtDoc.HasDefaultNamespace() ) )
     {
       // If a prefix was present in the name then it must match either a currently active prefix or the prefix passed in in _ppuNamespace.
       _TyStrView svPrefix( _pcTagName, nPosColon );
       if ( nPosColon )
       {
-        VerifyThrowSz(  ( !_psvPrefix && !_pnsvw ) || 
+        VerifyThrowSz(  ( !_psvPrefix && !_pxnvw ) || 
                         ( !!_psvPrefix && ( *_psvPrefix == svPrefix ) ) ||
-                        ( !!_pnsvw && ( _pnsvw->RStringPrefix() == svPrefix ) ), "Tag prefix(when present) must match passed (prefix,URI)." );
-        if ( !_psvPrefix && !_pnsvw )
+                        ( !!_pxnvw && ( _pxnvw->RStringPrefix() == svPrefix ) ), "Tag prefix(when present) must match passed (prefix,URI)." );
+        if ( !_psvPrefix && !_pxnvw )
         { // Use the same codepath below.
           Assert( !_psvUri );
           _psvPrefix = &svPrefix;
@@ -297,7 +322,7 @@ protected:
 
       _TyXmlNamespaceValueWrap * pxnvwTagRef; // always initialized below if used.
       _TyLexValue & rvalNS = rvalTag[1];
-      if ( !_pnsvw )
+      if ( !_pxnvw )
       {
         // Get the namespace value wrap. If this represents a reference to an existing current (prefix,uri)
         //  pair then we needn't declare the namespace attribute - with no loss of generality.
@@ -313,13 +338,13 @@ protected:
       }
       else
       {
-        if ( !_pnsvw->FIsNamespaceDeclaration() ) // We know that a namespace declaration is an active namespace.
+        if ( !_pxnvw->FIsNamespaceDeclaration() ) // We know that a namespace declaration is an active namespace.
         { // check to see that the URI is the active namespace for the given prefix.
-          VerifyThrowSz( _rcxtDoc.FIsActiveNamespace( *_pnsvw ), "Trying to use an inactive namespace as the current namespace." );
+          VerifyThrowSz( _rcxtDoc.FIsActiveNamespace( *_pxnvw ), "Trying to use an inactive namespace as the current namespace." );
           // Note that we could allow this to switch the namespace as well - it's a matter of design.
         }
         // Update the tag's reference to the namespace:
-        rvalNS.emplaceVal( _pnsvw->ShedReference() );
+        rvalNS.emplaceVal( _pxnvw->ShedReference() );
       }
     }
     else
@@ -330,23 +355,28 @@ protected:
     _SetName( _rcxtDoc, _rsvTagName, nPosColon, *_psvPrefix, rvalTag[0] );
     // I think we are done... whew!
   }
+  _TyXmlNamespaceValueWrap * _PGetDefaultAttributeNamespace( _TyXmlDocumentContext & _rcxtDoc, _TyXmlNamespaceValueWrap * _pxnvw ) const
+  {
+    return !_pxnvw ? ( _rcxtDoc.FHasDefaultAttributeNamespace() ? &rdcxt.GetDefaultAttributeNamespace() : nullptr ) : _pxnvw;
+  }
   void _AddAttribute( _TyXmlDocumentContext & _rcxtDoc, _TyStrView const & _rsvName, _TyStrView const & _rsvValue, _TyXmlNamespaceValueWrap * _pxnvw )
   {
-    VerifyThrow( FIsTag() && !GetValue().FIsNull() && ( !_pxnvw || _rcxtDoc.FHasNamespaceMap() ) );
+    _TyXmlNamespaceValueWrap * pxnvwDefaulted = _PGetDefaultAttributeNamespace( _pxnvw );
+    VerifyThrow( FIsTag() && !GetValue().FIsNull() && ( !pxnvwDefaulted || _rcxtDoc.FHasNamespaceMap() ) );
     size_t nPosColon = _NColonValidQualifiedName( &_rsvName[0], _rsvName.length() );
     _TyLexValue & rvalAttrNew = _DeclareNewAttr( _rcxtDoc );
     _TyLexValue & rvalNS = rvalAttrNew[1];
     _TyStrView svPrefix( &_rsvName[0], nPosColon );
-    if ( _rcxtDoc.FHasNamespaceMap() && ( nPosColon || _pnsvw ) )
+    if ( _rcxtDoc.FHasNamespaceMap() && ( nPosColon || pxnvwDefaulted ) )
     {
       // As with the tag declaration: If a prefix is present then it should match the 
-      if ( !_pnsvw )
+      if ( !pxnvwDefaulted )
         rvalNS.emplaceVal( _rcxtDoc.GetNamespaceValueWrap( svPrefix ) );
       else
       {
-        VerifyThrowSz( !nPosColon || ( svPrefix == _pnsvw->RStringPrefix() ), "Prefix(when present) must match passed namespace(when present) object's prefix." );
-        VerifyThrowSz( _pnsvw->FIsNamespaceDeclaration() || _rcxtDoc.FIsActiveNamespace( *_pnsvw ), "Trying to use an inactive namespace as the current namespace." );
-        rvalNS.emplaceVal( _pnsvw->ShedReference() );
+        VerifyThrowSz( !nPosColon || ( svPrefix == pxnvwDefaulted->RStringPrefix() ), "Prefix(when present) must match passed namespace(when present) object's prefix." );
+        VerifyThrowSz( pxnvwDefaulted->FIsNamespaceDeclaration() || _rcxtDoc.FIsActiveNamespace( *pxnvwDefaulted ), "Trying to use an inactive namespace as the current namespace." );
+        rvalNS.emplaceVal( pxnvwDefaulted->ShedReference() );
       }
       // Now make sure that this isn't a default namespace because there is no way to indicate that on an attribute name...
       VerifyThrowSz( !rvalNS.GetVal< _TyXmlNamespaceValueWrap >().RStringPrefix().empty(), "Attempt to apply the default namespace to an attribute name. That don't feng shui." );
@@ -368,10 +398,16 @@ protected:
       if ( _nPosColon )
         _rvalName.emplaceArgs< _TyStdStr >( &_rsvName[0] + nPosColon + 1, _rsvName.length() - nPosColon - 1 );
       else
+      if ( !_rsvPrefix.empty() ) // no prefix for default namespace.
       {
         _TyStdStr & rstrTagName = _rvalName.emplaceArgs< _TyStdStr >( _rsvPrefix );
         rstrTagName += _TyChar( ': ');
         rstrTagName += _rsvName;
+      }
+      else
+      {
+        Assert( !nPosColon );
+        _rvalName.emplaceArgs< _TyStdStr >( _rsvName );
       }
     }
     else
