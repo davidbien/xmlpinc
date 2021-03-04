@@ -432,10 +432,15 @@ protected:
   template < class t_TyXmlToken >
   void _CommitTag( t_TyXmlToken const & _rtok )
   {
+    // We shouldn't need to validate the attributes if this token came from an xml_read_cursor - as it would have been validated on the way in.
+    // We must check all attribute (name,value) pairs and if they are all typed data (i.e. not user added strings) then they all came from
+    //  an xml_read_cursor and they needn't be validated.
+    CheckDuplicateTokenAttrs( true, _rtok.GetLexToken(), true );
     _WriteTransportRaw( _TyMarkupTraits::s_kszTagBegin, StaticStringLen( _TyMarkupTraits::s_kszTagBegin ) );
     m_fHaveUnendedTag = true;
     const _TyLexValue & rvalRoot = rtok.GetValue();
     _WriteName( _rtok, rvalRoot[0] );
+    
 
   }
   // Write the name - it will have already been validated.
@@ -446,15 +451,30 @@ protected:
   {
     typedef t_TyXmlToken _TyXmlToken;
     typedef typename _TyXmlToken::_TyLexValue _TyLexValue;
+    typedef typename _TyXmlToken::_TyChar _TyChar;
+    typedef xml_namespace_value_wrap< _TyChar > _TyXmlNamespaceValueWrap;
+    typedef basic_string_view< _TyChar > _TyStrView;
     const _TyLexValue & rvalName = _rvalRgName[0];
     const _TyLexValue & rvalNS = _rvalRgName[1];
-    if ( rvalNS.FIsBool() || m_xdcxtDocumentContext.FIncludePrefixesInAttrNames() )
+    if ( !rvalNS.FIsBool() && !m_xdcxtDocumentContext.FIncludePrefixesInAttrNames() )
     {
-      // Then no need to fuss - the name will just contain the prefix if there is any.
-      
+      _TyXmlNamespaceValueWrap & rxnvw = rvalNS.GetVal< _TyXmlNamespaceValueWrap >();
+      _TyStrView svPrefix = rxnvw.RStringPrefix();
+      _WriteTransportRaw( &svPrefix[0], svPrefix.length() );
+      _WriteTransportRaw( _TyMarkupTraits::s_kszTagColon, StaticStringLen( _TyMarkupTraits::s_kszTagColon ) );
     }
-    
-
+    // Now write the name.
+    if ( !rvalName.FHasTypedData() )
+    {
+      rvalName.ApplyString( 
+        [this]< typename t_TyChar >( const t_TyChar * _pcBegin, const t_TyChar * const _pcEnd )
+        {
+          _WriteTransportRaw( _pcBegin, _pcEnd );
+        }
+      );
+    }
+    else
+      _WriteTypedData( _rtok, rvalName );
   }
 
   template < class t_TyXmlToken >
