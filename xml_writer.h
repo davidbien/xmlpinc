@@ -51,6 +51,14 @@ public:
     : m_xtkToken( _ruoUserObj, _paobCurToken )
   {
   }
+  void SetDetectReferences( EDetectReferences _edrDetectReferences )
+  {
+    m_edrDetectReferences = _edrDetectReferences;
+  }
+  EDetectReferences GetDetectReferences() const
+  {
+    return m_edrDetectReferences;
+  }
   const _TyXmlToken & GetToken() const
   {
     return m_xtkToken;
@@ -66,13 +74,19 @@ public:
   {
     if ( m_fCommitted )
       return; // no-op - valid to call more than once.
-    m_pxwWriter->_CommitTag( m_xtkToken );
+    m_pxwWriter->_CommitTag( m_xtkToken, m_edrDetectReferences );
     m_fCommitted = true; // If we throw whilte committing we are not committed - even though it may not be fixable.
+  }
+  void EndTag()
+  {
+    CommitTagData();
+    m_pxwWriter->EndTag( this );
   }
 protected:
   _TyXmlWriter * m_pxwWriter;
   _TyXmlToken m_xtkToken; // This is always a tag token. It really doesn't matter if the id is s_knTokenSTag or s_knTokenEmptyElemTag.
   bool m_fCommitted{false}; // Committed yet?
+  EDetectReferences m_edrDetectReferences{ edrDetectReferencesCount }; // User can override this inside of xml_write_tag.
 };
 
 // xml_write_tag:
@@ -99,6 +113,54 @@ public:
   xml_write_tag( _TyWriteContext & _rwcxt )
     : m_pwcxt( &_rwcxt )
   {
+  }
+  ~xml_write_tag()
+  {
+    // We shouldn't throw out of this destructor if we are within an unwinding:
+    if ( !!m_pwcxt )
+    {
+      bool fInUnwinding = !!std::uncaught_exceptions();
+      try
+      {
+        EndTag();
+      }
+      catch ( std::exception const & )
+      {
+        if ( !fInUnwinding )
+          throw; // let someone else deal with this.
+        // we could log here - not much else to be done besides aborting and that's draconian.
+      }
+    }
+  }
+
+  // This causes the data contained within this tag to be written to the transport.
+  // This method may only be called once.
+  // Note that starting another tag under this one will also cause an implicit Commit() to occur ( as a shortcut ).
+  // Note that writing a token to the when there is a non-committed tag causes an auto-commit.
+  // Calling commit on a committed tag is not an error - it is merely ignored - this takes care of cases where
+  //  the addition of a sub-tag or sub-token causes a commit.
+  void Commit()
+  {
+    Assert( m_pwcxt );
+    m_pwcxt->CommitTagData();
+  }
+  // End this tag. This is called from the destructor but may also be called directly.
+  void EndTag()
+  {
+    if ( !!m_pwcxt )
+    {
+      _TyWriteContext * pwcxt = m_pwcxt;
+      pwcxt->EndTag();
+    }
+  }
+  // This determines how references that may be present in attribute handles are detected or not.
+  void SetDetectReferences( EDetectReferences _edrDetectReferences )
+  {
+    m_pwcxt->SetDetectReferences( _edrDetectReferences );
+  }
+  EDetectReferences GetDetectReferences() const
+  {
+    return m_pwcxt->GetDetectReferences();
   }
   // Return if the tag has a namespace or not.
   bool FHasNamespace() const
@@ -181,17 +243,6 @@ public:
     m_pwcxt->GetToken().FormatAttributeVArg( m_pwcxt->GetDocumentContext(), _pszAttrName, (numeric_limits< size_t >::max)(), 
       _pszAttrValueFmt, (numeric_limits< size_t >::max)(), &_rxnvw, ap );
     va_end( ap );
-  }
-  // This causes the data contained within this tag to be written to the transport.
-  // This method may only be called once.
-  // Note that starting another tag under this one will also cause an implicit Commit() to occur ( as a shortcut ).
-  // Note that writing a token to the when there is a non-committed tag causes an auto-commit.
-  // Calling commit on a committed tag is not an error - it is merely ignored - this takes care of cases where
-  //  the addition of a sub-tag or sub-token causes a commit.
-  void Commit()
-  {
-    Assert( m_pwcxt );
-    m_pwcxt->CommitTagData();
   }
 protected:
   void _CheckCommitted() const
@@ -430,7 +481,7 @@ protected:
   //  is redeclared on that tag. 
   // 3) Need to validate that there are no duplicate attribute declarations. This include unique prefixes using the same system.
   template < class t_TyXmlToken >
-  void _CommitTag( t_TyXmlToken const & _rtok )
+  void _CommitTag( t_TyXmlToken const & _rtok, EDetectReferences _edrDetectReferences )
   {
     // We shouldn't need to validate the attributes if this token came from an xml_read_cursor - as it would have been validated on the way in.
     // We must check all attribute (name,value) pairs and if they are all typed data (i.e. not user added strings) then they all came from
@@ -438,10 +489,33 @@ protected:
     CheckDuplicateTokenAttrs( true, _rtok.GetLexToken(), true );
     _WriteTransportRaw( _TyMarkupTraits::s_kszTagBegin, StaticStringLen( _TyMarkupTraits::s_kszTagBegin ) );
     m_fHaveUnendedTag = true;
-    const _TyLexValue & rvalRoot = rtok.GetValue();
+    const _TyLexValue & rvalRoot = _rtok.GetValue();
     _WriteName( _rtok, rvalRoot[0] );
-    
-
+    // Move through all attributes writing each.
+    const _TyLexValue & rrgAttrs = rvalRoot[1];
+    size_t nAttrs = rrgAttrs.GetSize();
+    rrgAttrs.GetValueArray().ApplyContiguous( 0, nAttrs,
+      [this]( const _TyLexValue * _pvBegin, const _TyLexValue * _pvEnd )
+      {
+        for ( const _TyLexValue * pvCur = _pvBegin; _pvEnd != pvCur; ++pvCur )
+        {
+          _WriteTransportRaw( _TyMarkupTraits::s_kszSpace, StaticStringLen( _TyMarkupTraits::s_kszSpace ) );
+          const _TyLexValue & rvCur = *pvCur;
+          _WriteName( _rtok, rvCur );
+          _WriteTransportRaw( _TyMarkupTraits::s_kszEqualSign, StaticStringLen( _TyMarkupTraits::s_kszEqualSign ) );
+          // The tag itself specifies whether it wants double or single quotes.
+          bool fUseDoubleQuote = rvCur[3].GetVal< bool >();
+          _WriteTransportRaw( fUseDoubleQuote ? _TyMarkupTraits::s_kszDoubleQuote : _TyMarkupTraits::s_kszSingleQuote, StaticStringLen( _TyMarkupTraits::s_kszSingleQuote ) );
+          // Now write the value using the appropriate start token as the validator.
+          if ( fUseDoubleQuote )
+            _WriteCharAndAttrData< TGetAttCharDataNoSingleQuoteStart >( _rtok, rvCur[2], _edrDetectReferences );
+          else
+            _WriteCharAndAttrData< TGetAttCharDataNoDoubleQuoteStart >( _rtok, rvCur[2], _edrDetectReferences );
+          _WriteTransportRaw( fUseDoubleQuote ? _TyMarkupTraits::s_kszDoubleQuote : _TyMarkupTraits::s_kszSingleQuote, StaticStringLen( _TyMarkupTraits::s_kszSingleQuote ) );
+        }
+      }
+    );
+    // Done - we don't write any ending since we don't know yet which ending we should write.
   }
   // Write the name - it will have already been validated.
   // _rvalRgName is a value array containing at least (name,namespacewrap). 
