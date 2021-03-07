@@ -6,6 +6,7 @@
 // 02MAR2021
 
 #include "xml_types.h"
+#include "_strutil.h"
 
 __XMLP_BEGIN_NAMESPACE
 
@@ -15,7 +16,10 @@ template < class t_TyLexToken >
 void CheckDuplicateTokenAttrs( bool _fStrict, t_TyLexToken & _rltok, bool _fSkipIfAllTypedData = false )
 {
   typedef t_TyLexToken _TyLexToken;
-  typedef _TyLexToken::_TyValue _TyLexValue;
+  typedef typename _TyLexToken::_TyValue _TyLexValue;
+  typedef typename _TyLexValue::_TyChar _TyChar;
+  typedef basic_string_view< _TyChar > _TyStrView;
+  typedef xml_namespace_value_wrap< _TyChar > _TyXmlNamespaceValueWrap;
   // The default init allocator allows us to resize without initializing the elements...
   // Then we don't have to interact with the vector at all as we fill it...
   typedef const _TyLexValue * _TyPtrLexValue;
@@ -42,7 +46,7 @@ void CheckDuplicateTokenAttrs( bool _fStrict, t_TyLexToken & _rltok, bool _fSkip
     bool fIsAllTypedData = _fSkipIfAllTypedData;
     const _TyLexValue ** ppvalCur = ppvalBegin;
     rrgAttrs.GetValueArray().ApplyContiguous( 0, nAttrs,
-      [&ppvalCur]( const _TyLexValue * _pvBegin, const _TyLexValue * _pvEnd )
+      [&fIsAllTypedData,&ppvalCur]( const _TyLexValue * _pvBegin, const _TyLexValue * _pvEnd )
       {
         for ( ; _pvBegin != _pvEnd; )
         {
@@ -95,13 +99,13 @@ void CheckDuplicateTokenAttrs( bool _fStrict, t_TyLexToken & _rltok, bool _fSkip
     // We will throw an error for any duplicate prefix declarations if _fStrict is on because other parsers may barf on such declarations.
     const _TyLexValue & rvattrCur = **ppDupeCur;
     const _TyLexValue & rvnsCur = rvattrCur[1];
-    _TyStdStr strAttrName;
-    rvattrCur[0].GetString( _rltok, strAttrName );        
+    _TyStrView svAttrName;
+    rvattrCur[0].KGetStringView( _rltok, svAttrName );
     if ( rvnsCur.FIsA<bool>() )
     {
       // no-namespace attribute:
       fAnyDuplicateAttrNames = true;
-      LOGSYSLOG( eslmtError, "Duplicate attribute name found [%s].", strAttrName.c_str() );
+      LOGSYSLOG( eslmtError, "Duplicate attribute name found [%s].", StrConvertString< char >( svAttrName ).c_str() );
     }
     else
     {
@@ -114,14 +118,14 @@ void CheckDuplicateTokenAttrs( bool _fStrict, t_TyLexToken & _rltok, bool _fSkip
         if ( _fStrict || ( 0 != rxnvwCur.ICompare( rvnsNext.GetVal< _TyXmlNamespaceValueWrap >() ) ) )
         {
           fAnyDuplicateAttrNames = true;
-          LOGSYSLOG( eslmtError, "Duplicate namespace prefix name declared[%s].", strAttrName.c_str() );
+          LOGSYSLOG( eslmtError, "Duplicate namespace prefix name declared[%s].", StrConvertString< char >( svAttrName ).c_str() );
         }
       }
       else
       {
         // Attr same name with same URI declared:
         fAnyDuplicateAttrNames = true;
-        LOGSYSLOG( eslmtError, "Same named attr[%s] has same URI reference in namespace[%s].", strAttrName.c_str(), rxnvwCur.RStringUri().c_str() );
+        LOGSYSLOG( eslmtError, "Same named attr[%s] has same URI reference in namespace[%s].", StrConvertString< char >( svAttrName ).c_str(), rxnvwCur.RStringUri().c_str() );
       }
     }
   }

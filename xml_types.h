@@ -31,11 +31,28 @@ static constexpr bool vkfSupportDTD = false;
 template < class t_TyTransport, bool t_kfSupportDTD, bool t_kfValidating >
 struct xml_traits;
 
+template < class t_TyChar >
+struct xml_markup_traits;
+
 // xml_user.h:
 template < class t_tyChar, bool t_kfSupportDTD >
 class _xml_user_obj_base_dtd;
 template < class t_tyChar, bool t_kfSupportDTD >
 class xml_user_obj;
+
+// xml_context.h:
+template < class t_TyChar >
+class XMLDeclProperties;
+template < class t_TyChar >
+class _xml_output_format;
+template < class t_TyChar >
+class _xml_output_context;
+template < class t_TyLexUserObj >
+class _xml_document_context;
+template < class t_TyXmlTraits >
+class _xml_document_context_transport;
+template < class t_TyTpTransports >
+class _xml_document_context_transport_var;
 
 // xml_namespace.h
 template < class t_TyChar >

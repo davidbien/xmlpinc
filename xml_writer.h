@@ -194,14 +194,14 @@ public:
   template < class t_TyChar >
   void AddAttribute(  const t_TyChar * _pcAttrName, size_t _stLenAttrName = (numeric_limits< size_t >::max)(),
                       const t_TyChar * _pcAttrValue = nullptr, size_t _stLenAttrValue = (numeric_limits< size_t >::max)(),
-                      _TyXmlNamespaceValueWrap * _pxnvw = nullptr )
+                      const _TyXmlNamespaceValueWrap * _pxnvw = nullptr )
   {
     _CheckCommitted();
      m_pwcxt->GetToken().AddAttribute(  m_pwcxt->GetDocumentContext(), _pcAttrName, _stLenAttrName, _pcAttrValue, _stLenAttrValue, 
                                         _PGetDefaultAttributeNamespace( _pxnvw ) );
   }
   template < class t_TyStrViewOrString >
-  void AddAttribute(  t_TyStrViewOrString const & _strName, t_TyStrViewOrString const & _strValue, _TyXmlNamespaceValueWrap * _pxnvw = nullptr )
+  void AddAttribute(  t_TyStrViewOrString const & _strName, t_TyStrViewOrString const & _strValue, const _TyXmlNamespaceValueWrap * _pxnvw = nullptr )
   {
     _CheckCommitted();
     m_pwcxt->GetToken().AddAttribute( m_pwcxt->GetDocumentContext(), _strName, _strValue, _PGetDefaultAttributeNamespace( _pxnvw ) );
@@ -210,7 +210,7 @@ public:
   template < class t_TyChar >
   void FormatAttribute( const t_TyChar * _pcAttrName, size_t _stLenAttrName = (numeric_limits< size_t >::max)(),
                         const t_TyChar * _pcAttrValueFmt = nullptr, size_t _stLenAttrValue = (numeric_limits< size_t >::max)(),
-                        _TyXmlNamespaceValueWrap * _pxnvw = nullptr, ... )
+                        const _TyXmlNamespaceValueWrap * _pxnvw = nullptr, ... )
     requires( TAreSameSizeTypes_v< t_TyChar, char > || TAreSameSizeTypes_v< t_TyChar, wchar_t > )
   {
     _CheckCommitted();
@@ -249,12 +249,10 @@ protected:
   {
     VerifyThrowSz( !m_pwcxt->FCommited(), "Trying to edit a tag that has already been committed." );
   }
-  _TyXmlNamespaceValueWrap * _PGetDefaultAttributeNamespace( _TyXmlNamespaceValueWrap * _pxnvw ) const
+  const _TyXmlNamespaceValueWrap * _PGetDefaultAttributeNamespace( const _TyXmlNamespaceValueWrap * _pxnvw ) const
   {
     // The document-level default atttribute namespace is handled by xml_token.
-    _TyXmlDocumentContext const & rdcxt m_pwcxt->GetDocumentContext();
-    return !_pxnvw ? ( m_xnvwAttributes.FIsNull() ? (
-         rdcxt.FHasDefaultAttributeNamespace() ? &rdcxt.GetDefaultAttributeNamespace() : nullptr ) : &m_xnvwAttributes ) : _pxnvw;
+    return !_pxnvw ? &m_xnvwAttributes : _pxnvw;
   }
   _TyWriteContext * m_pwcxt{nullptr}; // The context in the context stack to which this xml_write_tag corresponds.
   _TyXmlNamespaceValueWrap m_xnvwAttributes; // When this is set then it is used for marking any added attributes.

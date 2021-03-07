@@ -23,13 +23,13 @@ public:
   XMLDeclProperties & operator=( XMLDeclProperties && ) = default;
   XMLDeclProperties( bool _fStandalone, EFileCharacterEncoding _efce )
     : m_fStandalone( _fStandalone ),
-      m_strEncoding( PszCharacterEncodingName( _efce ) )
+      m_strEncoding( PszCharacterEncodingName< _TyChar >( _efce ) )
   {
   }
   void Init( bool _fStandalone, EFileCharacterEncoding _efce )
   {
     m_fStandalone = _fStandalone;
-    m_strEncoding = PszCharacterEncodingName( _efce );
+    m_strEncoding = PszCharacterEncodingName< _TyChar >( _efce );
   }
   void swap( _TyThis & _r )
   {
@@ -86,7 +86,7 @@ public:
 template < class t_TyChar >
 class _xml_output_context
 {
-  typedef _xml_output_format _TyThis;
+  typedef _xml_output_context _TyThis;
 public:
   size_t m_nCurIndentLevel{0};
 };
@@ -108,6 +108,7 @@ public:
   typedef _xml_output_format< _TyChar > _TyXMLOutputFormat;
   typedef _xml_output_context< _TyChar > _TyXMLOutputContext;
   typedef pair< _TyXMLOutputFormat, _TyXMLOutputContext > _TyPrFormatContext;
+  typedef xml_namespace_value_wrap< _TyChar > _TyXmlNamespaceValueWrap;
 
   void Init( bool _fStandalone, EFileCharacterEncoding _efce )
   {
@@ -130,7 +131,8 @@ public:
     m_mapPrefixes.swap( _r.m_mapPrefixes );
     m_XMLDeclProperties.swap( _r.m_XMLDeclProperties );
     m_optMapNamespaces.swap( _r.m_optMapNamespaces );
-    m_optOutputFormat.swap( _r.m_optOutputFormat );
+    m_optprFormatContext.swap( _r.m_optprFormatContext );
+    m_xnvwDefaultAttributeNamespace.swap( _r.m_xnvwDefaultAttributeNamespace );
   }
   bool FAttributeValuesDoubleQuote() const
   {
@@ -166,11 +168,11 @@ public:
   {
     return m_optMapNamespaces.has_value();
   }
-  // Return if there is currently an active default namespace.
-  bool FHasDefaultNamespace() const
+  // Return if there is currently an active default namespace and return a reference to it if _pxnvw.
+  bool FHasDefaultNamespace( _TyXmlNamespaceValueWrap * _pxnvw = nullptr ) const
   {
     Assert( FHasNamespaceMap() );
-    return MapNamespaces().FHasDefaultNamespace();
+    return MapNamespaces().FHasDefaultNamespace( _pxnvw );
   }
   bool FIsActiveNamespace( _TyXmlNamespaceValueWrap const & _rxnvw ) const
   {
@@ -225,7 +227,8 @@ public:
   typedef optional< _TyXmlNamespaceMap > _TyOptXmlNamespaceMap;
   _TyOptXmlNamespaceMap m_optMapNamespaces;
   // This would only be populated in outputting situations.
-  typedef optional< _TyPrFormatContext > m_optprFormatContext;
+  typedef optional< _TyPrFormatContext > _TyOptPrFormatContext;
+  _TyOptPrFormatContext m_optprFormatContext;
   // This can be set and it will be used as the default attribute namespace for all declared attributes.
   _TyXmlNamespaceValueWrap m_xnvwDefaultAttributeNamespace;
 };

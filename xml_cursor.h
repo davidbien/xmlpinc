@@ -21,6 +21,8 @@
 #include "xml_types.h"
 #include "xml_traits.h"
 #include "xml_parse.h"
+#include "xml_context.h"
+#include "xml_util.h"
 
 __XMLP_BEGIN_NAMESPACE
 
@@ -694,7 +696,6 @@ protected:
     // Must clear all namespaces, prefixes, URIs, entities and parameter entities.
     m_XMLDeclProperties.clear();
     m_mapNamespaces.clear();
-
   }
   bool _FGetToken( unique_ptr< _TyLexToken > & _rpltok, const _TyStateProto * _pspStart = nullptr )
   {
@@ -914,16 +915,18 @@ protected:
     }
     // Leave the name as is - further processing will occur depending on flavor.
   }
+#if 0 // unused.
   template < class t_TyTransportCtxt >
   _TyNamespaceUri & _RLookupNamespacePrefix( _l_data_typed_range const & _rdr, t_TyTransportCtxt const & _rcxt )
   {
     _TyStrView sv;
     _rcxt.GetStringView( sv, _rdr );
-    typename _TyNamespaceMap::const_iterator cit = m_mapNamespaces.find( sv );
+    typename _TyXmlNamespaceMap::const_iterator cit = m_mapNamespaces.find( sv );
     if ( m_mapNamespaces.end() == cit )
       THROWXMLPARSEEXCEPTION("Can't find namespace prefix [%s].", StrConvertString<char>( sv ).c_str() );
     return cit->second;
   }
+#endif //0
   // Process any namespace declarations in this token and then process any namespace references.
   void _ProcessNamespaces( _TyLexToken & _rltok )
   {
@@ -948,7 +951,7 @@ protected:
         // We have a namespace declaration!
         _TyStrView svPrefix;
         rrgAttr[1].KGetStringView( _rltok, svPrefix );
-        const _TyUriAndPrefixMap::value_type & rvtPrefix = m_pXp->_RStrAddPrefix( svPrefix );
+        const _TyUriAndPrefixMap::value_type & rvtPrefix = m_pXp->RStrAddPrefix( svPrefix );
         // Check for uniqueness of prefix:
         VerifyThrowSz( !lPrefixesUsed.FFind( &rvtPrefix ), "Namespaces Validity: Cannot use same namespace prefix more than once within the same tag." );
         ALLOCA_LIST_PUSH( lPrefixesUsed, &rvtPrefix );
@@ -969,18 +972,15 @@ protected:
         _TyData & rdtPrefix = rrgTagName[0].GetVal< _TyData >();
         _TyStrView svPrefix;
         rrgTagName[0].KGetStringView( _rltok, svPrefix );
-        typename _TyNamespaceMap::iterator it = m_mapNamespaces.find( svPrefix );
-        VerifyThrowSz( m_mapNamespaces.end() != it, "Namespace prefix [%s] not found.", StrConvertString<char>( svPrefix ).c_str() );
         // Update the tag name so that it includes the prefix as is necessary for XML end tag matching.
         rdtPrefix.DataRangeGetSingle().m_posEnd = krdtName.DataRangeGetSingle().m_posEnd;
-        // Setup the xml_namespace_value_wrap in the 1th position as is standard:
-        rrgTagName[1].template emplaceArgs< _TyXmlNamespaceValueWrap >( *it, nullptr );
+        rrgTagName[1].emplaceVal( m_mapNamespaces.GetNamespaceValueWrap( &svPrefix ) );
       }
       else
       {
         // If we have a default namespace then we need to apply it to the tag.
-        typename _TyNamespaceMap::iterator it = m_mapNamespaces.find( _TyStrView() );
-        if ( ( m_mapNamespaces.end() == it ) || it->second.second.front().RStrUri().empty() )
+        _TyXmlNamespaceValueWrap xnvw;
+        if ( !m_mapNamespaces.FHasDefaultNamespace( &xnvw ) )
         {
           // If there is no namespace at all then we just put a "false" in the 1th position:
           rrgTagName[1].emplaceVal( false );
@@ -988,7 +988,7 @@ protected:
         else
         {
           // Setup the xml_namespace_value_wrap in the 1th position as is standard:
-          rrgTagName[1].template emplaceArgs< _TyXmlNamespaceValueWrap >( *it, nullptr );
+          rrgTagName[1].emplaceVal( std::move( xnvw ) );
         }
       }
     }//EB
@@ -1012,9 +1012,7 @@ protected:
         rdtPrefix.DataRangeGetSingle().m_posEnd = krdtName.DataRangeGetSingle().m_posEnd;
       else
         rdtPrefix.DataRangeGetSingle() = krdtName.DataRangeGetSingle(); // The user just wants the name without the prefix.
-      typename _TyNamespaceMap::iterator it = m_mapNamespaces.find( svPrefix );
-      VerifyThrowSz( m_mapNamespaces.end() != it, "Prefix [%s] was not found in the namespace map.", StrConvertString<char>( svPrefix ).c_str() );
-      rrgAttr[1].template emplaceArgs< _TyXmlNamespaceValueWrap >( *it, nullptr );
+      rrgAttr[1].emplaceVal( m_mapNamespaces.GetNamespaceValueWrap( &svPrefix ) );
     }
     // Now if the user wants to check for duplicate attributes - before we update the attribute names to include the prefixes.
     if ( m_fCheckDuplicateAttrs )
@@ -1088,7 +1086,7 @@ protected:
   _TyListReadContexts m_lContexts;
   unique_ptr< _TyLexToken > m_pltokLookahead;
   typename _TyListReadContexts::iterator m_itCurContext{m_lContexts.end()};
-  _TyNamespaceMap m_mapNamespaces;
+  _TyXmlNamespaceMap m_mapNamespaces;
 // State:
   // The current skip token array and the number of elements in it. This is passed to the lexical analyzer to cut token processing off optimally.
   _TySkipArray m_rgSkipTokensCur{0};

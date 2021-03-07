@@ -326,6 +326,24 @@ public:
   {
     _xrc._AttachXmlParser( this );
   }
+  typename _TyUriAndPrefixMap::value_type const & RStrAddPrefix( _TyStrView const & _rsv )
+  {
+    typename _TyUriAndPrefixMap::const_iterator cit = m_mapPrefixes.find( _rsv );
+    if ( m_mapPrefixes.end() != cit )
+      return *cit;
+    pair< typename _TyUriAndPrefixMap::iterator, bool > pib = m_mapPrefixes.insert( _TyStdStr( _rsv ) );
+    Assert( pib.second );
+    return *pib.first;
+  }
+  typename _TyUriAndPrefixMap::value_type const & RStrAddUri( _TyStrView const & _rsv )
+  {
+    typename _TyUriAndPrefixMap::const_iterator cit = m_mapUris.find( _rsv );
+    if ( m_mapUris.end() != cit )
+      return *cit;
+    pair< typename _TyUriAndPrefixMap::iterator, bool > pib = m_mapUris.insert( _TyStdStr( _rsv ) );
+    Assert( pib.second );
+    return *pib.first;
+  }  
 protected:
   template < class t_TyTransport >
   void _OpenParserCheckTransportVar( FileObj & _rfo )
@@ -380,24 +398,6 @@ protected:
     //  won't create a token for the whitespace.
     m_lexXml.GetUserObj().SetFilterAllTokenData( _fFilterAllTokenData );
   }
-  typename _TyUriAndPrefixMap::value_type const & _RStrAddPrefix( _TyStrView const & _rsv )
-  {
-    typename _TyUriAndPrefixMap::const_iterator cit = m_mapPrefixes.find( _rsv );
-    if ( m_mapPrefixes.end() != cit )
-      return *cit;
-    pair< typename _TyUriAndPrefixMap::iterator, bool > pib = m_mapPrefixes.insert( _TyStdStr( _rsv ) );
-    Assert( pib.second );
-    return *pib.first;
-  }
-  typename _TyUriAndPrefixMap::value_type const & _RStrAddUri( _TyStrView const & _rsv )
-  {
-    typename _TyUriAndPrefixMap::const_iterator cit = m_mapUris.find( _rsv );
-    if ( m_mapUris.end() != cit )
-      return *cit;
-    pair< typename _TyUriAndPrefixMap::iterator, bool > pib = m_mapUris.insert( _TyStdStr( _rsv ) );
-    Assert( pib.second );
-    return *pib.first;
-  }  
   void _InitMapsAndUserObj()
   {
     m_mapUris.clear();
