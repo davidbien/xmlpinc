@@ -323,11 +323,11 @@ public:
   }
   bool FInProlog() const
   {
-    return !FInsideDocumentTag() && !m_fGotFirstTag;
+    return ( 1 == m_lContexts.size() ) && !m_fGotFirstTag;
   }
   bool FInEpilog() const
   {
-    return !FInsideDocumentTag() && m_fGotFirstTag;
+    return ( 1 == m_lContexts.size() ) && m_fGotFirstTag;
   }
   bool FAtEOF() const
   {

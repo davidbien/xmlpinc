@@ -70,16 +70,17 @@ public:
   // The data inside of m_xtkToken is complete - write it out to the output stream.
   // We could then delete the data - except for namespace declarations, but I don't see the
   //  need to preemptively delete since not too much memory is being taken up.
-  void CommitTagData()
+  // If _fHasContent is true then it is known that the tag has content and thus the tag end characters can be written.
+  void CommitTagData( ECommitTagDisp ectdDisp = ectdContentUnknown )
   {
     if ( m_fCommitted )
       return; // no-op - valid to call more than once.
-    m_pxwWriter->_CommitTag( m_xtkToken, m_edrDetectReferences );
+    m_pxwWriter->_CommitTag( m_xtkToken, m_edrDetectReferences, ectdDisp );
     m_fCommitted = true; // If we throw whilte committing we are not committed - even though it may not be fixable.
   }
   void EndTag()
   {
-    CommitTagData();
+    CommitTagData( ectdNoContent );
     m_pxwWriter->EndTag( this );
   }
 protected:
@@ -275,6 +276,7 @@ public:
   typedef xml_user_obj< _TyChar, false > _TyLexUserObj;
   // We need to have our own local namespace map which means we need the full on document context:
   typedef _xml_document_context< _TyLexUserObj > _TyXmlDocumentContext;
+  typedef typename _TyXmlDocumentContext::_TyPrFormatContext _TyPrFormatContext;
   typedef typename _xml_namespace_map_traits< _TyChar >::_TyNamespaceMap _TyNamespaceMap;
   typedef xml_write_context< _TyXmlTransportOut > _TyWriteContext;
   typedef typename _TyWriteContext::_TyXmlToken _TyXmlToken;
@@ -289,9 +291,12 @@ public:
   // This will also write the XMLDecl if we are to do so, and regardless it will create a
   //  write context stack containing a single element which is the XMLDecl element regardless
   //  if we are to write the element.
-  void OpenFile( const char * _pszFileName, bool _fStandalone = true )
+  void OpenFile( const char * _pszFileName, bool _fStandalone = true, const _xml_output_format * _pxofFormat = nullptr )
   {
-    m_xdcxtDocumentContext.Init( _fStandalone, _TyXmlTransportOut::GetCharacterEncoding() );
+    _TyPrFormatContext prFormatContext;
+    if ( _pxofFormat )
+      prFormatContext.first = *_pxofFormat;
+    m_xdcxtDocumentContext.Init( _fStandalone, _TyXmlTransportOut::GetCharacterEncoding(), m_fUseNamespaces, &prFormatContext );
     m_strFileName = _pszFileName;
     FileObj foFile( CreateWriteOnlyFile( _pszFileName ) );
     VerifyThrowSz( foFile.FIsOpen(), "Unable to open file[%s]", _pszFileName );
@@ -299,8 +304,13 @@ public:
     emplaceTransport( foFile, m_fWriteBOM );
     _Init(); // This might write the XMLDecl tag to the file, but definitely will init the context stack.
   }
+  // Initialize the xml_writer. Write the XMLDecl root "tag" if that is desired. Regardless create a XMLDecl pseudo
+  //  tag as the root of the context list.
   void _Init()
   {
+    m_lContexts.clear();
+    m_fWroteFirstTag = false;
+    m_fHaveUnendedTag = false;
     if ( m_fWriteXMLDecl )
     {
       // Just write the XML declaration brute force - no reason to get fancy here. Note that this also includes
@@ -325,34 +335,52 @@ public:
 // options:
   void SetWriteBOM( bool _fWriteBOM )
   {
+    VerifyThrowSz( ( m_fWriteBOM == _fWriteBOM ) || !FHasTransport(), "Mustn't change the use of namespaces after opening a transport." );
     m_fWriteBOM = _fWriteBOM;
   }
-  void FSetWriteBOM()) const
+  void FGetWriteBOM()) const
   {
     return m_fWriteBOM;
   }
   void SetWriteXMLDecl( bool _fWriteXMLDecl )
   {
+    VerifyThrowSz( ( m_fWriteXMLDecl == _fWriteXMLDecl ) || !FHasTransport(), "Mustn't change the use of namespaces after opening a transport." );
     m_fWriteXMLDecl = _fWriteXMLDecl;
   }
-  void FSetWriteXMLDecl()) const
+  void FGetWriteXMLDecl()) const
   {
     return m_fWriteXMLDecl;
   }
   void SetUseNamespaces( bool _fUseNamespaces )
   {
+    VerifyThrowSz( ( m_fUseNamespaces == _fUseNamespaces ) || !FHasTransport(), "Mustn't change the use of namespaces after opening a transport." );
     m_fUseNamespaces = _fUseNamespaces;
   }
-  void FSetUseNamespaces()) const
+  void FGetUseNamespaces() const
   {
     return m_fUseNamespaces;
   }
 // status:
-  bool FInPrologue()
+  bool FIsOpen() const
   {
-    return !m_fWroteFirstTag;
+    return FHasTransport();
   }
-
+  bool FHasTransport() const
+  {
+    return m_optTransportOut.has_value();
+  }
+  bool FInsideDocumentTag() const
+  {
+    return m_lContexts.size() > 1; // the claim is constant time since C++17.
+  }
+  bool FInProlog() const
+  {
+    return !m_fWroteFirstTag && ( 1 == m_lContexts.size() );
+  }
+  bool FInEpilog() const
+  {
+    return m_fWroteFirstTag && ( 1 == m_lContexts.size() );
+  }
   // This will:
   // 1) Call FMoveDown on _xrc
   // 2) We must check and declare any namespace that we may encounter along the way as
@@ -378,7 +406,7 @@ public:
   {
     _CheckCommitCur();
     // Add a new tag as the top of the context.
-    _TyWriteContext & rwcxNew m_lContexts.emplace_back( m_xdcxtDocumentContext.GetUserObj(), s_knTokenSTag );
+    _TyWriteContext & rwcxNew = m_lContexts.emplace_back( m_xdcxtDocumentContext.GetUserObj(), s_knTokenSTag );
     rwcxNew.GetToken().SetTagName( m_xdcxtDocumentContext, _pszTagName, _stLenTag, _ppuNamespace );
     return _TyXmlWriteTag( rwcxNew );
   }
@@ -389,9 +417,45 @@ public:
   {
     _CheckCommitCur();
     // Add a new tag as the top of the context.
-    _TyWriteContext & rwcxNew m_lContexts.emplace_back( m_xdcxtDocumentContext.GetUserObj(), s_knTokenSTag );
+    _TyWriteContext & rwcxNew = m_lContexts.emplace_back( m_xdcxtDocumentContext.GetUserObj(), s_knTokenSTag );
     rwcxNew.GetToken().SetTagName( m_xdcxtDocumentContext, _rxnvw, _pszTagName, _stLenTag );
     return _TyXmlWriteTag( rwcxNew );
+  }
+  // Start a tag by copying the passed token.
+  // If we namespace of the tag isn't current then the namespace is declared as an additional attribute.
+  // We also copy current namespace declarations even if they are not referred to by the tag's namespace prefix.
+  template < class t_TyXmlToken >
+  _TyXmlWriteTag StartTag( t_TyXmlToken const & _rtok )
+  {
+
+  }
+  // Start a tag by moving its contents into this object.
+  // We leave the tag name entact in the old object and we must leave any active namespace declarations there and just copy them.
+  _TyXmlWriteTag StartTag( _TyXmlToken && _rrtok )
+  {
+    
+  }
+  // We are writing a token - we are not writing the end tag for a token.
+  void _CheckCommitCur()
+  {
+    _CheckWriteTagEnd( true );
+    if ( !FInsideDocumentTag() )
+      return;
+    _TyWriteContext & rwcxCur = m_lContexts.back();
+    // We know, if we are committing here, that we have content and thus can can write the tag end right away.
+    rwcxCur.CommitTagData( ectdWithContent );
+  }
+  // Check to see if we have started a tag and if so end it allowing for an end tag.
+  void _CheckWriteTagEnd( bool _fWithContent )
+  {
+    if ( m_fHaveUnendedTag )
+    {
+      m_fHaveUnendedTag = false;
+      if ( _fWithContent )
+        _WriteTransportRaw( _TyMarkupTraits::s_kszTagEnd, StaticStringLen( _TyMarkupTraits::s_kszTagEnd ) );
+      else
+        _WriteTransportRaw( _TyMarkupTraits::s_kszEmptyElemTagEnd, StaticStringLen( _TyMarkupTraits::s_kszEmptyElemTagEnd ) );
+    }
   }
 
 #if 0
@@ -479,14 +543,15 @@ protected:
   //  is redeclared on that tag. 
   // 3) Need to validate that there are no duplicate attribute declarations. This include unique prefixes using the same system.
   template < class t_TyXmlToken >
-  void _CommitTag( t_TyXmlToken const & _rtok, EDetectReferences _edrDetectReferences )
+  void _CommitTag( t_TyXmlToken const & _rtok, EDetectReferences _edrDetectReferences, ECommitTagDisp ectdDisp )
   {
+    _CheckWriteTagEnd( true ); // We might have an unended tag and since we are a sub tag then that tag has content.
     // We shouldn't need to validate the attributes if this token came from an xml_read_cursor - as it would have been validated on the way in.
     // We must check all attribute (name,value) pairs and if they are all typed data (i.e. not user added strings) then they all came from
     //  an xml_read_cursor and they needn't be validated.
     CheckDuplicateTokenAttrs( true, _rtok.GetLexToken(), true );
     _WriteTransportRaw( _TyMarkupTraits::s_kszTagBegin, StaticStringLen( _TyMarkupTraits::s_kszTagBegin ) );
-    m_fHaveUnendedTag = true;
+    m_fHaveUnendedTag = ( ectdDisp == ectdContentUnknown );
     const _TyLexValue & rvalRoot = _rtok.GetValue();
     _WriteName( _rtok, rvalRoot[0] );
     // Move through all attributes writing each.
@@ -513,7 +578,16 @@ protected:
         }
       }
     );
-    // Done - we don't write any ending since we don't know yet which ending we should write.
+    // Write the ending if we know we have content.
+    if ( !m_fHaveUnendedTag )
+    {
+      Assert( ( ectdDisp == ectdWithContent ) || ( ectdDisp == ectdNoContent ) );
+      if ( ectdDisp == ectdWithContent )
+        _WriteTransportRaw( _TyMarkupTraits::s_kszTagEnd, StaticStringLen( _TyMarkupTraits::s_kszTagEnd ) );
+      else
+        _WriteTransportRaw( _TyMarkupTraits::s_kszEmptyElemTagEnd, StaticStringLen( _TyMarkupTraits::s_kszEmptyElemTagEnd ) );
+    }
+    // otherwise we don't write any ending since we don't know yet which ending we should write.
   }
   // Write the name - it will have already been validated.
   // _rvalRgName is a value array containing at least (name,namespacewrap). 

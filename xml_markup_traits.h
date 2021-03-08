@@ -13,6 +13,8 @@ template <>
 struct xml_markup_traits< char32_t >
 {
   typedef char32_t _TyChar;
+  static constexpr const _TyChar s_kszTagEnd[] = U">";
+  static constexpr const _TyChar s_kszEmptyElemTagEnd[] = U"/>";
   static constexpr const _TyChar s_kszCommentBegin[] = U"<!--";
   static constexpr const _TyChar s_kszCommentEnd[] = U"-->";
   static constexpr const _TyChar s_kszCDataSectionBegin[] = U"<![CDATA[";
@@ -28,6 +30,8 @@ template <>
 struct xml_markup_traits< char16_t >
 {
   typedef char16_t _TyChar;
+  static constexpr const _TyChar s_kszTagEnd[] = u">";
+  static constexpr const _TyChar s_kszEmptyElemTagEnd[] = u"/>";
   static constexpr const _TyChar s_kszCommentBegin[] = u"<!--";
   static constexpr const _TyChar s_kszCommentEnd[] = u"-->";
   static constexpr const _TyChar s_kszCDataSectionBegin[] = u"<![CDATA[";
@@ -43,6 +47,8 @@ template <>
 struct xml_markup_traits< char8_t >
 {
   typedef char8_t _TyChar;
+  static constexpr const _TyChar s_kszTagEnd[] = u8">";
+  static constexpr const _TyChar s_kszEmptyElemTagEnd[] = u8"/>";
   static constexpr const _TyChar s_kszCommentBegin[] = u8"<!--";
   static constexpr const _TyChar s_kszCommentEnd[] = u8"-->";
   static constexpr const _TyChar s_kszCDataSectionBegin[] = u8"<![CDATA[";

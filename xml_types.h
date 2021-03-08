@@ -43,9 +43,7 @@ class xml_user_obj;
 // xml_context.h:
 template < class t_TyChar >
 class XMLDeclProperties;
-template < class t_TyChar >
 class _xml_output_format;
-template < class t_TyChar >
 class _xml_output_context;
 template < class t_TyLexUserObj >
 class _xml_document_context;

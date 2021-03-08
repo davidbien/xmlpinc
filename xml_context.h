@@ -65,29 +65,66 @@ public:
 
 // _xml_output_format:
 // Static formatting options for XML output.
-template < class t_TyChar >
 class _xml_output_format
 {
   typedef _xml_output_format _TyThis;
 public:
-// Whether to use double quotes for attribute values.
+// If this is true then we won't add any spaces or end-of-lines when writing the output.
+  bool m_fNoFormatting{true};
+// Whether to use double quotes for attribute values by default.
   bool m_fAttributeValuesDoubleQuote{true};
-// If this is zero then a tab is used per indent.
-  uint8_t m_byNSpacesPerIndent{2};
+// If this is negative one then a tab is used per indent. If it is zero then no indentation is added.
+  int8_t m_byNSpacesPerIndent{2};
+// This is the maximum indentation level for which spaces/tabs are added. After this the maximum is used.
+  size_t m_nMaximumIndentLevelForWhitespace{32};
 // This isn't really an "output" format but it determines what the tags look like while we have them in there.
 // The xml_read_cursor has this same option and thus it is easy to keep things in sync when we are just copying
 //  an entire XML node, etc.
 // Note that it is faster to write the tag to the file since we have to write any prefix.
   bool m_fIncludePrefixesInAttrNames{true};
-};
 
+  ~_xml_output_format() = default;
+  _xml_output_format() = default;
+  _xml_output_format( _xml_output_format const & ) = default;
+  _xml_output_format & operator =( _xml_output_format const & ) = default;
+  void swap( _TyThis & _r )
+  {
+    if ( this == & _r )
+      return;
+    std::swap( m_fNoFormatting, _r.m_fNoFormatting );
+    std::swap( m_fAttributeValuesDoubleQuote, _r.m_fAttributeValuesDoubleQuote );
+    std::swap( m_byNSpacesPerIndent, _r.m_byNSpacesPerIndent );
+    std::swap( m_nMaximumIndentLevelForWhitespace, _r.m_nMaximumIndentLevelForWhitespace );
+    std::swap( m_fIncludePrefixesInAttrNames, _r.m_fIncludePrefixesInAttrNames );
+  }
+  bool FUseTabsForIndent() const
+  {
+    return -1 == m_byNSpacesPerIndent;
+  }
+  size_t NSpacesPerIndent() const
+  {
+    return -1 == m_byNSpacesPerIndent ? 0 : m_byNSpacesPerIndent;
+  }
+  bool FIncludePrefixesInAttrNames() const
+  {
+    return m_fIncludePrefixesInAttrNames;
+  }
+  bool FAttributeValuesDoubleQuote() const
+  {
+    return m_fAttributeValuesDoubleQuote;
+  }
+};
 // _xml_output_context:
 // Dynamic output context.
-template < class t_TyChar >
 class _xml_output_context
 {
   typedef _xml_output_context _TyThis;
 public:
+  ~_xml_output_context() = default;
+  _xml_output_context() = default;
+  _xml_output_context( const _xml_output_context & ) = default;
+  _xml_output_context & operator =( const _xml_output_context & ) = default;
+
   size_t m_nCurIndentLevel{0};
 };
 
@@ -105,16 +142,26 @@ public:
   typedef typename _xml_namespace_map_traits< _TyChar >::_TyUriAndPrefixMap _TyUriAndPrefixMap;
   typedef xml_namespace_map< _TyChar > _TyXmlNamespaceMap;
   typedef XMLDeclProperties< _TyChar > _TyXMLDeclProperties;
-  typedef _xml_output_format< _TyChar > _TyXMLOutputFormat;
-  typedef _xml_output_context< _TyChar > _TyXMLOutputContext;
+  typedef _xml_output_format _TyXMLOutputFormat;
+  typedef _xml_output_context _TyXMLOutputContext;
   typedef pair< _TyXMLOutputFormat, _TyXMLOutputContext > _TyPrFormatContext;
   typedef xml_namespace_value_wrap< _TyChar > _TyXmlNamespaceValueWrap;
 
-  void Init( bool _fStandalone, EFileCharacterEncoding _efce )
+  void Init( bool _fStandalone, EFileCharacterEncoding _efce, bool _fUseNamespaces, const _TyPrFormatContext * _pprFormatContext = nullptr )
   {
     // Create the user object - it will create all the default entities in its entity map.
     m_upUserObj = make_unique< _TyLexUserObj >();
     m_XMLDeclProperties.Init( _fStandalone, _efce );
+    m_mapUris.clear();
+    m_mapPrefixes.clear();
+    if ( _fUseNamespaces )
+      m_optMapNamespaces.emplace( *this );
+    else
+      m_optMapNamespaces.reset();
+    if ( _pprFormatContext )
+      m_optprFormatContext.emplace( *_pprFormatContext );
+    else
+      m_optprFormatContext.reset();
   }
   ~_xml_document_context() = default;
   _xml_document_context() = default;
@@ -137,12 +184,12 @@ public:
   bool FAttributeValuesDoubleQuote() const
   {
     Assert( !!m_optprFormatContext );
-    return !m_optprFormatContext ? true : m_optprFormatContext->first.m_fAttributeValuesDoubleQuote;
+    return !m_optprFormatContext ? true : m_optprFormatContext->first.FAttributeValuesDoubleQuote();
   }
   bool FIncludePrefixesInAttrNames() const
   {
     Assert( !!m_optprFormatContext );
-    return !m_optprFormatContext ? false : m_optprFormatContext->first.m_fIncludePrefixesInAttrNames;
+    return !m_optprFormatContext ? false : m_optprFormatContext->first.FIncludePrefixesInAttrNames();
   }
   template < class t_TyStrViewOrString >
   typename _TyUriAndPrefixMap::value_type const & RStrAddPrefix( t_TyStrViewOrString const & _rs )
