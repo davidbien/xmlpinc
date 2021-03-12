@@ -52,6 +52,21 @@ public:
     : m_tokToken( _ruoUserObj, _paobCurToken )
   {
   }
+  // Copy the passed token - we use the lex token since an xml token is only a wrapper.
+  template < class t_TyLexToken >
+  xml_token( t_TyLexToken const & _rtokCopy )
+    requires( !is_same_v< t_TyLexToken, _TyLexToken > )
+    : m_tokToken( _rtokCopy )
+  {
+  }
+  // Move in the passed token - we'll move what we can and copy the rest.
+  // We can move in the _l_value<> object and then we will have to modify
+  template < class t_TyLexToken >
+  xml_token( t_TyLexToken const && _rrtokCopy )
+    requires( !is_same_v< t_TyLexToken, _TyLexToken > )
+    : m_tokToken( std::move( _rrtokCopy ) )
+  {
+  }
   xml_token() = delete;
   xml_token( xml_token const & ) = default;
   xml_token & operator=( xml_token const & ) = default;

@@ -41,7 +41,8 @@ class xml_write_context
 public:
   typedef typename t_TyXmlTransportOut::_TyChar _TyChar;
   typedef xml_writer< t_TyXmlTransportOut > _TyXmlWriter;
-  // We always used backed context transport contexts for our tokens in the writer. We probably won't fill them ever, but could do so.
+  // We always used backed context transport contexts for our tokens in the writer. When translating tokens
+  //  any transport context can be converted into a backed context.
   typedef _l_transport_backed_ctxt< _TyChar > _TyTransportCtxt;
   typedef xml_user_obj< _TyChar, vkfSupportDTD > _TyLexUserObj;
   typedef tuple< xml_namespace_value_wrap< _TyChar > > _TyTpValueTraitsPack;
@@ -430,7 +431,7 @@ public:
 
   }
   // Start a tag by moving its contents into this object.
-  // We leave the tag name entact in the old object and we must leave any active namespace declarations there and just copy them.
+  // We leave the tag name intact in the old object and we must leave any active namespace declarations there and just copy them.
   _TyXmlWriteTag StartTag( _TyXmlToken && _rrtok )
   {
     
