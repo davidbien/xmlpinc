@@ -423,16 +423,33 @@ public:
     return _TyXmlWriteTag( rwcxNew );
   }
   // Start a tag by copying the passed token.
-  // If we namespace of the tag isn't current then the namespace is declared as an additional attribute.
+  // If the namespace of the tag isn't current then the namespace is declared as an additional attribute.
   // We also copy current namespace declarations even if they are not referred to by the tag's namespace prefix.
   template < class t_TyXmlToken >
   _TyXmlWriteTag StartTag( t_TyXmlToken const & _rtok )
   {
+    VerifyThrowSz( _rtok.FIsTag(), "Trying to start a tag with a non-tag token." );
+    // Here's how things will work: We call to copy the lex token that is inside of the xml token.
+    // We pass the m_xdcxtDocumentContext with the token to copy.
+    // If the namespace *reference* on the tag isn't the current URI for that (prefix,URI) then the namespace on the token copy
+    //  will be a namespace *declaration* object and a new namespace will have been added.
+    // We must, as we have the context here, add this namespace declaration as a new attribute on the tag and then move the
+    //  namespace declaration object to the new attribute and make the namespace on the tag a reference to this declaration.
+    // Then we will be all set up.
+    _TyXmlDocumentContext::_TyTokenCopyContext ctxtTokenCopy;
+    _TyXmlToken tokThis( m_xdcxtDocumentContext, _rtok.GetLexToken(), &ctxtTokenCopy );
+    // Now inside of ctxtTokenCopy we have a list of declarations and a list of references.
+    
+    tokThis.AssertValid();
+    if ( ctxtTokenCopy.m_pxnvwDeclarationFromReference && ctxtTokenCopy.m_pxnvwDeclarationFromReference )
+    // The copy is done - now check for an undeclared namespace on the tag:
+    tokThis._CheckDeclareTagNamespace();
 
   }
   // Start a tag by moving its contents into this object.
   // We leave the tag name intact in the old object and we must leave any active namespace declarations there and just copy them.
-  _TyXmlWriteTag StartTag( _TyXmlToken && _rrtok )
+  template < class t_TyXmlToken >
+  _TyXmlWriteTag StartTag( t_TyXmlToken && _rrtok )
   {
     
   }
