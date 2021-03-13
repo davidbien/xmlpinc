@@ -128,6 +128,37 @@ public:
   size_t m_nCurIndentLevel{0};
 };
 
+// This is used with tags. We will encounter a local-declared namespace first as a reference in the tag.
+// This will cause a namespace declaration in the copied tag's namespace field. Then when we encounter
+//  the actual namespace declaraion (the attribute) we will notice that this namespace is already declared.
+// This object will exchange the declaration with the reference if the declaration is encountered. If it isn't
+//  encountered then we will declare the namespace by adding an attribute (after the copy is finished).
+template < class t_TyChar >
+class _xml_token_copy_context
+{
+  typedef _xml_token_copy_context _TyThis;
+public:
+  typedef t_TyChar _TyChar;
+  typedef xml_namespace_value_wrap< _TyChar > _TyXmlNamespaceValueWrap;
+  typedef tuple< _TyXmlNamespaceValueWrap > _TyTpValueTraitsPack;
+  typedef _l_value< _TyChar, _TyTpValueTraitsPack > _TyLexValue;
+
+  ~_xml_token_copy_context() = default;
+  _xml_token_copy_context() = default;
+  _xml_token_copy_context( _xml_token_copy_context const & ) = default;
+  _xml_token_copy_context & operator=( _xml_token_copy_context const &) = default;
+
+  _TyLexValue * m_plvalContainerCur{nullptr}; // This is set the the container for the current value - it may be null. 
+  
+  // We maintain two lists:
+  // 1) A list of values containing namespace declaration values.
+  // 2) A list of values containing namespace reference values.
+  // Then we will appropriately match declarations with actual attribute namespace declarations.
+  typedef list< _TyLexValue * > _TyListNamespaces;
+  _TyListNamespaces m_lDeclarations;
+  _TyListNamespaces m_lReferences;
+};
+
 // _xml_document_context:
 // This organizes all the info from parsing that we need to keep to maintain a valid standalone xml_document. It contains backing memory
 //  for string views on prefixes and URIs, the XMLDecl properties (or synthesized ones), and the transport for those transport types
@@ -146,6 +177,7 @@ public:
   typedef _xml_output_context _TyXMLOutputContext;
   typedef pair< _TyXMLOutputFormat, _TyXMLOutputContext > _TyPrFormatContext;
   typedef xml_namespace_value_wrap< _TyChar > _TyXmlNamespaceValueWrap;
+  typedef _xml_token_copy_context< _TyChar > _TyTokenCopyContext;
 
   void Init( bool _fStandalone, EFileCharacterEncoding _efce, bool _fUseNamespaces, const _TyPrFormatContext * _pprFormatContext = nullptr )
   {
@@ -264,6 +296,27 @@ public:
   _TyXmlNamespaceValueWrap const & GetDefaultAttributeNamespace() const
   {
     return m_xnvwDefaultAttributeNamespace;
+  }
+  // _l_value<>::_MoveFrom() calls an r-value-reference version of this method but we don't need it - dont't want it.
+  template < class t_TyXmlNamespaceValueWrapOther >
+  void TranslateUserType( _TyTokenCopyContext * _ptccCopyCtxt, t_TyXmlNamespaceValueWrapOther const & _rxnvwOther, _TyLexValue & _rvalNSVW  )
+  {
+    Assert( _rvalNSVW.FIsNull() );
+    Assert( !!_ptccCopyCtxt && !!_ptccCopyCtxt->m_plvalContainerCur ); // We always pass this in - we expect to be within a container.
+    // First, regardless, we must get a (prefix,uri) from the other nsvw:
+    typedef _TyXmlNamespaceValueWrap::_TyPrStrPrefixUri prstrPrefixUri;
+    _rxnvwOther.GetPrefixUri( prstrPrefixUri );
+
+    // Record the containers for all declarations and references - this lets us fix things up pretty easily.    
+    _TyXmlNamespaceValueWrap xnvwThis = GetNamespaceValueWrap( &prstrPrefixUri.first, &prstrPrefixUri.second );
+    _TyXmlNamespaceValueWrap & rxnvwInValue = _rvalNSVW.emplaceVal< _TyXmlNamespaceValueWrap >( std::move( xnvwThis ) );
+    if ( rxnvwInValue.FIsNamespaceDeclaration() )
+      _ptccCopyCtxt->m_lDeclarations.push_back( _ptccCopyCtxt->m_plvalContainerCur );
+    else
+    {
+      Assert( rxnvwInValue.FIsNamespaceReference() );
+      _ptccCopyCtxt->m_lReferences.push_back( _ptccCopyCtxt->m_plvalContainerCur );
+    }
   }
 
   unique_ptr< _TyLexUserObj > m_upUserObj; // The user object. Contains all entity references.

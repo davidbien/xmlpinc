@@ -40,6 +40,12 @@ public:
   typedef xml_markup_traits< _TyChar > _TyMarkupTraits;
 
   ~xml_token() = default;
+  // Because we might have namespace *declarations* we cannot allow default copying of tokens.
+  // We could create a namespace reference when copying a namespace declarations. Have to flesh this out a bit more.
+  xml_token( xml_token const & ) = delete;
+  xml_token & operator=( xml_token const & ) = delete;
+  xml_token( xml_token && ) = default;
+  xml_token & operator=( xml_token && ) = default;
   xml_token( _TyLexToken const & _rtok )
     : m_tokToken( _rtok )
   {
@@ -53,18 +59,16 @@ public:
   {
   }
   // Copy the passed token - we use the lex token since an xml token is only a wrapper.
-  template < class t_TyLexToken >
-  xml_token( t_TyLexToken const & _rtokCopy )
-    requires( !is_same_v< t_TyLexToken, _TyLexToken > )
-    : m_tokToken( _rtokCopy )
+  template < class t_TyContainerNew, class t_TyLexToken >
+  xml_token( t_TyContainerNew & _rNewContainer, t_TyLexToken const & _rtokCopy, typename t_TyContainerNew::_TyTokenCopyContext * _ptccCopyCtxt = nullptr )
+    : m_tokToken( _rNewContainer, _rtokCopy, _ptccCopyCtxt )
   {
   }
   // Move in the passed token - we'll move what we can and copy the rest.
-  // We can move in the _l_value<> object and then we will have to modify
-  template < class t_TyLexToken >
-  xml_token( t_TyLexToken const && _rrtokCopy )
-    requires( !is_same_v< t_TyLexToken, _TyLexToken > )
-    : m_tokToken( std::move( _rrtokCopy ) )
+  // We can move in the _l_value<> object and then we will have to modify positions on encoding change.
+  template < class t_TyContainerNew, class t_TyLexToken >
+  xml_token( t_TyContainerNew & _rNewContainer, t_TyLexToken const && _rrtokCopy, typename t_TyContainerNew::_TyTokenCopyContext * _ptccCopyCtxt = nullptr )
+    : m_tokToken( _rNewContainer, std::move( _rrtokCopy ), _ptccCopyCtxt )
   {
   }
   xml_token() = delete;
@@ -295,6 +299,24 @@ public:
     _TyString strValue;
     VPrintfStdStr( strValue, _stLenAttrValue, _pcAttrValue, _ap );
     AddAttribute( _rcxtDoc, _pcAttrName, _stLenAttrName, &strValue[0], strValue.length(), _pxnvw );
+  }
+  // This method for internal use. Check if there is a namespace declaration on the tag and add that
+  //  as an attribute namespace declaration.
+  void _CheckDeclareTagNamespace()
+  {
+    Assert( FIsTag() );
+    _TyLexValue & rvalTagNameNS = tokThis[0][1];
+    if ( rvalTagNameNS.FIsA< _TyXmlNamespaceValueWrap >() )
+    {
+      _TyXmlNamespaceValueWrap & rxnvw = rvalTagNameNS.GetVal< _TyXmlNamespaceValueWrap >();
+      if ( rxnvw.FIsNamespaceDeclaration() )
+      {
+        // Then we must declare this as a new attibute namespace declaration and change this around to a namespace reference:
+        // The namespace is current in m_mapNamespaces inside of m_xdcxtDocumentContext.
+
+      }
+    }
+
   }
 protected:
   void _InitTag( _TyXmlDocumentContext & _rcxtDoc )

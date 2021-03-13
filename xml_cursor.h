@@ -486,7 +486,7 @@ public:
     // Able to move down. First process the next tag:
     _ProcessToken( m_pltokLookahead );
     Assert( !_FAtTailContext() ); // A new context should have been inserted below us.
-    Assert( !m_pltokLookahead->PAxnObjGet() ); // We should have moved this token away...
+    Assert( m_pltokLookahead->FIsNull() ); // We should have moved this token away...
     m_pltokLookahead.reset(); // Rid the null token object.
     // Now we must read the lookahead to prime the ending.
     VerifyThrowSz( _FGetToken( m_pltokLookahead ) || ( ( s_knTokenEmptyElemTag == tidLookahead ) && ( m_lContexts.size() == 2 ) ), "Premature EOF." );
@@ -603,7 +603,7 @@ protected:
   {
     vtyTokenIdent tid = m_pltokLookahead->GetTokenId();
     _ProcessToken( m_pltokLookahead );
-    Assert( !m_pltokLookahead->PAxnObjGet() ); // We should have moved this token away...
+    Assert( m_pltokLookahead->FIsNull() ); // We should have moved this token away...
     m_pltokLookahead.reset(); // Rid the null token object.
     // Now we must read the lookahead to prime the ending.
     VerifyThrowSz( _FGetToken( m_pltokLookahead ) || ( ( tid == s_knTokenETag ) && ( m_lContexts.size() == 2 ) ), _pszMesg );
@@ -628,7 +628,7 @@ protected:
         _ProcessTagName( (*m_pltokLookahead)[0] );
         _PushNewContext( *m_pltokLookahead );
       }
-      Assert( !m_pltokLookahead->PAxnObjGet() ); // We should have moved this token away...
+      Assert( m_pltokLookahead->FIsNull() ); // We should have moved this token away...
       m_pltokLookahead.reset(); // Rid the null token object.
       VerifyThrowSz( m_pXp->GetLexicalAnalyzer().FGetToken( m_pltokLookahead, rgSkipTokens, rgSkipTokens + nSkipTokens, nullptr, false ), "Premature EOF." );
     }
@@ -722,7 +722,7 @@ protected:
     while( _FIsContentToken( m_pltokLookahead->GetTokenId() ) )
     {
       _ProcessToken( m_pltokLookahead );
-      Assert( !m_pltokLookahead->PAxnObjGet() ); // We should have moved this token away...
+      Assert( m_pltokLookahead->FIsNull() ); // We should have moved this token away...
       m_pltokLookahead.reset(); // Rid the null token object.
       bool fGotToken = _FGetToken( m_pltokLookahead );
       VerifyThrowSz( fGotToken || FInEpilog(), "Hit premature EOF." );
