@@ -26,7 +26,7 @@ void CheckDuplicateTokenAttrs( bool _fStrict, t_TyLexToken & _rltok, bool _fSkip
   typedef std::vector< _TyPtrLexValue, default_init_allocator< _TyPtrLexValue > > _TyVectorPtrs;
   _TyVectorPtrs rgPointers;
   static constexpr size_t knptrMaxAllocaSize = vknbyMaxAllocaSize / sizeof( _TyLexValue* );
-  _TyLexValue & rrgAttrs = _rltok[1];
+  _TyLexValue & rrgAttrs = _rltok[vknAttributesIdx];
   size_t nAttrs = rrgAttrs.GetSize();
   const _TyLexValue ** ppvalBegin;
   const _TyLexValue ** ppvalEnd;
@@ -51,7 +51,7 @@ void CheckDuplicateTokenAttrs( bool _fStrict, t_TyLexToken & _rltok, bool _fSkip
         for ( ; _pvBegin != _pvEnd; )
         {
           if ( fIsAllTypedData )
-            fIsAllTypedData = (*_pvBegin)[0].FHasTypedData();
+            fIsAllTypedData = (*_pvBegin)[vknNameIdx].FHasTypedData();
           *ppvalCur++ = _pvBegin++;
         }
       }
@@ -66,14 +66,14 @@ void CheckDuplicateTokenAttrs( bool _fStrict, t_TyLexToken & _rltok, bool _fSkip
     {
       // First compare the names:
       _TyStrView svNameLeft;
-      (*_rlpt)[0].KGetStringView( _rltok, svNameLeft );
+      (*_rlpt)[vknNameIdx].KGetStringView( _rltok, svNameLeft );
       _TyStrView svNameRight;
-      (*_rrpt)[0].KGetStringView( _rltok, svNameRight );
+      (*_rrpt)[vknNameIdx].KGetStringView( _rltok, svNameRight );
       strong_ordering iComp = svNameLeft <=> svNameRight;
       if ( 0 == iComp )
       {
-        _TyLexValue const & rlvalNS = (*_rlpt)[1];
-        _TyLexValue const & rrvalNS = (*_rrpt)[1];
+        _TyLexValue const & rlvalNS = (*_rlpt)[vknNamespaceIdx];
+        _TyLexValue const & rrvalNS = (*_rrpt)[vknNamespaceIdx];
         bool fIsNotBoolLeft = !rlvalNS.FIsA< bool >();
         bool fIsNotBoolRight = !rrvalNS.FIsA< bool >();
         iComp = (int)fIsNotBoolLeft <=> (int)fIsNotBoolRight;
@@ -98,9 +98,9 @@ void CheckDuplicateTokenAttrs( bool _fStrict, t_TyLexToken & _rltok, bool _fSkip
     // If the same prefix declares the same URI then we will will ignore it because I cannot see an interpretation of this in the W3C XML Namespace Specification.
     // We will throw an error for any duplicate prefix declarations if _fStrict is on because other parsers may barf on such declarations.
     const _TyLexValue & rvattrCur = **ppDupeCur;
-    const _TyLexValue & rvnsCur = rvattrCur[1];
+    const _TyLexValue & rvnsCur = rvattrCur[vknNamespaceIdx];
     _TyStrView svAttrName;
-    rvattrCur[0].KGetStringView( _rltok, svAttrName );
+    rvattrCur[vknNameIdx].KGetStringView( _rltok, svAttrName );
     if ( rvnsCur.FIsA<bool>() )
     {
       // no-namespace attribute:
@@ -114,7 +114,7 @@ void CheckDuplicateTokenAttrs( bool _fStrict, t_TyLexToken & _rltok, bool _fSkip
       if ( rxnvwCur.FIsNamespaceDeclaration() )
       {
         const _TyLexValue & rvattrNext = *ppDupeCur[1];
-        const _TyLexValue & rvnsNext = rvattrNext[1];
+        const _TyLexValue & rvnsNext = rvattrNext[vknNamespaceIdx];
         if ( _fStrict || ( 0 != rxnvwCur.ICompare( rvnsNext.GetVal< _TyXmlNamespaceValueWrap >() ) ) )
         {
           fAnyDuplicateAttrNames = true;

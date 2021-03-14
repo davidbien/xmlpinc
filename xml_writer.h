@@ -435,17 +435,22 @@ public:
     //  will be a namespace *declaration* object and a new namespace will have been added.
     // We must, as we have the context here, add this namespace declaration as a new attribute on the tag and then move the
     //  namespace declaration object to the new attribute and make the namespace on the tag a reference to this declaration.
-    // Then we will be all set up.
+    // Then we will be all set up. Except that we need to do this for any namespace that might also be on attribute names and may
+    //  also be declared locally or somewhere where we won't see the declaration.
+    // So we need a list of declarations and a list of references and then we need to match the two up.
     _TyXmlDocumentContext::_TyTokenCopyContext ctxtTokenCopy;
     _TyXmlToken tokThis( m_xdcxtDocumentContext, _rtok.GetLexToken(), &ctxtTokenCopy );
-    // Now inside of ctxtTokenCopy we have a list of declarations and a list of references.
-    
+    // Now inside of ctxtTokenCopy we have two arrays of pointers to names of tag/attrbutes that contain namespace declarations and namespace references.
+    // We need to match the declarations to attribute declarations (if they are present). If there is no attribute namespace declaraion for some
+    //  set of namespace declarations then those declarations will need new attribute declarations.
+    // There is also the possibility of redundant attribute declarations with a namespace reference attached to it. These will be filtered upon write - 
+    //  i.e. there is no need to write an attribute declaration that has a namespace reference and not a namespace declaration attached to it.
+    // Note that these references shouldn't be part of vknTagName_NNamespaceDeclsIdx's count of namespace declarations - even if the references are part of
+    //  a attribute namespace declaration. Only actual declaration objects.
+    tokThis._FixupNamespaceDeclarations( m_xdcxtDocumentContext, ctxtTokenCopy );
     tokThis.AssertValid();
-    if ( ctxtTokenCopy.m_pxnvwDeclarationFromReference && ctxtTokenCopy.m_pxnvwDeclarationFromReference )
-    // The copy is done - now check for an undeclared namespace on the tag:
-    tokThis._CheckDeclareTagNamespace();
-
   }
+  
   // Start a tag by moving its contents into this object.
   // We leave the tag name intact in the old object and we must leave any active namespace declarations there and just copy them.
   template < class t_TyXmlToken >
@@ -571,9 +576,9 @@ protected:
     _WriteTransportRaw( _TyMarkupTraits::s_kszTagBegin, StaticStringLen( _TyMarkupTraits::s_kszTagBegin ) );
     m_fHaveUnendedTag = ( ectdDisp == ectdContentUnknown );
     const _TyLexValue & rvalRoot = _rtok.GetValue();
-    _WriteName( _rtok, rvalRoot[0] );
+    _WriteName( _rtok, rvalRoot[vknTagNameIdx] );
     // Move through all attributes writing each.
-    const _TyLexValue & rrgAttrs = rvalRoot[1];
+    const _TyLexValue & rrgAttrs = rvalRoot[vknAttributesIdx];
     size_t nAttrs = rrgAttrs.GetSize();
     rrgAttrs.GetValueArray().ApplyContiguous( 0, nAttrs,
       [this]( const _TyLexValue * _pvBegin, const _TyLexValue * _pvEnd )
@@ -585,13 +590,13 @@ protected:
           _WriteName( _rtok, rvCur );
           _WriteTransportRaw( _TyMarkupTraits::s_kszEqualSign, StaticStringLen( _TyMarkupTraits::s_kszEqualSign ) );
           // The tag itself specifies whether it wants double or single quotes.
-          bool fUseDoubleQuote = rvCur[3].GetVal< bool >();
+          bool fUseDoubleQuote = rvCur[vknAttr_FDoubleQuoteIdx].GetVal< bool >();
           _WriteTransportRaw( fUseDoubleQuote ? _TyMarkupTraits::s_kszDoubleQuote : _TyMarkupTraits::s_kszSingleQuote, StaticStringLen( _TyMarkupTraits::s_kszSingleQuote ) );
           // Now write the value using the appropriate start token as the validator.
           if ( fUseDoubleQuote )
-            _WriteCharAndAttrData< TGetAttCharDataNoSingleQuoteStart >( _rtok, rvCur[2], _edrDetectReferences );
+            _WriteCharAndAttrData< TGetAttCharDataNoSingleQuoteStart >( _rtok, rvCur[vknAttr_ValueIdx], _edrDetectReferences );
           else
-            _WriteCharAndAttrData< TGetAttCharDataNoDoubleQuoteStart >( _rtok, rvCur[2], _edrDetectReferences );
+            _WriteCharAndAttrData< TGetAttCharDataNoDoubleQuoteStart >( _rtok, rvCur[vknAttr_ValueIdx], _edrDetectReferences );
           _WriteTransportRaw( fUseDoubleQuote ? _TyMarkupTraits::s_kszDoubleQuote : _TyMarkupTraits::s_kszSingleQuote, StaticStringLen( _TyMarkupTraits::s_kszSingleQuote ) );
         }
       }
@@ -618,8 +623,8 @@ protected:
     typedef typename _TyXmlToken::_TyChar _TyChar;
     typedef xml_namespace_value_wrap< _TyChar > _TyXmlNamespaceValueWrap;
     typedef basic_string_view< _TyChar > _TyStrView;
-    const _TyLexValue & rvalName = _rvalRgName[0];
-    const _TyLexValue & rvalNS = _rvalRgName[1];
+    const _TyLexValue & rvalName = _rvalRgName[vknNameIdx];
+    const _TyLexValue & rvalNS = _rvalRgName[vknNamespaceIdx];
     if ( !rvalNS.FIsBool() && !m_xdcxtDocumentContext.FIncludePrefixesInAttrNames() )
     {
       _TyXmlNamespaceValueWrap & rxnvw = rvalNS.GetVal< _TyXmlNamespaceValueWrap >();
@@ -707,11 +712,11 @@ protected:
     const _TyLexValue & rval = rtok.GetValue();
     VerifyThrow( rval.FIsArray() );
     // We may have just a PITarget or a PITarget + PITargetMeat.
-    _WritePIPortion< TGetPITargetStart >( _rtok, rval[0] );
-    if ( ( rval.GetSize() > 1 ) && !rval[1].FEmptyTypedData() )
+    _WritePIPortion< TGetPITargetStart >( _rtok, rval[vknProcessingInstruction_PITargetIdx] );
+    if ( ( rval.GetSize() > 1 ) && !rval[vknProcessingInstruction_MeatIdx].FEmptyTypedData() )
     {
       _WriteTransportRaw( _TyMarkupTraits::s_kszSpace, StaticStringLen( _TyMarkupTraits::s_kszSpace ) );
-      _WritePIPortion< TGetPITargetMeatStart >( _rtok, rval[0] );
+      _WritePIPortion< TGetPITargetMeatStart >( _rtok, rval[vknProcessingInstruction_MeatIdx] );
     }
     _WriteTransportRaw( _TyMarkupTraits::s_kszProcessingInstructionEnd, StaticStringLen( _TyMarkupTraits::s_kszProcessingInstructionEnd ) );
   }

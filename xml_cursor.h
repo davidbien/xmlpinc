@@ -625,7 +625,7 @@ protected:
         _ProcessEndTag( *m_pltokLookahead );
       else
       {
-        _ProcessTagName( (*m_pltokLookahead)[0] );
+        _ProcessTagName( (*m_pltokLookahead)[vknTagNameIdx] );
         _PushNewContext( *m_pltokLookahead );
       }
       Assert( m_pltokLookahead->FIsNull() ); // We should have moved this token away...
@@ -753,19 +753,19 @@ protected:
       if ( m_fUseXMLNamespaces )
       {
         // Then we must check if we have any namespace declarations in this tag and if so undeclare them.
-        _TyLexValue const & rrgvName = (**_popttokRtnSpentTag)[0];
-        size_t nNamespaceDecls = rrgvName[2].GetVal< size_t >();
+        _TyLexValue const & rrgvName = (**_popttokRtnSpentTag)[vknTagNameIdx];
+        size_t nNamespaceDecls = rrgvName[vknTagName_NNamespaceDeclsIdx].GetVal< size_t >();
         if ( nNamespaceDecls )
         {
           // Move through looking for namespace declarations and undeclare them. No need to do this in reverse.
-          typename _TyLexValue::_TySegArrayValues & rsaAttrs = (**_popttokRtnSpentTag)[1].GetValueArray();
+          typename _TyLexValue::_TySegArrayValues & rsaAttrs = (**_popttokRtnSpentTag)[vknAttributesIdx].GetValueArray();
           (void)rsaAttrs.NApplyContiguous( 0, rsaAttrs.NElements(), 
             [&nNamespaceDecls]( _TyLexValue * _pattrBegin, _TyLexValue * _pattrEnd ) -> size_t
             {
               _TyLexValue * pattrCur = _pattrBegin;
               for ( ; ( _pattrEnd != pattrCur ) && !!nNamespaceDecls; ++pattrCur )
               {
-                _TyLexValue & rvNamespace = (*pattrCur)[1];
+                _TyLexValue & rvNamespace = (*pattrCur)[vknNamespaceIdx];
                 if ( rvNamespace.FIsA<_TyXmlNamespaceValueWrap>() )
                 {
                   _TyXmlNamespaceValueWrap & rxnvw = rvNamespace.GetVal< _TyXmlNamespaceValueWrap >();
@@ -829,11 +829,11 @@ protected:
     const _TyXmlToken & rxtTagStart = m_lContexts.back().GetTag();
     Assert( rxtTagStart.FIsTag() );
     const _TyLexToken & rltokTagStart = rxtTagStart.GetLexToken();
-    const _TyLexValue & rvalTagStart = rltokTagStart.GetValue()[0];
+    const _TyLexValue & rvalTagStart = rltokTagStart.GetValue()[vknTagNameIdx];
     _TyStrView svTagStart;
-    rltokTagStart.KGetStringView( svTagStart, rvalTagStart[0] );
+    rltokTagStart.KGetStringView( svTagStart, rvalTagStart[vknNameIdx] );
     _TyStrView svTagEnd;
-    _rltok.KGetStringView( svTagEnd, rvalTagEnd[0] );
+    _rltok.KGetStringView( svTagEnd, rvalTagEnd[vknNameIdx] );
     VerifyThrowSz( svTagStart == svTagEnd, "Start tag[%s] doesn't match end tag[%s]", StrConvertString<char>( svTagStart ).c_str(), StrConvertString<char>( svTagEnd ).c_str() );
     // The context is always popped later in FNextTag().
     _TyLexToken ltokEat( std::move( _rltok ) ); // eat the token.
@@ -859,17 +859,17 @@ protected:
   void _ProcessProcessingInstruction( _TyLexToken & _rltok )
   {
     // We may have some "meat" after the PITarget - or not.
-    vtyDataPosition posMeatBegin = _rltok[1].GetVal< vtyDataPosition >();
+    vtyDataPosition posMeatBegin = _rltok[vknProcessingInstruction_MeatIdx].GetVal< vtyDataPosition >();
     if ( vkdpNullDataPosition == posMeatBegin )
     {
       // Then insert a null _TyData:
-      _rltok[1].template emplaceArgs< _TyData >();
+      _rltok[vknProcessingInstruction_MeatIdx].template emplaceArgs< _TyData >();
     }
     else
     {
       _l_data_range drToken;
       _rltok.GetTokenDataRange( drToken );
-      _rltok[1].template emplaceArgs< _TyData >( posMeatBegin, drToken.end()-2, s_kdtPlainText, s_knTriggerPITargetMeatBegin ); // subtract "?>".
+      _rltok[vknProcessingInstruction_MeatIdx].template emplaceArgs< _TyData >( posMeatBegin, drToken.end()-2, s_kdtPlainText, s_knTriggerPITargetMeatBegin ); // subtract "?>".
     }
     _AppendContextContent( _rltok );
   }
@@ -907,10 +907,10 @@ protected:
     // Tag names must match literally between start and end tags.
     // As well we want the end user to see a uniform representation of tag names.
     // So if a namespace specifier is present then we will reset the end position of the this namespace specifier to include the ':' and the namespace name.
-    _TyData const & krdtName = _rrgvalName[1].GetVal< _TyData >();
+    _TyData const & krdtName = _rrgvalName[vknNamespaceIdx].GetVal< _TyData >();
     if ( !krdtName.FIsNull() )
     {
-      _TyData & rdtPrefix = _rrgvalName[0].GetVal< _TyData >();
+      _TyData & rdtPrefix = _rrgvalName[vknNameIdx].GetVal< _TyData >();
       rdtPrefix.DataRangeGetSingle().m_posEnd = krdtName.DataRangeGetSingle().m_posEnd;
     }
     // Leave the name as is - further processing will occur depending on flavor.
@@ -937,44 +937,44 @@ protected:
     // First thing to do is to move through all attributes and obtain all namespace declarations and at the same time ensure they are valid.
     typedef AllocaList< const typename _TyUriAndPrefixMap::value_type *, false > _TyListPrefixes;
     _TyListPrefixes lPrefixesUsed; // Can't declare the same prefix in the same tag.
-    _TyLexValue & rrgAttrs = _rltok[1];
+    _TyLexValue & rrgAttrs = _rltok[vknAttributesIdx];
     size_t nNamespaceDecls = 0; // Count these so we can store with the tag and then know when we have finished processing on end-tag.
     const size_t knAttrs = rrgAttrs.GetSize();
     for ( size_t nAttr = 0; nAttr < knAttrs; ++nAttr )
     {
       _TyLexValue & rrgAttr = rrgAttrs[nAttr];
       _TyStrView svName;
-      rrgAttr[0].KGetStringView( _rltok, svName );
+      rrgAttr[vknNameIdx].KGetStringView( _rltok, svName );
       if ( !svName.compare( str_array_cast< _TyChar >("xmlns") ) )
       {
         ++nNamespaceDecls;
         // We have a namespace declaration!
         _TyStrView svPrefix;
-        rrgAttr[1].KGetStringView( _rltok, svPrefix );
+        rrgAttr[vknNamespaceIdx].KGetStringView( _rltok, svPrefix );
         const _TyUriAndPrefixMap::value_type & rvtPrefix = m_pXp->RStrAddPrefix( svPrefix );
         // Check for uniqueness of prefix:
         VerifyThrowSz( !lPrefixesUsed.FFind( &rvtPrefix ), "Namespaces Validity: Cannot use same namespace prefix more than once within the same tag." );
         ALLOCA_LIST_PUSH( lPrefixesUsed, &rvtPrefix );
         _TyStrView svUri;
-        rrgAttr[2].KGetStringView( _rltok, svUri );
+        rrgAttr[vknAttr_ValueIdx].KGetStringView( _rltok, svUri );
         _ProcessTagName( rrgAttr ); // For xmlns attr names we process the same as we process the tag name. We want to leave both "xmlns" and any colon and prefix in the attr name.
         // Add the (prefix,uri) pair and put a _TyXmlNamespaceValueWrap in the _l_value to track its lifetime:
-        rrgAttr[1].emplaceVal( m_mapNamespaces.GetNamespaceValueWrap( *m_pXp, svPrefix, svUri ) );
+        rrgAttr[vknNamespaceIdx].emplaceVal( m_mapNamespaces.GetNamespaceValueWrap( *m_pXp, svPrefix, svUri ) );
       }
     }
     // Now parse the namespace on the tag:
     {//B
-      _TyLexValue & rrgTagName = _rltok[0];
-      rrgTagName[2].template emplaceArgs< size_t >( nNamespaceDecls ); // record the count of namespace decls so we can know when we are done processing the end-tag.
-      _TyData const & krdtName = rrgTagName[1].GetVal< _TyData >();
+      _TyLexValue & rrgTagName = _rltok[vknNameIdx];
+      rrgTagName[vknTagName_NNamespaceDeclsIdx].template emplaceArgs< size_t >( nNamespaceDecls ); // record the count of namespace decls so we can know when we are done processing the end-tag.
+      _TyData const & krdtName = rrgTagName[vknNamespaceIdx].GetVal< _TyData >();
       if ( !krdtName.FIsNull() )
       {
-        _TyData & rdtPrefix = rrgTagName[0].GetVal< _TyData >();
+        _TyData & rdtPrefix = rrgTagName[vknNameIdx].GetVal< _TyData >();
         _TyStrView svPrefix;
-        rrgTagName[0].KGetStringView( _rltok, svPrefix );
+        rrgTagName[vknNameIdx].KGetStringView( _rltok, svPrefix );
         // Update the tag name so that it includes the prefix as is necessary for XML end tag matching.
         rdtPrefix.DataRangeGetSingle().m_posEnd = krdtName.DataRangeGetSingle().m_posEnd;
-        rrgTagName[1].emplaceVal( m_mapNamespaces.GetNamespaceValueWrap( &svPrefix ) );
+        rrgTagName[vknNamespaceIdx].emplaceVal( m_mapNamespaces.GetNamespaceValueWrap( &svPrefix ) );
       }
       else
       {
@@ -983,12 +983,12 @@ protected:
         if ( !m_mapNamespaces.FHasDefaultNamespace( &xnvw ) )
         {
           // If there is no namespace at all then we just put a "false" in the 1th position:
-          rrgTagName[1].emplaceVal( false );
+          rrgTagName[vknNamespaceIdx].emplaceVal( false );
         }
         else
         {
           // Setup the xml_namespace_value_wrap in the 1th position as is standard:
-          rrgTagName[1].emplaceVal( std::move( xnvw ) );
+          rrgTagName[vknNamespaceIdx].emplaceVal( std::move( xnvw ) );
         }
       }
     }//EB
@@ -996,23 +996,23 @@ protected:
     for ( size_t nAttr = 0; nAttr < knAttrs; ++nAttr )
     {
       _TyLexValue & rrgAttr = rrgAttrs[nAttr];
-      if ( rrgAttr[1].FIsA< _TyXmlNamespaceValueWrap >() )
+      if ( rrgAttr[vknNamespaceIdx].FIsA< _TyXmlNamespaceValueWrap >() )
         continue; // This is an xmlns attribute that was processed above.
-      if ( rrgAttr[1].FEmptyTypedData() )
+      if ( rrgAttr[vknNamespaceIdx].FEmptyTypedData() )
       {
         // No default namespaces for attribute names - this has no namespace:
-        rrgAttr[1].emplaceVal( false );
+        rrgAttr[vknNamespaceIdx].emplaceVal( false );
         continue;
       }
       _TyStrView svPrefix;
-      rrgAttr[0].KGetStringView( _rltok, svPrefix );
-      _TyData const & krdtName = rrgAttr[1].GetVal< _TyData >();
-      _TyData & rdtPrefix = rrgAttr[0].GetVal< _TyData >();
+      rrgAttr[vknNameIdx].KGetStringView( _rltok, svPrefix );
+      _TyData const & krdtName = rrgAttr[vknNamespaceIdx].GetVal< _TyData >();
+      _TyData & rdtPrefix = rrgAttr[vknNameIdx].GetVal< _TyData >();
       if ( m_fIncludePrefixesInAttrNames && !m_fCheckDuplicateAttrs )
         rdtPrefix.DataRangeGetSingle().m_posEnd = krdtName.DataRangeGetSingle().m_posEnd;
       else
         rdtPrefix.DataRangeGetSingle() = krdtName.DataRangeGetSingle(); // The user just wants the name without the prefix.
-      rrgAttr[1].emplaceVal( m_mapNamespaces.GetNamespaceValueWrap( &svPrefix ) );
+      rrgAttr[vknNamespaceIdx].emplaceVal( m_mapNamespaces.GetNamespaceValueWrap( &svPrefix ) );
     }
     // Now if the user wants to check for duplicate attributes - before we update the attribute names to include the prefixes.
     if ( m_fCheckDuplicateAttrs )
@@ -1024,15 +1024,15 @@ protected:
       for ( size_t nAttr = 0; nAttr < knAttrs; ++nAttr )
       {
         _TyLexValue & rrgAttr = rrgAttrs[nAttr];
-        if ( !rrgAttr[1].FIsA< _TyXmlNamespaceValueWrap >() )
+        if ( !rrgAttr[vknNamespaceIdx].FIsA< _TyXmlNamespaceValueWrap >() )
         {
-          Assert( rrgAttr[1].FIsA< bool >() && !rrgAttr[1].GetVal< bool >() ); // Not in any namespace at all.
+          Assert( rrgAttr[vknNamespaceIdx].FIsA< bool >() && !rrgAttr[vknNamespaceIdx].GetVal< bool >() ); // Not in any namespace at all.
           continue; // This is an xmlns attribute that was processed above.
         }
-        _TyXmlNamespaceValueWrap const & rnvw = rrgAttr[1].GetVal< _TyXmlNamespaceValueWrap >();
+        _TyXmlNamespaceValueWrap const & rnvw = rrgAttr[vknNamespaceIdx].GetVal< _TyXmlNamespaceValueWrap >();
         if ( rnvw.FIsNamespaceDeclaration() )
           continue;
-        _TyData & rdtName = rrgAttr[0].GetVal< _TyData >();
+        _TyData & rdtName = rrgAttr[vknNameIdx].GetVal< _TyData >();
         rdtName.DataRangeGetSingle().m_posBegin -= 1 + rnvw.PVtNamespaceMapValue()->first.length(); // push back to include the prefix.
       }
     }
@@ -1041,21 +1041,21 @@ protected:
   //  we must combine the name and the prefix and as well indicate that they are in no namespace by setting the 1th element to false.
   void _ProcessNoNamespaces( _TyLexToken & _rltok )
   {
-    _ProcessTagName( _rltok[0] );
-    _TyLexValue & rrgAttrs = _rltok[1];
+    _ProcessTagName( _rltok[vknTagNameIdx] );
+    _TyLexValue & rrgAttrs = _rltok[vknAttributesIdx];
     const size_t knAttrs = rrgAttrs.GetSize();
     for ( size_t nAttr = 0; nAttr < knAttrs; ++nAttr )
     {
       _TyLexValue & rrgAttr = rrgAttrs[nAttr];
       // The name will include the prefix and the colon when we are not namespace aware.
       _ProcessTagName( rrgAttr ); 
-      rrgAttr[1].emplaceVal( false ); // This indicates that there is no namespace.
+      rrgAttr[vknNamespaceIdx].emplaceVal( false ); // This indicates that there is no namespace.
     }
     {//B - indicate there is no namespace on the tag.
-      _TyLexValue & rrgTagName = _rltok[0];
+      _TyLexValue & rrgTagName = _rltok[vknTagNameIdx];
       _ProcessTagName( rrgTagName ); 
-      rrgTagName[1].emplaceVal( false );
-      rrgTagName[2].template emplaceArgs< size_t >( 0 ); // record the count of namespace decls so we can know when we are done processing the end-tag.
+      rrgTagName[vknNamespaceIdx].emplaceVal( false );
+      rrgTagName[vknTagName_NNamespaceDeclsIdx].template emplaceArgs< size_t >( 0 ); // record the count of namespace decls so we can know when we are done processing the end-tag.
     }//EB
     if ( m_fCheckDuplicateAttrs )
       _CheckDuplicateAttrs(  _rltok );

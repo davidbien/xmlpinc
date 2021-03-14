@@ -51,10 +51,10 @@ public:
     if ( !rrgVals.FIsNull() )
     {
       Assert( rrgVals.FIsArray() );
-      m_fStandalone = rrgVals[0].template GetVal<bool>();
-      rrgVals[2].GetString( _rltok, m_strEncoding );
+      m_fStandalone = rrgVals[vknXMLDecl_StandaloneIdx].template GetVal<bool>();
+      rrgVals[vknXMLDecl_EncodingIdx].GetString( _rltok, m_strEncoding );
       _TyStdStr strMinorVNum;
-      rrgVals[4].GetString( _rltok, strMinorVNum );
+      rrgVals[vknXMLDecl_VersionMinorNumberIdx].GetString( _rltok, strMinorVNum );
       m_nVersionMinorNumber = uint8_t( strMinorVNum[0] - _TyChar('0') );
     }
   }
@@ -151,12 +151,12 @@ public:
   _TyLexValue * m_plvalContainerCur{nullptr}; // This is set the the container for the current value - it may be null. 
   
   // We maintain two lists:
-  // 1) A list of values containing namespace declaration values.
-  // 2) A list of values containing namespace reference values.
+  // 1) An array of values containing namespace declaration values.
+  // 2) An array of values containing namespace reference values.
   // Then we will appropriately match declarations with actual attribute namespace declarations.
-  typedef list< _TyLexValue * > _TyListNamespaces;
-  _TyListNamespaces m_lDeclarations;
-  _TyListNamespaces m_lReferences;
+  typedef vector< _TyLexValue * > _TyRgNamespaces;
+  _TyRgNamespaces m_rgDeclarations;
+  _TyRgNamespaces m_rgReferences;
 };
 
 // _xml_document_context:
@@ -311,11 +311,11 @@ public:
     _TyXmlNamespaceValueWrap xnvwThis = GetNamespaceValueWrap( &prstrPrefixUri.first, &prstrPrefixUri.second );
     _TyXmlNamespaceValueWrap & rxnvwInValue = _rvalNSVW.emplaceVal< _TyXmlNamespaceValueWrap >( std::move( xnvwThis ) );
     if ( rxnvwInValue.FIsNamespaceDeclaration() )
-      _ptccCopyCtxt->m_lDeclarations.push_back( _ptccCopyCtxt->m_plvalContainerCur );
+      _ptccCopyCtxt->m_rgDeclarations.push_back( _ptccCopyCtxt->m_plvalContainerCur );
     else
     {
       Assert( rxnvwInValue.FIsNamespaceReference() );
-      _ptccCopyCtxt->m_lReferences.push_back( _ptccCopyCtxt->m_plvalContainerCur );
+      _ptccCopyCtxt->m_rgReferences.push_back( _ptccCopyCtxt->m_plvalContainerCur );
     }
   }
 

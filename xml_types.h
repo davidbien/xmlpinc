@@ -121,6 +121,26 @@ struct _xml_namespace_map_traits
   typedef unordered_map< _TyStdStr, _TyNamespaceMapped, _TyStringTransparentHash, std::equal_to<void> > _TyNamespaceMap;
 };
 
+// These are positions within the _l_value<> aggregate for tags:
+static const size_t vknTagNameIdx = 0;
+static const size_t vknAttributesIdx = 1;
+// Name positions: Shared between tag and attribute names:
+static const size_t vknNameIdx = 0;
+static const size_t vknNamespaceIdx = 1;
+static const size_t vknTagName_NNamespaceDeclsIdx = 2;
+static const size_t vknAttr_ValueIdx = 2;
+static const size_t vknAttr_FDoubleQuoteIdx = 3;
+
+// Positions in the _l_value<> aggregate for Processing Instruction.
+static const vknProcessingInstruction_PITargetIdx = 0;
+static const vknProcessingInstruction_MeatIdx = 1;
+
+// Positions in the _l_value<> aggregate for XMLDecl.
+static const vknXMLDecl_StandaloneIdx = 0;
+static const vknXMLDecl_EncodingIdx = 2;
+static const vknXMLDecl_VersionMinorNumberIdx = 4;
+
+
 // Declare all the various types of the triggers and tokens for the XML lexical analyzer.
 static const vtyActionIdent s_knTriggerPITargetStart = 1;
 static const vtyActionIdent s_knTriggerPITargetEnd = 2;
