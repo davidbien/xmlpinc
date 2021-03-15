@@ -83,7 +83,31 @@ public:
   void AssertValid() const
   {
 #if ASSERTSENABLED
-    // todo.
+    switch( m_tokToken.GetTokenId() )
+    {
+      case s_knTokenETag:
+        Assert( 0 ); // Don't expect to see a token for an end tag.
+      break;
+      case s_knTokenSTag:
+      case s_knTokenEmptyElemTag:
+        _AssertValidTag();
+      break;
+      case s_knTokenComment:
+        _AssertValidComment();
+      break;
+      case s_knTokenXMLDecl:
+        _AssertValidXMLDecl();
+      break;
+      case s_knTokenCDataSection:
+        _AssertValidCDataSection();
+      break;
+      case s_knTokenCharData:
+        _AssertValidCharData();
+      break;
+      case s_knTokenProcessingInstruction:
+        _AssertValidProcessingInstruction();
+      break;
+    }
 #endif //ASSERTSENABLED
   }
   vtyTokenIdent GetTokenId() const
@@ -563,6 +587,121 @@ protected:
     // Add one to the count of attribute namespace declarations in this tag:
     ++GetValue()[vknTagNameIdx][vknTagName_NNamespaceDeclsIdx].GetVal<size_t>();
   }
+
+#if ASSERTSENABLED
+  void _AssertValidName( const _TyLexValue & _rrgvName, size_t & _rnNamespaceDecls, const _TyXmlNamespaceValueWrap ** _ppxnvw )
+  {
+    const _TyLexValue & rvName = _rrgvName[vknNameIdx];
+    Assert( ( rvName.FHasTypedData() && !rvName.FEmptyTypedData() ) || rvName.FIsString() );
+    const _TyLexValue & rvNS = _rrgvName[vknNamespaceIdx];
+    Assert( rvNS.FIsBool() || rvNS.FIsA< _TyXmlNamespaceValueWrap >() );
+    if ( _ppxnvw )
+      *_ppxnvw = nullptr;
+    if ( rvNS.FIsA< _TyXmlNamespaceValueWrap >() )
+    {
+      const _TyXmlNamespaceValueWrap & rxnvw = rvNS.GetVal< _TyXmlNamespaceValueWrap >();
+      if ( _ppxnvw )
+        *_ppxnvw = &rxnvw;
+      if ( rxnvw.FIsNamespaceDeclaration() )
+        ++_rnNamespaceDecls;
+    }
+  }
+  void _AssertValidTag()
+  {
+    _TyLexValue const & rvRoot = GetValue();
+    Assert( vknTagArrayCount == rvRoot.GetSize() );
+    if ( vknTagArrayCount == rvRoot.GetSize() )
+    {
+      size_t nNamespaceDecls = 0;
+      _TyLexValue const & rvTag = rvRoot[vknTagNameIdx];
+      Assert( vknTagName_ArrayCount == rvTag.GetSize() );
+      if ( vknTagName_ArrayCount == rvTag.GetSize() )
+      {
+        const _TyXmlNamespaceValueWrap * pxnvw;
+        _AssertValidName( rvTag, &pxnvw, nNamespaceDecls );
+        Assert( !pxnvw || pxnvw->FIsNamespaceReference() );
+        Assert( rvTag[vknTagName_NNamespaceDeclsIdx].FIsA<size_t>() );
+      }
+      _TyLexValue const & rrgvAttrs = rvRoot[vknAttributesIdx];
+      Assert( rrgvAttrs.FIsArray() );
+      if ( rrgvAttrs.FIsArray() )
+      {
+        typename const _TyLexValue::_TySegArrayValues & rsaAttrs = rrgvAttrs.GetValueArray();
+        rsaAttrs.ApplyContiguous( 0, rsaAttrs.NElements(),
+          [this]( const _TyLexValue * _pvBegin, const _TyLexValue * _pvEnd )
+          {
+            for ( const _TyLexValue * pvCur = _pvBegin; _pvEnd != pvCur; ++pvCur )
+            {
+              Assert( vknAttr_ArrayCount == pvCur->GetSize() );
+              if ( vknAttr_ArrayCount == pvCur->GetSize() )
+              {
+                const _TyXmlNamespaceValueWrap * pxnvw;
+                _AssertValidName( *pvCur, &pxnvw, nNamespaceDecls );
+                bool fIsAttrNamespaceDecl;
+                bool fIsAttr = _FIsAttribute( **pvCur, &fIsAttrNamespaceDecl );
+                Assert( fIsAttr );
+                Assert( !pxnvw || !pxnvw->FIsNull() );
+                Assert( fIsAttrNamespaceDecl == ( !!pxnvw && pxnvw->FIsNamespaceDeclaration() ) );
+                const _TyLexValue & rvValue = _rrgvName[vknAttr_ValueIdx];
+                Assert( ( rvValue.FHasTypedData() && !rvValue.FEmptyTypedData() ) || rvValue.FIsString() );
+                Assert( _rrgvName[vknAttr_FDoubleQuoteIdx].FIsBool() );
+              }
+            }
+          }
+        );
+      }
+      Assert( ( vknTagName_ArrayCount != rvTag.GetSize() ) || ( nNamespaceDecls == rvTag[vknTagName_NNamespaceDeclsIdx].GetVal<size_t>() ) );
+    }
+  }
+  void _AssertValidComment()
+  {
+    _TyLexValue const & rvRoot = GetValue();
+    // An empty comment is not valid - but we might allow it here and just fix up to a single space on output.
+    Assert( ( rvName.FHasTypedData() && !rvName.FEmptyTypedData() ) || rvName.FIsString() );
+  }
+  void _AssertValidXMLDecl()
+  {
+    _TyLexValue const & rvRoot = GetValue();
+    Assert( rvRoot.FIsNull() || rvRoot.FIsArray() ); // null for a pseudo token here.
+    if ( rvRoot.FIsArray() )
+    {
+      Assert( vknXMLDecl_ArrayCount == rvRoot.GetSize() );
+      if ( vknXMLDecl_ArrayCount == rvRoot.GetSize() )
+      {
+        Assert( rvRoot[vknXMLDecl_StandaloneIdx].FIsBool() );
+        Assert( rvRoot[vknXMLDecl_StandaloneDoubleQuoteIdx].FIsBool() );
+        Assert( rvRoot[vknXMLDecl_EncodingIdx].FHasTypedData() || rvRoot[vknXMLDecl_EncodingIdx].FIsString() );
+        Assert( rvRoot[vknXMLDecl_EncodingDoubleQuoteIdx].FIsBool() );
+        Assert( rvRoot[vknXMLDecl_VersionMinorNumberIdx].FHasTypedData() || rvRoot[vknXMLDecl_VersionMinorNumberIdx].FIsString() );
+        Assert( rvRoot[vknXMLDecl_VersionMinorNumberDoubleQuoteIdx].FIsBool() );
+      }
+    }
+  }
+  void _AssertValidCDataSection()
+  {
+    // An empty CDataSection is valid - why you would want one is questionable.
+    Assert( rvName.FHasTypedData() || rvName.FIsString() );
+  }
+  void _AssertValidCharData()
+  {
+    // Empty CharData is not valid - production-wise - but we would just not write anything at all.
+    Assert( ( rvName.FHasTypedData() && !rvName.FEmptyTypedData() ) || rvName.FIsString() );
+  }
+  void _AssertValidProcessingInstruction()
+  {
+    _TyLexValue const & rvRoot = GetValue();
+    Assert( rvRoot.FIsArray() );
+    if ( rvRoot.FIsArray() )
+    {
+      // We expect a potentially null element in the "meat" of the PI.
+      Assert( 2 == rvRoot.GetSize() );
+      _TyLexValue const & rvTarget = rvRoot[vknProcessingInstruction_PITargetIdx];
+      Assert( ( rvTarget.FHasTypedData() && !rvTarget.FEmptyTypedData() ) || rvTarget.FIsString() );
+      _TyLexValue const & rvMeat = rvRoot[vknProcessingInstruction_MeatIdx];
+      Assert( rvMeat.FHasTypedData() || rvMeat.FIsString() );
+    }
+  }
+#endif //ASSERTSENABLED
 
   _TyLexToken m_tokToken;
 };

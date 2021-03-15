@@ -124,22 +124,31 @@ struct _xml_namespace_map_traits
 // These are positions within the _l_value<> aggregate for tags:
 static const size_t vknTagNameIdx = 0;
 static const size_t vknAttributesIdx = 1;
+static const size_t vknTagArrayCount = 2;
 // Name positions: Shared between tag and attribute names:
 static const size_t vknNameIdx = 0;
 static const size_t vknNamespaceIdx = 1;
+// Tag-name specific:
 static const size_t vknTagName_NNamespaceDeclsIdx = 2;
+static const size_t vknTagName_ArrayCount = 3;
+// Attribute specific:
 static const size_t vknAttr_ValueIdx = 2;
 static const size_t vknAttr_FDoubleQuoteIdx = 3;
+static const size_t vknAttr_ArrayCount = 4;
 
 // Positions in the _l_value<> aggregate for Processing Instruction.
 static const vknProcessingInstruction_PITargetIdx = 0;
 static const vknProcessingInstruction_MeatIdx = 1;
+static const vknProcessingInstruction_ArrayCount = 2;
 
 // Positions in the _l_value<> aggregate for XMLDecl.
 static const vknXMLDecl_StandaloneIdx = 0;
+static const vknXMLDecl_StandaloneDoubleQuoteIdx = 1;
 static const vknXMLDecl_EncodingIdx = 2;
+static const vknXMLDecl_EncodingDoubleQuoteIdx = 3;
 static const vknXMLDecl_VersionMinorNumberIdx = 4;
-
+static const vknXMLDecl_VersionMinorNumberDoubleQuoteIdx = 5;
+static const vknXMLDecl_ArrayCount = 6;
 
 // Declare all the various types of the triggers and tokens for the XML lexical analyzer.
 static const vtyActionIdent s_knTriggerPITargetStart = 1;
@@ -331,7 +340,7 @@ using TyGetTokenComment = _l_action_token< _l_trigger_noop< t_TyLexTraits, s_knT
 
 static const vtyActionIdent s_knTokenXMLDecl = 1004;
 template < class t_TyLexTraits, bool t_fInLexGen = true >
-using TyGetTokenXMLDecl = _l_action_token< _l_action_save_data_single< s_knTokenXMLDecl, TyGetTriggerStandaloneYes<t_TyLexTraits,t_fInLexGen>, TyGetTriggerStandaloneYes<t_TyLexTraits,t_fInLexGen>, 
+using TyGetTokenXMLDecl = _l_action_token< _l_action_save_data_single< s_knTokenXMLDecl, TyGetTriggerStandaloneYes<t_TyLexTraits,t_fInLexGen>, TyGetTriggerStandaloneDoubleQuote<t_TyLexTraits,t_fInLexGen>, 
   TyGetTriggerEncodingNameEnd<t_TyLexTraits,t_fInLexGen>, TyGetTriggerEncDeclDoubleQuote<t_TyLexTraits,t_fInLexGen>, TyGetTriggerVersionNumEnd<t_TyLexTraits,t_fInLexGen>, TyGetTriggerVersionNumDoubleQuote<t_TyLexTraits,t_fInLexGen> > >;
 
 static const vtyActionIdent s_knTokenCDataSection = 1005;

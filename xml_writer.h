@@ -141,10 +141,18 @@ public:
   // Note that writing a token to the when there is a non-committed tag causes an auto-commit.
   // Calling commit on a committed tag is not an error - it is merely ignored - this takes care of cases where
   //  the addition of a sub-tag or sub-token causes a commit.
-  void Commit()
+  // If _fCallerEndsTagDirectly then we "forget" about the ending of the tag using the lifetime of this object.
+  // This allows the caller to use the write context stack as a write stack and not maintain a separate stack
+  //  of xml_write_tag<> objects. The caller is then responsible for calling xml_write_context<>::EndTag().
+  void Commit( bool _fCallerEndsTagDirectly = false )
   {
     Assert( m_pwcxt );
-    m_pwcxt->CommitTagData();
+    if ( m_pwcxt )
+    {
+      m_pwcxt->CommitTagData();
+      if ( _fCallerEndsTagDirectly )
+        m_pwcxt = nullptr;
+    }
   }
   // End this tag. This is called from the destructor but may also be called directly.
   void EndTag()
@@ -155,7 +163,7 @@ public:
       pwcxt->EndTag();
     }
   }
-  // This determines how references that may be present in attribute handles are detected or not.
+  // This determines how references that may be present in attribute values are detected or not.
   void SetDetectReferences( EDetectReferences _edrDetectReferences )
   {
     m_pwcxt->SetDetectReferences( _edrDetectReferences );
@@ -454,9 +462,21 @@ public:
   // Start a tag by moving its contents into this object.
   // We leave the tag name intact in the old object and we must leave any active namespace declarations there and just copy them.
   template < class t_TyXmlToken >
-  _TyXmlWriteTag StartTag( t_TyXmlToken && _rrtok )
+  _TyXmlWriteTag StartTag( t_TyXmlToken && _rrtok, bool _fKeepTagName = false )
   {
-    
+    VerifyThrowSz( _rtok.FIsTag(), "Trying to start a tag with a non-tag token." );
+    _rrtok.AssertValid();
+    // First make a copy of the tag name's _l_value<>. We shouldn't have to copy anything else since clearly the caller
+    //  doesn't care much about the tag's content. We'll copy it back into the tag after moving it.
+    typename t_TyXmlToken::_TyLexValue rvNameCopy;
+    if ( _fKeepTagName )
+      rvNameCopy = _rrtok[vknTagNameIdx][vknNameIdx];
+    _TyXmlDocumentContext::_TyTokenCopyContext ctxtTokenCopy;
+    _TyXmlToken tokThis( m_xdcxtDocumentContext, std::move( _rtok.GetLexToken() ), &ctxtTokenCopy );
+    tokThis._FixupNamespaceDeclarations( m_xdcxtDocumentContext, ctxtTokenCopy );
+    tokThis.AssertValid();
+    if ( _fKeepTagName )
+      _rrtok[vknTagNameIdx][vknNameIdx] = std::move( rvNameCopy );
   }
   // We are writing a token - we are not writing the end tag for a token.
   void _CheckCommitCur()
