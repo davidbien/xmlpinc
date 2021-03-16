@@ -45,6 +45,8 @@ template < class t_TyChar >
 class XMLDeclProperties;
 class _xml_output_format;
 class _xml_output_context;
+template < class t_TyChar >
+class _xml_token_copy_context;
 template < class t_TyLexUserObj >
 class _xml_document_context;
 template < class t_TyXmlTraits >
@@ -95,6 +97,21 @@ class xml_parser_var;
 // xml_exc.h:
 class xml_parse_exception;
 
+// xml_transport.h:
+template < class t_TyChar, class t_TyFSwitchEndian >
+class xml_write_transport_file;
+template < class t_TyChar, class t_TyFSwitchEndian >
+class xml_write_transport_mapped;
+
+// xml_writer.h:
+template < class t_TyXmlTransportOut >
+class xml_write_context;
+template < class t_TyXmlTransportOut >
+class xml_write_tag;
+template < class t_TyXmlTransportOut >
+class xml_writer;
+
+
 // When we actually support DTD and validation (if ever because they aren't that important to me) then we might have to make this more complex.
 // This is an adaptor for use with MultiplexTuplePack_t<>.
 template < class t_TyTransport >
@@ -137,18 +154,18 @@ static const size_t vknAttr_FDoubleQuoteIdx = 3;
 static const size_t vknAttr_ArrayCount = 4;
 
 // Positions in the _l_value<> aggregate for Processing Instruction.
-static const vknProcessingInstruction_PITargetIdx = 0;
-static const vknProcessingInstruction_MeatIdx = 1;
-static const vknProcessingInstruction_ArrayCount = 2;
+static const size_t vknProcessingInstruction_PITargetIdx = 0;
+static const size_t vknProcessingInstruction_MeatIdx = 1;
+static const size_t vknProcessingInstruction_ArrayCount = 2;
 
 // Positions in the _l_value<> aggregate for XMLDecl.
-static const vknXMLDecl_StandaloneIdx = 0;
-static const vknXMLDecl_StandaloneDoubleQuoteIdx = 1;
-static const vknXMLDecl_EncodingIdx = 2;
-static const vknXMLDecl_EncodingDoubleQuoteIdx = 3;
-static const vknXMLDecl_VersionMinorNumberIdx = 4;
-static const vknXMLDecl_VersionMinorNumberDoubleQuoteIdx = 5;
-static const vknXMLDecl_ArrayCount = 6;
+static const size_t vknXMLDecl_StandaloneIdx = 0;
+static const size_t vknXMLDecl_StandaloneDoubleQuoteIdx = 1;
+static const size_t vknXMLDecl_EncodingIdx = 2;
+static const size_t vknXMLDecl_EncodingDoubleQuoteIdx = 3;
+static const size_t vknXMLDecl_VersionMinorNumberIdx = 4;
+static const size_t vknXMLDecl_VersionMinorNumberDoubleQuoteIdx = 5;
+static const size_t vknXMLDecl_ArrayCount = 6;
 
 // Declare all the various types of the triggers and tokens for the XML lexical analyzer.
 static const vtyActionIdent s_knTriggerPITargetStart = 1;

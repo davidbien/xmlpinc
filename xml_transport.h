@@ -5,6 +5,8 @@
 // dbien
 // 17FEB2021
 
+#include "xml_types.h"
+
 __XMLP_BEGIN_NAMESPACE
 
 // xml_write_transport_file:
@@ -58,7 +60,7 @@ public:
   typedef t_TyFSwitchEndian _TyFSwitchEndian;
   static size_t s_knGrowFileByBytes = 16384 * sizeof( _TyChar ); // As we write the file grow it in this increment.
 
-  xml_write_transport_file( FileObj & _rfoFile, bool _fWriteBOM )
+  xml_write_transport_mapped( FileObj & _rfoFile, bool _fWriteBOM )
     : m_foFile( std::move( _rfoFile ) )
   {
     VerifyThrow( m_foFile.FIsOpen() );
@@ -81,7 +83,7 @@ public:
     m_pcEnd = m_pcCur + ( stMapBytes / sizeof( _TyChar) );
   }
 
-  ~xml_write_transport_file()
+  ~xml_write_transport_mapped()
   {
     bool fInUnwinding = !!std::uncaught_exceptions();
     _Close( !fInUnwinding ); // Only throw on error from close if we are not currently unwinding.

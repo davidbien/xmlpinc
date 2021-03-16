@@ -178,6 +178,7 @@ public:
   typedef pair< _TyXMLOutputFormat, _TyXMLOutputContext > _TyPrFormatContext;
   typedef xml_namespace_value_wrap< _TyChar > _TyXmlNamespaceValueWrap;
   typedef _xml_token_copy_context< _TyChar > _TyTokenCopyContext;
+  typedef typename _TyTokenCopyContext::_TyLexValue _TyLexValue;
 
   void Init( bool _fStandalone, EFileCharacterEncoding _efce, bool _fUseNamespaces, const _TyPrFormatContext * _pprFormatContext = nullptr )
   {

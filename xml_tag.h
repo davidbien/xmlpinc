@@ -108,8 +108,8 @@ protected:
   void _WriteContent( xml_writer< t_TyXmlTransportOut > & _rxw ) const
   {
     typedef xml_writer< t_TyXmlTransportOut > _TyXmlWriter;
-    _TyRgTokens::const_iterator citCur = m_rgTokens.begin();
-    _TyRgTokens::const_iterator citEnd = m_rgTokens.end();
+    typename _TyRgTokens::const_iterator citCur = m_rgTokens.begin();
+    typename _TyRgTokens::const_iterator citEnd = m_rgTokens.end();
     for ( ; citEnd != citCur; ++citCur )
     {
       const _TyVariant & rvCur = *citCur;

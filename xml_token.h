@@ -40,6 +40,7 @@ public:
   typedef xml_markup_traits< _TyChar > _TyMarkupTraits;
 
   ~xml_token() = default;
+  xml_token() = delete;
   // Because we might have namespace *declarations* we cannot allow default copying of tokens.
   // We could create a namespace reference when copying a namespace declarations. Have to flesh this out a bit more.
   xml_token( xml_token const & ) = delete;
@@ -71,11 +72,6 @@ public:
     : m_tokToken( _rNewContainer, std::move( _rrtokCopy ), _ptccCopyCtxt )
   {
   }
-  xml_token() = delete;
-  xml_token( xml_token const & ) = default;
-  xml_token & operator=( xml_token const & ) = default;
-  xml_token( xml_token && ) = default;
-  xml_token & operator=( xml_token && ) = default;
   void swap( xml_token & _r )
   {
     m_tokToken.swap( _r.m_tokToken );
@@ -336,7 +332,7 @@ public:
     auto lambdaCompareNamespacePrefix = []( const _TyLexValue * _plvalNameLeft, const _TyLexValue * _plvalNameRight ) -> bool
     {
       const _TyLexValue & rlvalNSLeft = (*_plvalNameLeft)[vknNamespaceIdx];
-      const _TyLexValue & rlvalNSRight = (*_plvalNameRight([vknNamespaceIdx]);
+      const _TyLexValue & rlvalNSRight = (*_plvalNameRight)[vknNamespaceIdx];
       // We should only see namespace value wraps in the namespace position:
       Assert( rlvalNSLeft.FIsA< _TyXmlNamespaceValueWrap >() && rlvalNSRight.FIsA< _TyXmlNamespaceValueWrap >() );
       return rlvalNSLeft.GetVal< _TyXmlNamespaceValueWrap >().RStringPrefix() < rlvalNSRight.GetVal< _TyXmlNamespaceValueWrap >().RStringPrefix();
@@ -626,7 +622,7 @@ protected:
       Assert( rrgvAttrs.FIsArray() );
       if ( rrgvAttrs.FIsArray() )
       {
-        typename const _TyLexValue::_TySegArrayValues & rsaAttrs = rrgvAttrs.GetValueArray();
+        const typename _TyLexValue::_TySegArrayValues & rsaAttrs = rrgvAttrs.GetValueArray();
         rsaAttrs.ApplyContiguous( 0, rsaAttrs.NElements(),
           [this]( const _TyLexValue * _pvBegin, const _TyLexValue * _pvEnd )
           {
@@ -642,9 +638,9 @@ protected:
                 Assert( fIsAttr );
                 Assert( !pxnvw || !pxnvw->FIsNull() );
                 Assert( fIsAttrNamespaceDecl == ( !!pxnvw && pxnvw->FIsNamespaceDeclaration() ) );
-                const _TyLexValue & rvValue = _rrgvName[vknAttr_ValueIdx];
+                const _TyLexValue & rvValue = (*pvCur)[vknAttr_ValueIdx];
                 Assert( ( rvValue.FHasTypedData() && !rvValue.FEmptyTypedData() ) || rvValue.FIsString() );
-                Assert( _rrgvName[vknAttr_FDoubleQuoteIdx].FIsBool() );
+                Assert( (*pvCur)[vknAttr_FDoubleQuoteIdx].FIsBool() );
               }
             }
           }
@@ -657,7 +653,7 @@ protected:
   {
     _TyLexValue const & rvRoot = GetValue();
     // An empty comment is not valid - but we might allow it here and just fix up to a single space on output.
-    Assert( ( rvName.FHasTypedData() && !rvName.FEmptyTypedData() ) || rvName.FIsString() );
+    Assert( ( rvRoot.FHasTypedData() && !rvRoot.FEmptyTypedData() ) || rvRoot.FIsString() );
   }
   void _AssertValidXMLDecl()
   {
@@ -680,12 +676,14 @@ protected:
   void _AssertValidCDataSection()
   {
     // An empty CDataSection is valid - why you would want one is questionable.
-    Assert( rvName.FHasTypedData() || rvName.FIsString() );
+    _TyLexValue const & rvRoot = GetValue();
+    Assert( rvRoot.FHasTypedData() || rvRoot.FIsString() );
   }
   void _AssertValidCharData()
   {
     // Empty CharData is not valid - production-wise - but we would just not write anything at all.
-    Assert( ( rvName.FHasTypedData() && !rvName.FEmptyTypedData() ) || rvName.FIsString() );
+    _TyLexValue const & rvRoot = GetValue();
+    Assert( ( rvRoot.FHasTypedData() && !rvRoot.FEmptyTypedData() ) || rvRoot.FIsString() );
   }
   void _AssertValidProcessingInstruction()
   {

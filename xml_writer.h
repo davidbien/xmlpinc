@@ -1034,7 +1034,4 @@ class xml_writer_var
 public:
 };
 
-
-
-
 __XMLP_END_NAMESPACE
