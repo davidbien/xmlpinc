@@ -32,6 +32,27 @@
 
 __XMLP_BEGIN_NAMESPACE
 
+enum EDetectReferences
+{
+   edrNoReferences, // then any embedded '&' is escaped with "&amp;"
+   edrAlwaysReference, // then any embedded '&' *must* correspond to a valid Reference of some sort.
+   edrAutoReference, // try to detect if we should replace with "&amp;" or not:
+   edrAutoReferenceNoError, 
+     //  1) If we see what looks like a CharRef (which is pretty obvious) then we will validate it.
+     //  2) If we see what looks like just an EntityRef then we check if it is in the entity ref map:
+     //     a) If it isn't in the entity map and edrAutoReferenceNoError then we will replace the leading '&' with "&amp;"
+     //     b) If it isn't in the enity map and edrAutoReference then we will throw an error for a missing reference.
+  edrDetectReferencesCount // This always at the end.
+};
+
+enum ECommitTagDisp
+{
+  ectdNoContent,
+  ectdWithContent,
+  ectdContentUnknown,
+  rctdCommitTagDispCount // This at end.
+};
+
 // xml_write_context:
 // There is a stack of write contexts corresponding to the current set of unclosed tags from root to current leaf.
 template < class t_TyXmlTransportOut >
@@ -47,6 +68,7 @@ public:
   typedef xml_user_obj< _TyChar, vkfSupportDTD > _TyLexUserObj;
   typedef tuple< xml_namespace_value_wrap< _TyChar > > _TyTpValueTraitsPack;
   typedef xml_token< _TyTransportCtxt, _TyLexUserObj, _TyTpValueTraitsPack > _TyXmlToken;
+  typedef _l_action_object_base< _TyChar, false > _TyAxnObjBase;
 
   xml_write_context( _TyLexUserObj & _ruoUserObj, const _TyAxnObjBase * _paobCurToken )
     : m_xtkToken( _ruoUserObj, _paobCurToken )
@@ -104,8 +126,10 @@ class xml_write_tag
   typedef xml_write_tag _TyThis;
 public:
   typedef t_TyXmlTransportOut _TyXmlTransportOut;
+  typedef typename _TyXmlTransportOut::_TyChar _TyChar;
   typedef xml_writer< _TyXmlTransportOut > _TyWriter;
   typedef xml_write_context< _TyXmlTransportOut > _TyWriteContext;
+  typedef xml_namespace_value_wrap< _TyChar > _TyXmlNamespaceValueWrap;
 
   // This is our attribute value/name interface object:
   // 1) Namespaces might be declared for this tag - default or prefixed.
@@ -290,6 +314,7 @@ public:
   typedef xml_write_context< _TyXmlTransportOut > _TyWriteContext;
   typedef typename _TyWriteContext::_TyXmlToken _TyXmlToken;
   typedef list< _TyWriteContext > _TyListWriteContexts;
+  typedef xml_namespace_value_wrap< _TyChar > _TyXmlNamespaceValueWrap;
 
   xml_writer()
   {
@@ -347,7 +372,7 @@ public:
     VerifyThrowSz( ( m_fWriteBOM == _fWriteBOM ) || !FHasTransport(), "Mustn't change the use of namespaces after opening a transport." );
     m_fWriteBOM = _fWriteBOM;
   }
-  void FGetWriteBOM()) const
+  void FGetWriteBOM() const
   {
     return m_fWriteBOM;
   }
@@ -356,7 +381,7 @@ public:
     VerifyThrowSz( ( m_fWriteXMLDecl == _fWriteXMLDecl ) || !FHasTransport(), "Mustn't change the use of namespaces after opening a transport." );
     m_fWriteXMLDecl = _fWriteXMLDecl;
   }
-  void FGetWriteXMLDecl()) const
+  void FGetWriteXMLDecl() const
   {
     return m_fWriteXMLDecl;
   }
@@ -708,19 +733,20 @@ protected:
       _WriteTypedData( _rtok, _rval );
     else
     {      
-      _rval.ApplyString( 
-        [this]< typename t_TyChar >( const t_TyChar * _pcBegin, const t_TyChar * const _pcEnd )
+      _rval.ApplyString(
+        [this]< typename t_TyChar >(const t_TyChar * _pcBegin, const t_TyChar* const _pcEnd)
         {
-          const _TyStateProto * const kpspValidateTokenStart = t_tempGetStartToken< t_TyChar >::s_kpspStart;
-          const bool kfIsPITargetMeat = ( kpspValidateTokenStart == PspGetPITargetMeatStart< t_TyChar >() );
+          const _TyStateProto* const kpspValidateTokenStart = t_tempGetStartToken< t_TyChar >::s_kpspStart;
+          const bool kfIsPITargetMeat = (kpspValidateTokenStart == PspGetPITargetMeatStart< t_TyChar >());
           // In this case there is no remedy to any encountered anti-accept state, but we want to know if we hit one
           //  so we can give a more informative error message.
-          const _TyStateProto * pspAccept;
-          const t_TyChar * pcMatch = _l_match< t_TyChar >::PszMatch( kpspValidateTokenStart, _pcBegin, _pcEnd - _pcBegin, &pspAccept );
-          VerifyThrowSz( !( !pspAccept || pspAccept->IsAntiAcceptingState() || ( pcMatch != _pcEnd ) ), 
-            kfIsPITargetMeat ? "Invalid characters found in PITargetMeat." : "Invalid characters found in PITarget." );
-          _WriteTransportRaw( _pcBegin, _pcEnd );
+          const _TyStateProto* pspAccept;
+          const t_TyChar* pcMatch = _l_match< t_TyChar >::PszMatch(kpspValidateTokenStart, _pcBegin, _pcEnd - _pcBegin, &pspAccept);
+          VerifyThrowSz(!(!pspAccept || pspAccept->IsAntiAcceptingState() || (pcMatch != _pcEnd)),
+            kfIsPITargetMeat ? "Invalid characters found in PITargetMeat." : "Invalid characters found in PITarget.");
+          _WriteTransportRaw(_pcBegin, _pcEnd);
         }
+      );
     }
   }
   template < class t_TyXmlToken >
@@ -858,7 +884,7 @@ protected:
             else
             {
               // In this case we should be pointing at an invalid character:
-              Assert( ( *pcMatch == t_TyChar('\'') ) || ( *pcMatch == t_TyChar('\"') ) || ( *pcMatch == t_TyChar('<') ) );
+              Assert( ( *pcMatch == t_TyChar('\'') ) || ( *pcMatch == t_TyChar('"') ) || ( *pcMatch == t_TyChar('<') ) );
               _WriteTransportRaw( pcCur, pcMatch );
               pcCur = pcMatch;
               switch( *pcCur++ )

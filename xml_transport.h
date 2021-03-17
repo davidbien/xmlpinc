@@ -6,6 +6,7 @@
 // 17FEB2021
 
 #include "xml_types.h"
+#include "_fdobjs.h"
 
 __XMLP_BEGIN_NAMESPACE
 
@@ -33,7 +34,7 @@ public:
   void Write( const t_TyCharWrite * _pcBegin, const t_TyCharWrite * _pcEnd )
   {
     // We send to the conversion template which will call back into this:
-    VerifyThrowSz( FWriteUTFStream< _TyChar >( _pcBegin, _pcEnd - _pcBegin, *this ) );
+    VerifyThrow( FWriteUTFStream< _TyChar >( _pcBegin, _pcEnd - _pcBegin, *this ) );
   }
   // We want these calls to be noexcept.
   bool FWrite( const _TyChar * _pcBuf, size_t _nch ) noexcept
@@ -41,7 +42,7 @@ public:
     int iResult = FileWrite( m_foFile.HFileGet(), _pcBuf, _nch * sizeof ( _TyChar ) );
     return !iResult;
   }
-  static constexpr EFileCharacterEncoding GetCharacterEncoding()
+  static constexpr EFileCharacterEncoding GetEncoding()
   {
     return GetCharacterEncoding< _TyChar, _TyFSwitchEndian >();
   }
@@ -58,7 +59,7 @@ class xml_write_transport_mapped
 public:
   typedef t_TyChar _TyChar;
   typedef t_TyFSwitchEndian _TyFSwitchEndian;
-  static size_t s_knGrowFileByBytes = 16384 * sizeof( _TyChar ); // As we write the file grow it in this increment.
+  static const size_t s_knGrowFileByBytes = 16384 * sizeof( _TyChar ); // As we write the file grow it in this increment.
 
   xml_write_transport_mapped( FileObj & _rfoFile, bool _fWriteBOM )
     : m_foFile( std::move( _rfoFile ) )
@@ -70,7 +71,7 @@ public:
     // Leave the file right where it is and map it here - the mapping will take care of correctly offsetting everything.
 	  m_nbyMapAtPosition = (size_t)NFileSeekAndThrow(_rfoFile.HFileGet(), 0, vkSeekCur);
     size_t stMapBytes = s_knGrowFileByBytes;
-    int iResult = FileSetSize( foFile.HFileGet(), m_nbyMapAtPosition + stMapBytes ); // Set initial size.
+    int iResult = FileSetSize( m_foFile.HFileGet(), m_nbyMapAtPosition + stMapBytes ); // Set initial size.
     if ( !!iResult )
       THROWNAMEDEXCEPTIONERRNO(GetLastErrNo(), "FileSetSize() failed.");
     size_t stSizeMapping;
@@ -94,7 +95,7 @@ public:
   void Write( const t_TyCharWrite * _pcBegin, const t_TyCharWrite * _pcEnd )
   {
     // We send to the conversion template which will call back into this:
-    VerifyThrowSz( FWriteUTFStream< _TyChar >( _pcBegin, _pcEnd - _pcBegin, *this ) );
+    VerifyThrow( FWriteUTFStream< _TyChar >( _pcBegin, _pcEnd - _pcBegin, *this ) );
   }
   // We want these calls to be noexcept.
   bool FWrite( const _TyChar * _pcBuf, size_t _nch ) noexcept
@@ -102,10 +103,9 @@ public:
     int iResult = _CheckGrowMapNoThrow( _nch );
     if ( !iResult )
     {
-      memcpy( )
-
+      memcpy( m_pcCur, _pcBuf, _nch * sizeof( _TyChar ) );
+      m_pcCur += _nch;
     }
-      iResult = FileWrite( m_foFile.HFileGet(), _pcBuf, _nch * sizeof ( _TyChar ) );
     return !iResult;
   }
 protected:
@@ -142,7 +142,7 @@ protected:
     Assert( ( stSizeMapping - stResultMapAtPosition ) == nbyOldMapping + nbyGrowBy );
     size_t nchOffsetCur = m_pcCur - m_pcBase;
     m_pcBase = (_TyChar*)m_fmoMap.Pby( stResultMapAtPosition );
-    m_pcEnd = m_pcBase + ( stMapBytes / sizeof( _TyChar) );
+    m_pcEnd = m_pcBase + ( stSizeMapping / sizeof( _TyChar) );
     m_pcCur = m_pcBase + nchOffsetCur;
   }
   // Allow throwing on error because closing actually does something and we need to know if it succeeds.
@@ -192,7 +192,7 @@ protected:
   }
 
   FileObj m_foFile;
-  FileMappedObj m_fmoMap;
+  FileMappingObj m_fmoMap;
   size_t m_nbyMapAtPosition{0}; // We save this because we may be growing the file.
   _TyChar * m_pcBase{nullptr};
   _TyChar * m_pcCur{nullptr};

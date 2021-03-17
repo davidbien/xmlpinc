@@ -111,6 +111,32 @@ class xml_write_tag;
 template < class t_TyXmlTransportOut >
 class xml_writer;
 
+// Implement a mapping from lex read transports to xml output transports - mostly for unit testing.
+template < class t_TyLexTransport >
+struct map_input_to_output_transport;
+template < class t_TyChar, class t_TyBoolSwitchEndian >
+struct map_input_to_output_transport< _l_transport_file< t_TyChar, t_TyBoolSwitchEndian > >
+{
+  typedef xml_write_transport_file< t_TyChar, t_TyBoolSwitchEndian > _TyXmlWriteTransport;
+};
+template < class t_TyChar, class t_TyBoolSwitchEndian >
+struct map_input_to_output_transport< _l_transport_mapped< t_TyChar, t_TyBoolSwitchEndian > >
+{
+  typedef xml_write_transport_mapped< t_TyChar, t_TyBoolSwitchEndian > _TyXmlWriteTransport;
+};
+// Don't have an analogue for fixed memory transport yet in xml output.
+template < class t_TyLexTransport, class t_TyChar, class t_TyBoolSwitchEndian >
+struct map_input_to_any_output_transport;
+template < class t_TyLexInputChar, class t_TyLexInputBoolSwitchEndian, class t_TyChar, class t_TyBoolSwitchEndian >
+struct map_input_to_any_output_transport< _l_transport_file< t_TyLexInputChar, t_TyLexInputBoolSwitchEndian >, t_TyChar, t_TyBoolSwitchEndian >
+{
+  typedef xml_write_transport_file< t_TyChar, t_TyBoolSwitchEndian > _TyXmlWriteTransport;
+};
+template < class t_TyLexInputChar, class t_TyLexInputBoolSwitchEndian, class t_TyChar, class t_TyBoolSwitchEndian >
+struct map_input_to_any_output_transport< _l_transport_mapped< t_TyLexInputChar, t_TyLexInputBoolSwitchEndian >, t_TyChar, t_TyBoolSwitchEndian >
+{
+  typedef xml_write_transport_mapped< t_TyChar, t_TyBoolSwitchEndian > _TyXmlWriteTransport;
+};
 
 // When we actually support DTD and validation (if ever because they aren't that important to me) then we might have to make this more complex.
 // This is an adaptor for use with MultiplexTuplePack_t<>.
