@@ -30,11 +30,14 @@
 //       a different character type. That's not true at all, actually due to the presence of variable length characters.
 //       We'll have to think about how to do this.         
 
+#include "xml_output_tokens.h"
+#include "_l_match.h"
+
 __XMLP_BEGIN_NAMESPACE
 
 enum EDetectReferences
 {
-   edrNoReferences, // then any embedded '&' is escaped with "&amp;"
+   edrNoReferences, // then any embedded '&' is always escaped with "&amp;"
    edrAlwaysReference, // then any embedded '&' *must* correspond to a valid Reference of some sort.
    edrAutoReference, // try to detect if we should replace with "&amp;" or not:
    edrAutoReferenceNoError, 
@@ -43,14 +46,6 @@ enum EDetectReferences
      //     a) If it isn't in the entity map and edrAutoReferenceNoError then we will replace the leading '&' with "&amp;"
      //     b) If it isn't in the enity map and edrAutoReference then we will throw an error for a missing reference.
   edrDetectReferencesCount // This always at the end.
-};
-
-enum ECommitTagDisp
-{
-  ectdNoContent,
-  ectdWithContent,
-  ectdContentUnknown,
-  rctdCommitTagDispCount // This at end.
 };
 
 // xml_write_context:
@@ -70,11 +65,15 @@ public:
   typedef xml_token< _TyTransportCtxt, _TyLexUserObj, _TyTpValueTraitsPack > _TyXmlToken;
   typedef _l_action_object_base< _TyChar, false > _TyAxnObjBase;
 
+  xml_write_context( _TyLexUserObj & _ruoUserObj, vtyTokenIdent _tidAccept )
+    : m_xtkToken( _ruoUserObj, _tidAccept )
+  {
+  }
   xml_write_context( _TyLexUserObj & _ruoUserObj, const _TyAxnObjBase * _paobCurToken )
     : m_xtkToken( _ruoUserObj, _paobCurToken )
   {
   }
-  void SetDetectReferences( EDetectReferences _edrDetectReferences )
+  void SetDetectReferences( EDetectReferences _edrDetectReferences = edrDetectReferencesCount )
   {
     m_edrDetectReferences = _edrDetectReferences;
   }
@@ -94,17 +93,18 @@ public:
   // We could then delete the data - except for namespace declarations, but I don't see the
   //  need to preemptively delete since not too much memory is being taken up.
   // If _fHasContent is true then it is known that the tag has content and thus the tag end characters can be written.
-  void CommitTagData( ECommitTagDisp ectdDisp = ectdContentUnknown )
+  void CommitTagData()
   {
     if ( m_fCommitted )
       return; // no-op - valid to call more than once.
-    m_pxwWriter->_CommitTag( m_xtkToken, m_edrDetectReferences, ectdDisp );
+    m_pxwWriter->_CommitTag( m_xtkToken, m_edrDetectReferences );
     m_fCommitted = true; // If we throw whilte committing we are not committed - even though it may not be fixable.
   }
   void EndTag()
   {
-    CommitTagData( ectdNoContent );
-    m_pxwWriter->EndTag( this );
+    CommitTagData();
+    m_pxwWriter->_EndTag( this );
+    // this has been deleted as of this statement.
   }
 protected:
   _TyXmlWriter * m_pxwWriter;
@@ -136,11 +136,24 @@ public:
   // 2) Attribute/value pairs might be added to this tag.
   // 3) This tag may already be populated with data that came from an XML stream but now the user wants to modify the values.
 
+  xml_write_tag( xml_write_tag const & ) = delete;
+  xml_write_tag & operator =( xml_write_tag const & ) = delete;
+  xml_write_tag( xml_write_tag && _rr )
+  {
+    swap( _rr );
+  }
+  xml_write_tag & operator =( xml_write_tag && _rr )
+  {
+    _TyThis acquire( std::move( _rr ) );
+    swap( acquire );
+    return *this;
+  }
+
   xml_write_tag( _TyWriteContext & _rwcxt )
     : m_pwcxt( &_rwcxt )
   {
   }
-  ~xml_write_tag()
+  ~xml_write_tag() noexcept(false)
   {
     // We shouldn't throw out of this destructor if we are within an unwinding:
     if ( !!m_pwcxt )
@@ -157,6 +170,11 @@ public:
         // we could log here - not much else to be done besides aborting and that's draconian.
       }
     }
+  }
+  void swap( _TyThis & _r )
+  {
+    std::swap( m_pwcxt, _r.m_pwcxt );
+    m_xnvwAttributes.swap( _r.m_xnvwAttributes );
   }
 
   // This causes the data contained within this tag to be written to the transport.
@@ -184,11 +202,12 @@ public:
     if ( !!m_pwcxt )
     {
       _TyWriteContext * pwcxt = m_pwcxt;
+      m_pwcxt = nullptr; // After call to _TyWriteContext::EndTag() the context is deleted.
       pwcxt->EndTag();
     }
   }
   // This determines how references that may be present in attribute values are detected or not.
-  void SetDetectReferences( EDetectReferences _edrDetectReferences )
+  void SetDetectReferences( EDetectReferences _edrDetectReferences = edrDetectReferencesCount )
   {
     m_pwcxt->SetDetectReferences( _edrDetectReferences );
   }
@@ -304,7 +323,7 @@ public:
   typedef t_TyXmlTransportOut _TyXmlTransportOut;
   typedef typename _TyXmlTransportOut::_TyChar _TyChar;
   typedef xml_markup_traits< _TyChar > _TyMarkupTraits;
-  typedef xml_write_tag< _TyChar > _TyXmlWriteTag;
+  typedef xml_write_tag< t_TyXmlTransportOut > _TyXmlWriteTag;
   // We need a user object in order to be able to create tokens.
   typedef xml_user_obj< _TyChar, false > _TyLexUserObj;
   // We need to have our own local namespace map which means we need the full on document context:
@@ -312,9 +331,11 @@ public:
   typedef typename _TyXmlDocumentContext::_TyPrFormatContext _TyPrFormatContext;
   typedef typename _xml_namespace_map_traits< _TyChar >::_TyNamespaceMap _TyNamespaceMap;
   typedef xml_write_context< _TyXmlTransportOut > _TyWriteContext;
+  friend _TyWriteContext;
   typedef typename _TyWriteContext::_TyXmlToken _TyXmlToken;
   typedef list< _TyWriteContext > _TyListWriteContexts;
   typedef xml_namespace_value_wrap< _TyChar > _TyXmlNamespaceValueWrap;
+  typedef typename _TyXmlDocumentContext::_TyEntityMap _TyEntityMap;
 
   xml_writer()
   {
@@ -330,17 +351,17 @@ public:
     _TyPrFormatContext prFormatContext;
     if ( _pxofFormat )
       prFormatContext.first = *_pxofFormat;
-    m_xdcxtDocumentContext.Init( _fStandalone, _TyXmlTransportOut::GetCharacterEncoding(), m_fUseNamespaces, &prFormatContext );
+    m_xdcxtDocumentContext.Init( _fStandalone, _TyXmlTransportOut::GetEncoding(), m_fUseNamespaces, &prFormatContext );
     m_strFileName = _pszFileName;
     FileObj foFile( CreateWriteOnlyFile( _pszFileName ) );
     VerifyThrowSz( foFile.FIsOpen(), "Unable to open file[%s]", _pszFileName );
     // emplace the transport - it will write the BOM or not:
     emplaceTransport( foFile, m_fWriteBOM );
-    _Init(); // This might write the XMLDecl tag to the file, but definitely will init the context stack.
+    _Init( _fStandalone ); // This might write the XMLDecl tag to the file, but definitely will init the context stack.
   }
   // Initialize the xml_writer. Write the XMLDecl root "tag" if that is desired. Regardless create a XMLDecl pseudo
   //  tag as the root of the context list.
-  void _Init()
+  void _Init( bool _fStandalone )
   {
     m_lContexts.clear();
     m_fWroteFirstTag = false;
@@ -349,15 +370,18 @@ public:
     {
       // Just write the XML declaration brute force - no reason to get fancy here. Note that this also includes
       //  ' version="1.0" encoding="'.
-      _WriteTransportRaw( _TyMarkupTraits::s_kszXMLDeclBeginEtc, StaticStringLen( _TyMarkupTraits::s_kszXMLDeclBeginEtc ) );
-      const _TyChar * pszEncoding = PszCharacterEncodingName< _TyChar >( _TyXmlTransportOut::GetCharacterEncoding() );
+      _WriteTransportRaw( m_xdcxtDocumentContext.FAttributeValuesDoubleQuote() ? _TyMarkupTraits::s_kszXMLDeclBeginEtcDoubleQuote : _TyMarkupTraits::s_kszXMLDeclBeginEtcSingleQuote, 
+          StaticStringLen( _TyMarkupTraits::s_kszXMLDeclBeginEtcSingleQuote ) );
+      const _TyChar * pszEncoding = PszCharacterEncodingName< _TyChar >( _TyXmlTransportOut::GetEncoding() );
       _WriteTransportRaw( pszEncoding, StrNLen( pszEncoding ) );
-      _WriteTransportRaw( _TyMarkupTraits::s_kszStandaloneEtc, StaticStringLen( _TyMarkupTraits::s_kszStandaloneEtc ) );
-      if ( m_fStandalone )
-        _WriteTransportRaw( _TyMarkupTraits::s_kszYes, StaticStringLen( _TyMarkupTraits::s_kszYes ) );
+      _WriteTransportRaw( m_xdcxtDocumentContext.FAttributeValuesDoubleQuote() ? _TyMarkupTraits::s_kszStandaloneEtcDoubleQuote : _TyMarkupTraits::s_kszStandaloneEtcSingleQuote, 
+        StaticStringLen( _TyMarkupTraits::s_kszStandaloneEtcDoubleQuote) );
+      if ( _fStandalone )
+        _WriteTransportRaw( _TyMarkupTraits::s_kszXMLDeclYes, StaticStringLen( _TyMarkupTraits::s_kszXMLDeclYes ) );
       else
-        _WriteTransportRaw( _TyMarkupTraits::s_kszNo, StaticStringLen( _TyMarkupTraits::s_kszNo ) );
-      _WriteTransportRaw( _TyMarkupTraits::s_kszXMLDeclEndEtc, StaticStringLen( _TyMarkupTraits::s_kszXMLDeclEndEtc ) );
+        _WriteTransportRaw( _TyMarkupTraits::s_kszXMLDeclNo, StaticStringLen( _TyMarkupTraits::s_kszXMLDeclNo ) );
+      _WriteTransportRaw(m_xdcxtDocumentContext.FAttributeValuesDoubleQuote() ? _TyMarkupTraits::s_kszXMLDeclEndEtcDoubleQuote : _TyMarkupTraits::s_kszXMLDeclEndEtcSingleQuote, 
+        StaticStringLen( _TyMarkupTraits::s_kszXMLDeclEndEtcDoubleQuote) );
     }
     m_lContexts.emplace_back( m_xdcxtDocumentContext.GetUserObj(), s_knTokenXMLDecl  ); // create the XMLDecl pseudo-tag.
   }
@@ -393,6 +417,15 @@ public:
   void FGetUseNamespaces() const
   {
     return m_fUseNamespaces;
+  }
+  void SetDefaultDetectReferences( EDetectReferences _edrDefaultDetectReferences )
+  {
+    VerifyThrow( edrDetectReferencesCount != _edrDefaultDetectReferences ); // must set some valid option here.
+    m_edrDefaultDetectReferences = _edrDefaultDetectReferences;
+  }
+  EDetectReferences EGetDefaultDetectReferences() const
+  {
+    return m_edrDefaultDetectReferences;
   }
 // status:
   bool FIsOpen() const
@@ -471,7 +504,7 @@ public:
     // Then we will be all set up. Except that we need to do this for any namespace that might also be on attribute names and may
     //  also be declared locally or somewhere where we won't see the declaration.
     // So we need a list of declarations and a list of references and then we need to match the two up.
-    _TyXmlDocumentContext::_TyTokenCopyContext ctxtTokenCopy;
+    typename _TyXmlDocumentContext::_TyTokenCopyContext ctxtTokenCopy;
     _TyXmlToken tokThis( m_xdcxtDocumentContext, _rtok.GetLexToken(), &ctxtTokenCopy );
     // Now inside of ctxtTokenCopy we have two arrays of pointers to names of tag/attrbutes that contain namespace declarations and namespace references.
     // We need to match the declarations to attribute declarations (if they are present). If there is no attribute namespace declaraion for some
@@ -489,15 +522,15 @@ public:
   template < class t_TyXmlToken >
   _TyXmlWriteTag StartTag( t_TyXmlToken && _rrtok, bool _fKeepTagName = false )
   {
-    VerifyThrowSz( _rtok.FIsTag(), "Trying to start a tag with a non-tag token." );
+    VerifyThrowSz( _rrtok.FIsTag(), "Trying to start a tag with a non-tag token." );
     _rrtok.AssertValid();
     // First make a copy of the tag name's _l_value<>. We shouldn't have to copy anything else since clearly the caller
     //  doesn't care much about the tag's content. We'll copy it back into the tag after moving it.
     typename t_TyXmlToken::_TyLexValue rvNameCopy;
     if ( _fKeepTagName )
       rvNameCopy = _rrtok[vknTagNameIdx][vknNameIdx];
-    _TyXmlDocumentContext::_TyTokenCopyContext ctxtTokenCopy;
-    _TyXmlToken tokThis( m_xdcxtDocumentContext, std::move( _rtok.GetLexToken() ), &ctxtTokenCopy );
+    typename _TyXmlDocumentContext::_TyTokenCopyContext ctxtTokenCopy;
+    _TyXmlToken tokThis( m_xdcxtDocumentContext, std::move( _rrtok.GetLexToken() ), &ctxtTokenCopy );
     tokThis._FixupNamespaceDeclarations( m_xdcxtDocumentContext, ctxtTokenCopy );
     tokThis.AssertValid();
     if ( _fKeepTagName )
@@ -506,12 +539,10 @@ public:
   // We are writing a token - we are not writing the end tag for a token.
   void _CheckCommitCur()
   {
-    _CheckWriteTagEnd( true );
     if ( !FInsideDocumentTag() )
       return;
     _TyWriteContext & rwcxCur = m_lContexts.back();
-    // We know, if we are committing here, that we have content and thus can can write the tag end right away.
-    rwcxCur.CommitTagData( ectdWithContent );
+    rwcxCur.CommitTagData();
   }
   // Check to see if we have started a tag and if so end it allowing for an end tag.
   void _CheckWriteTagEnd( bool _fWithContent )
@@ -526,15 +557,21 @@ public:
     }
   }
 
-#if 0
-  // Ends the current tag. If _ptokEnd is passed it needs to match the top of the write stack. If not an exception will be thrown.
-  // The safest manner of operation is to pass _ptokEnd bask to check - but I don't see a reason to *require* it.
-  void EndTag( _TyXmlWriteTag * _ptokEnd = nullptr )
+void _EndTag( _TyWriteContext * _pwcxEnd )
+{
+  VerifyThrowSz( _pwcxEnd == &m_lContexts.back(), "Ending a tag that is not at the top of the context stack." );
+  // So if we currently have an unended tag then there must be no content and we needn't write a separate end tag token.
+  if ( m_fHaveUnendedTag )
+    _CheckWriteTagEnd( false );
+  else
   {
-
+    // We have already validate the tag name so we can just write it:
+    _WriteTransportRaw( _TyMarkupTraits::s_kszEndTagBegin, StaticStringLen( _TyMarkupTraits::s_kszEndTagBegin ) );
+    _WriteName( _pwcxEnd->GetToken(), _pwcxEnd->GetToken()[vknTagNameIdx] );
+    _WriteTransportRaw( _TyMarkupTraits::s_kszTagEnd, StaticStringLen( _TyMarkupTraits::s_kszTagEnd ) );
   }
-#endif //0
-
+  m_lContexts.pop_back();
+}
   // Write a non-tag token to the output transport at the current position.
   // Validation is performed - e.g. only whitespace chardata is allowed before the first tag.
   // The token is passed the production to which it correspond's state machine to ensure that it matches.
@@ -569,7 +606,7 @@ public:
     }
   }
   template < class... t_TysArgs >
-  _TyXmlTransportOut emplaceTransport( t_TysArgs&&... _args )
+  _TyXmlTransportOut & emplaceTransport( t_TysArgs&&... _args )
   {
     return m_optTransportOut.emplace( std::forward< t_TysArgs >(_args) ... );
   }
@@ -589,14 +626,14 @@ protected:
   {
     _WriteTransportRaw( _pcBegin, _pcBegin + _nchLen );
   }
-  template < class t_TyToken >
-  void _WriteTypedData( t_TyToken const & _rtok, typename t_TyToken::_TyValue const & _rval )
+  template < class t_TyXmlToken >
+  void _WriteTypedData(t_TyXmlToken const & _rtok, typename t_TyXmlToken::_TyLexValue const & _rval )
   {
     typedef basic_string_view< typename t_TyXmlToken::_TyChar > _TyStrView;
     if ( _rval.FEmptyTypedData() )
       return; // no-op.
     _TyStrView sv;
-    _rtok.KGetStringView( rval, sv );
+    _rtok.KGetStringView( _rval, sv );
     _WriteTransportRaw( &sv[0], sv.length() );
   }
   // This just commits the start of the tag. And we can't write the last ">" or "/>" until
@@ -611,22 +648,23 @@ protected:
   //  is redeclared on that tag. 
   // 3) Need to validate that there are no duplicate attribute declarations. This include unique prefixes using the same system.
   template < class t_TyXmlToken >
-  void _CommitTag( t_TyXmlToken const & _rtok, EDetectReferences _edrDetectReferences, ECommitTagDisp ectdDisp )
+  void _CommitTag( t_TyXmlToken const & _rtok, EDetectReferences _edrDetectReferences )
   {
+    typedef typename t_TyXmlToken::_TyLexValue _TyLexValue;
     _CheckWriteTagEnd( true ); // We might have an unended tag and since we are a sub tag then that tag has content.
     // We shouldn't need to validate the attributes if this token came from an xml_read_cursor - as it would have been validated on the way in.
     // We must check all attribute (name,value) pairs and if they are all typed data (i.e. not user added strings) then they all came from
     //  an xml_read_cursor and they needn't be validated.
     CheckDuplicateTokenAttrs( true, _rtok.GetLexToken(), true );
     _WriteTransportRaw( _TyMarkupTraits::s_kszTagBegin, StaticStringLen( _TyMarkupTraits::s_kszTagBegin ) );
-    m_fHaveUnendedTag = ( ectdDisp == ectdContentUnknown );
+    m_fHaveUnendedTag = true;
     const _TyLexValue & rvalRoot = _rtok.GetValue();
     _WriteName( _rtok, rvalRoot[vknTagNameIdx] );
     // Move through all attributes writing each.
     const _TyLexValue & rrgAttrs = rvalRoot[vknAttributesIdx];
     size_t nAttrs = rrgAttrs.GetSize();
     rrgAttrs.GetValueArray().ApplyContiguous( 0, nAttrs,
-      [this]( const _TyLexValue * _pvBegin, const _TyLexValue * _pvEnd )
+      [this,&_rtok,_edrDetectReferences]( const _TyLexValue * _pvBegin, const _TyLexValue * _pvEnd )
       {
         for ( const _TyLexValue * pvCur = _pvBegin; _pvEnd != pvCur; ++pvCur )
         {
@@ -646,16 +684,8 @@ protected:
         }
       }
     );
-    // Write the ending if we know we have content.
-    if ( !m_fHaveUnendedTag )
-    {
-      Assert( ( ectdDisp == ectdWithContent ) || ( ectdDisp == ectdNoContent ) );
-      if ( ectdDisp == ectdWithContent )
-        _WriteTransportRaw( _TyMarkupTraits::s_kszTagEnd, StaticStringLen( _TyMarkupTraits::s_kszTagEnd ) );
-      else
-        _WriteTransportRaw( _TyMarkupTraits::s_kszEmptyElemTagEnd, StaticStringLen( _TyMarkupTraits::s_kszEmptyElemTagEnd ) );
-    }
-    // otherwise we don't write any ending since we don't know yet which ending we should write.
+    // we don't write any ending since we don't know yet which ending we should write. This also lets us
+    //  know what we need to do when we are ending a tag.
   }
   // Write the name - it will have already been validated.
   // _rvalRgName is a value array containing at least (name,namespacewrap). 
@@ -672,7 +702,7 @@ protected:
     const _TyLexValue & rvalNS = _rvalRgName[vknNamespaceIdx];
     if ( !rvalNS.FIsBool() && !m_xdcxtDocumentContext.FIncludePrefixesInAttrNames() )
     {
-      _TyXmlNamespaceValueWrap & rxnvw = rvalNS.GetVal< _TyXmlNamespaceValueWrap >();
+      const _TyXmlNamespaceValueWrap & rxnvw = rvalNS.GetVal< _TyXmlNamespaceValueWrap >();
       _TyStrView svPrefix = rxnvw.RStringPrefix();
       _WriteTransportRaw( &svPrefix[0], svPrefix.length() );
       _WriteTransportRaw( _TyMarkupTraits::s_kszTagColon, StaticStringLen( _TyMarkupTraits::s_kszTagColon ) );
@@ -694,15 +724,15 @@ protected:
   template < class t_TyXmlToken >
   void _WriteComment( t_TyXmlToken const & _rtok )
   {
-    _CheckCommitCur();
     typedef typename t_TyXmlToken::_TyLexValue _TyLexValue;
+    _CheckCommitCur();
     _WriteTransportRaw( _TyMarkupTraits::s_kszCommentBegin, StaticStringLen( _TyMarkupTraits::s_kszCommentBegin ) );
     // Scenarios:
     // 1) We do everything in the character type of t_TyXmlToken. There is no reason to convert because we can just convert on output and that doesn't require a buffer.
     // 2) Validate if necessary and then write.
     // 3) If we came from an xml_read_cursor: We will have positions and not a string in the _l_value object. In this case validation is not necessary as it was validated on input.
     // For a comment we should see a single, non-empty, _l_value element. If it is empty we will throw because that is not a valid comment.
-    const _TyLexValue & rval = rtok.GetValue();
+    const _TyLexValue & rval = _rtok.GetValue();
     // We should see either a single data range here or some type of string.
     VerifyThrow( rval.FHasTypedData() || rval.FIsString() );
     if ( !rval.FHasTypedData() ) // We assume that if we have data positions then it came from an xml_read_cursor and thereby doesn't need validation.
@@ -725,8 +755,8 @@ protected:
     }
     _WriteTransportRaw( _TyMarkupTraits::s_kszCommentEnd, StaticStringLen( _TyMarkupTraits::s_kszCommentEnd ) );
   }
-  template < template < class t_TyChar > t_tempGetStartToken, class t_TyXmlToken >
-  void _WritePIPortion( t_TyXmlToken const & _rtok, typename t_TyToken::_TyValue const & _rval )
+  template < template < class t_TyChar > class t_tempGetStartToken, class t_TyXmlToken >
+  void _WritePIPortion( t_TyXmlToken const & _rtok, typename t_TyXmlToken::_TyLexValue const & _rval )
   {
     VerifyThrow( _rval.FHasTypedData() || _rval.FIsString() );
     if ( _rval.FHasTypedData() )
@@ -736,6 +766,7 @@ protected:
       _rval.ApplyString(
         [this]< typename t_TyChar >(const t_TyChar * _pcBegin, const t_TyChar* const _pcEnd)
         {
+          typedef _l_state_proto< t_TyChar > _TyStateProto;
           const _TyStateProto* const kpspValidateTokenStart = t_tempGetStartToken< t_TyChar >::s_kpspStart;
           const bool kfIsPITargetMeat = (kpspValidateTokenStart == PspGetPITargetMeatStart< t_TyChar >());
           // In this case there is no remedy to any encountered anti-accept state, but we want to know if we hit one
@@ -752,10 +783,10 @@ protected:
   template < class t_TyXmlToken >
   void _WriteProcessingInstruction( t_TyXmlToken const & _rtok )
   {
-    _CheckCommitCur();
     typedef typename t_TyXmlToken::_TyLexValue _TyLexValue;
+    _CheckCommitCur();
     _WriteTransportRaw( _TyMarkupTraits::s_kszProcessingInstructionBegin, StaticStringLen( _TyMarkupTraits::s_kszProcessingInstructionBegin ) );
-    const _TyLexValue & rval = rtok.GetValue();
+    const _TyLexValue & rval = _rtok.GetValue();
     VerifyThrow( rval.FIsArray() );
     // We may have just a PITarget or a PITarget + PITargetMeat.
     _WritePIPortion< TGetPITargetStart >( _rtok, rval[vknProcessingInstruction_PITargetIdx] );
@@ -769,12 +800,12 @@ protected:
   template < class t_TyXmlToken >
   void _WriteCDataSection( t_TyXmlToken const & _rtok )
   {
-    _CheckCommitCur();
     typedef typename t_TyXmlToken::_TyLexValue _TyLexValue;
+    _CheckCommitCur();
     _WriteTransportRaw( _TyMarkupTraits::s_kszCDataSectionBegin, StaticStringLen( _TyMarkupTraits::s_kszCDataSectionBegin ) );
     // If we find illegal characters within a CDATA section then there is no remedy. (Well we could end the CDataSection and put in a CharRef, but we aren't doing that now.)
     // If we find a "]]>" embedded in the CDataSection then we will appropriately escape it with an overlapping CDataSection. I.e.: "<![CDATA[]]]]><![CDATA[>]]>".
-    const _TyLexValue & rval = rtok.GetValue();
+    const _TyLexValue & rval = _rtok.GetValue();
     // We should see either a single data range here or some type of string.
     VerifyThrow( rval.FHasTypedData() || rval.FIsString() );
     if ( !rval.FHasTypedData() ) // We assume that if we have data positions then it came from an xml_read_cursor and thereby doesn't need validation.
@@ -783,6 +814,7 @@ protected:
       rval.ApplyString( 
         [this]< typename t_TyChar >( const t_TyChar * _pcBegin, const t_TyChar * const _pcEnd )
         {
+          typedef _l_state_proto< t_TyChar > _TyStateProto;
           // Move through and appropriately replace each found "]]>" with "]]]]><![CDATA[>", writing as we go.
           // Since we are using an anti-accepting state in the CDCharsOutputValidate production we need to examine the returned state for anti-accepting.
           const _TyStateProto * pspCDCharsOutputValidate = PspGetCDCharsOutputValidateStart< t_TyChar >();
@@ -837,7 +869,7 @@ protected:
   //     b) If it isn't in the enity map and edrAutoReference then we will throw an error for a missing reference.
   // _rval: This is the value that we are currently writing. This may be one of the attribute values of a tag or chardata.
   // t_tempGetStartToken: This is one of TGetCharDataStart<>, TGetAttCharDataNoSingleQuoteStart<>, TGetAttCharDataNoDoubleQuoteStart<>.
-  template < template < class t_TyChar > class t_tempGetStartToken, class t_TyXmlToken >
+  template < template < class > class t_tempGetStartToken, class t_TyXmlToken >
   void _WriteCharAndAttrData( t_TyXmlToken const & _rtok, typename t_TyXmlToken::_TyLexValue const & _rval, EDetectReferences _edrDetectReferences = edrDetectReferencesCount )
   {
     typedef typename t_TyXmlToken::_TyLexValue _TyLexValue;
@@ -849,34 +881,36 @@ protected:
     {
       // Then we need to validate the string in whatever character type it is in - don't matter none.
       _rval.ApplyString( 
-        [this]< typename t_TyChar >( const t_TyChar * _pcBegin, const t_TyChar * const _pcEnd )
+        [this,&_edrDetectReferences]< typename t_TyCharApplyString >( const t_TyCharApplyString * _pcBegin, const t_TyCharApplyString * const _pcEnd )
         {
-          const _TyStateProto * const kpspValidateTokenStart = t_tempGetStartToken< t_TyChar >::s_kpspStart;
-          if ( !m_fWroteFirstTag && ( kpspValidateTokenStart == PspGetCharDataStart< t_TyChar >() ) )
+          typedef _l_state_proto< t_TyCharApplyString > _TyStateProto;
+          const _TyStateProto * const kpspValidateTokenStart = t_tempGetStartToken< t_TyCharApplyString >::s_kpspStart;
+          if ( !m_fWroteFirstTag )
           {
+            Assert( kpspValidateTokenStart == PspGetCharDataStart< t_TyCharApplyString >() ); // Shouldn't see any attribute values before the first tag.
             // CharData before the first tag should match the S production.
-            const t_TyChar * pcMatchSpace = _l_match< t_TyChar >::PszMatch( PspGetSpacesStart< t_TyChar >(), pcCur, _pcEnd - pcCur );
+            const t_TyCharApplyString * pcMatchSpace = _l_match< t_TyCharApplyString >::PszMatch( PspGetSpacesStart< t_TyCharApplyString >(), _pcBegin, _pcEnd - _pcBegin );
             VerifyThrowSz( pcMatchSpace == _pcEnd, "CharData before the first tag much be composed entirely of spaces." );
             _WriteTransportRaw( _pcBegin, _pcEnd );
             return;
           }
-          const _TyStateProto * const kpspAllReferences = PspGetAllReferencesStart< t_TyChar >();
+          const _TyStateProto * const kpspAllReferences = PspGetAllReferencesStart< t_TyCharApplyString >();
           // Move through and validate as we have described above.
           // Since we are using an anti-accepting state in the CharData production we need to examine the returned state for anti-accepting.
-          for ( const t_TyChar * pcCur = _pcBegin; _pcEnd != pcCur;  )
+          for ( const t_TyCharApplyString * pcCur = _pcBegin; _pcEnd != pcCur;  )
           {
 #if ASSERTSENABLED
-            const t_TyChar * dbg_pcAtBlockStart = pcCur;
+            const t_TyCharApplyString * dbg_pcAtBlockStart = pcCur;
 #endif //ASSERTSENABLED
             const _TyStateProto * pspAccept;
-            const t_TyChar * pcMatch = _l_match< t_TyChar >::PszMatch( kpspValidateTokenStart, pcCur, _pcEnd - pcCur, &pspAccept );
+            const t_TyCharApplyString * pcMatch = _l_match< t_TyCharApplyString >::PszMatch( kpspValidateTokenStart, pcCur, _pcEnd - pcCur, &pspAccept );
             // If we find an accepting state that doesn't complete the entire remainder of characters then we:
             // 1) Might be at the start of a reference.
             // 2) Might be at a single or double quote.
             // However if we find an anti-accepting state then that means we have encountered an embedded "]]>" and we can appropriately escape.
             if ( !pspAccept->FIsAntiAcceptingState() ) // Most common thing to happen is this.
             {
-              Assert( ( pcMatch[-3] == t_TyChar(']') ) && ( pcMatch[-2] == t_TyChar(']') ) && ( pcMatch[-1] == t_TyChar('>') ) );
+              Assert( ( pcMatch[-3] == t_TyCharApplyString(']') ) && ( pcMatch[-2] == t_TyCharApplyString(']') ) && ( pcMatch[-1] == t_TyCharApplyString('>') ) );
               _WriteTransportRaw( pcCur, pcMatch-1 );
               pcCur = pcMatch - 1;
               _WriteTransportRaw( _TyMarkupTraits::s_kszEntityGreaterThan, StaticStringLen( _TyMarkupTraits::s_kszEntityGreaterThan ) );
@@ -884,7 +918,7 @@ protected:
             else
             {
               // In this case we should be pointing at an invalid character:
-              Assert( ( *pcMatch == t_TyChar('\'') ) || ( *pcMatch == t_TyChar('"') ) || ( *pcMatch == t_TyChar('<') ) );
+              Assert( ( *pcMatch == t_TyCharApplyString('\'') ) || ( *pcMatch == t_TyCharApplyString('"') ) || ( *pcMatch == t_TyCharApplyString('<') ) );
               _WriteTransportRaw( pcCur, pcMatch );
               pcCur = pcMatch;
               switch( *pcCur++ )
@@ -892,13 +926,13 @@ protected:
                 default:
                   Assert( false ); // no reason to throw because if things are correct we cannot get here.
                 break;
-                case t_TyChar('\''):
+                case t_TyCharApplyString('\''):
                   _WriteTransportRaw( _TyMarkupTraits::s_kszEntityApostrophe, StaticStringLen( _TyMarkupTraits::s_kszEntityApostrophe ) );
                 break;
-                case t_TyChar('\"'):
+                case t_TyCharApplyString('\"'):
                   _WriteTransportRaw( _TyMarkupTraits::s_kszEntityDoubleQuote, StaticStringLen( _TyMarkupTraits::s_kszEntityDoubleQuote ) );
                 break;
-                case t_TyChar('&'):
+                case t_TyCharApplyString('&'):
                 {
                   // Reference. _edrDetectReferences now comes into play:
                   if ( edrNoReferences == _edrDetectReferences )
@@ -908,25 +942,25 @@ protected:
                   else
                   {
                     // We might have a reference (at least) in this case - figure out what we have:
-                    const t_TyChar * pcMatchReference = _l_match< t_TyChar >::PszMatch( kpspAllReferences, pcCur-1, _pcEnd - ( pcCur - 1 ), &pspAccept );
+                    const t_TyCharApplyString * pcMatchReference = _l_match< t_TyCharApplyString >::PszMatch( kpspAllReferences, pcCur-1, _pcEnd - ( pcCur - 1 ), &pspAccept );
                     VerifyThrowSz( pspAccept || ( edrAlwaysReference != _edrDetectReferences ), "Found a & that didn't match the Reference production." );
                     if ( !pspAccept )
                     {
-                      Assert( ( edrAutoReference == _edrDetectReferences ) || ( edrAutoReferenceNoError == _edrDetectReferences ) )
+                      Assert( ( edrAutoReference == _edrDetectReferences ) || ( edrAutoReferenceNoError == _edrDetectReferences ) );
                       // Then this doesn't match the Reference production and we are on "auto" - just replace with an amp:
                       _WriteTransportRaw( _TyMarkupTraits::s_kszEntityAmpersand, StaticStringLen( _TyMarkupTraits::s_kszEntityAmpersand ) );
                     }
                     else
                     {
-                      typedef basic_string_view< t_TyChar > _TyStrView;
-                      typedef basic_string< t_TyChar > _TyString;
+                      typedef basic_string_view< t_TyCharApplyString > _TyStrView;
+                      typedef basic_string< t_TyCharApplyString > _TyString;
                       switch( pspAccept->m_tidAccept )
                       {
                         case s_knTokenEntityRef:
                         {
                           // Must be a valid reference:
                           _TyStrView svRef( pcCur, pcMatchReference - 1 );
-                          const _TyMapEntities & rmapEntities = GetEntityMap();
+                          const _TyEntityMap & rmapEntities = m_xdcxtDocumentContext.GetEntityMap();
                           bool fFoundEntityReference = ( rmapEntities.end() != rmapEntities.find( svRef ) );
                           VerifyThrowSz( fFoundEntityReference || ( edrAutoReferenceNoError == _edrDetectReferences ), "Entity reference to [%s] not found.", StrConvertString<char>( svRef ).c_str() );
                           if ( fFoundEntityReference )
@@ -984,9 +1018,10 @@ protected:
       // We will peruse and write out according to the sub-tokens present in the typed data. We will have to augment with
       //  sub-token (trigger) markup as we go.
       typedef basic_string_view< typename t_TyXmlToken::_TyChar > _TyStrView;
+      typedef _l_data<> _TyData;
       _TyData const & krdtCharData = _rval.GetTypedData();
       krdtCharData.Apply(
-        [this,&_rtok]( const _TyData * _pdtrBegin, const _TyData * _pdtrEnd )
+        [this,&_rtok]( const _l_data_typed_range * _pdtrBegin, const _l_data_typed_range * _pdtrEnd )
         {
           for ( const _l_data_typed_range * pdtrCur = _pdtrBegin; _pdtrEnd != pdtrCur; ++pdtrCur )
           {
@@ -996,7 +1031,7 @@ protected:
               case s_kdtPlainText:
               {
                 _TyStrView svPlain;
-                _rtok.KGetStringView( *pdtrCur, svPlain );
+                _rtok.GetLexToken().KGetStringView( svPlain, pdtrCur->GetRangeBase() );
                 _WriteTransportRaw( &svPlain[0], svPlain.length() );
               }
               break;
@@ -1004,7 +1039,7 @@ protected:
               {
                 _WriteTransportRaw( _TyMarkupTraits::s_kszCharDecRefBegin, StaticStringLen( _TyMarkupTraits::s_kszCharDecRefBegin ) );
                 _TyStrView svCharDecRef;
-                _rtok.KGetStringView( *pdtrCur, svCharDecRef );
+                _rtok.GetLexToken().KGetStringView( svCharDecRef, pdtrCur->GetRangeBase() );
                 _WriteTransportRaw( &svCharDecRef[0], svCharDecRef.length() );
                 _WriteTransportRaw( _TyMarkupTraits::s_kszReferenceEnd, StaticStringLen( _TyMarkupTraits::s_kszReferenceEnd ) );
               }
@@ -1013,7 +1048,7 @@ protected:
               {
                 _WriteTransportRaw( _TyMarkupTraits::s_kszCharHexRefBegin, StaticStringLen( _TyMarkupTraits::s_kszCharHexRefBegin ) );
                 _TyStrView svCharHexRef;
-                _rtok.KGetStringView( *pdtrCur, svCharHexRef );
+                _rtok.GetLexToken().KGetStringView( svCharHexRef, pdtrCur->GetRangeBase() );
                 _WriteTransportRaw( &svCharHexRef[0], svCharHexRef.length() );
                 _WriteTransportRaw( _TyMarkupTraits::s_kszReferenceEnd, StaticStringLen( _TyMarkupTraits::s_kszReferenceEnd ) );
               }
@@ -1022,7 +1057,7 @@ protected:
               {
                 _WriteTransportRaw( _TyMarkupTraits::s_kszEntityRefRefBegin, StaticStringLen( _TyMarkupTraits::s_kszEntityRefRefBegin ) );
                 _TyStrView svEntityRef;
-                _rtok.KGetStringView( *pdtrCur, svEntityRef );
+                _rtok.GetLexToken().KGetStringView( svEntityRef, pdtrCur->GetRangeBase() );
                 _WriteTransportRaw( &svEntityRef[0], svEntityRef.length() );
                 _WriteTransportRaw( _TyMarkupTraits::s_kszReferenceEnd, StaticStringLen( _TyMarkupTraits::s_kszReferenceEnd ) );
               }
@@ -1043,12 +1078,13 @@ protected:
   string m_strFileName; // Save this since it is cheap - might be enpty.
   _TyListWriteContexts m_lContexts;
 // options:
+  EDetectReferences m_edrDefaultDetectReferences{edrAutoReferenceNoError};
   bool m_fWriteBOM{true}; // Write a BOM because that's just a nice thing to do.
   bool m_fWriteXMLDecl{true}; // Whether to write an XMLDecl. This is honored in all scenarios.
   bool m_fUseNamespaces{true}; // Using namespaces?
 // state:
-  
   bool m_fWroteFirstTag{false};
+  bool m_fHaveUnendedTag{false};
 };
 
 // xml_writer_var:

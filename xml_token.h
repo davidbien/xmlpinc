@@ -59,6 +59,10 @@ public:
     : m_tokToken( _ruoUserObj, _paobCurToken )
   {
   }
+  xml_token( _TyUserObj & _ruoUserObj, vtyTokenIdent _tidAccept )
+    : m_tokToken( _ruoUserObj, _tidAccept )
+  {
+  }
   // Copy the passed token - we use the lex token since an xml token is only a wrapper.
   template < class t_TyContainerNew, class t_TyLexToken >
   xml_token( t_TyContainerNew & _rNewContainer, t_TyLexToken const & _rtokCopy, typename t_TyContainerNew::_TyTokenCopyContext * _ptccCopyCtxt = nullptr )
@@ -340,10 +344,10 @@ public:
     std::sort( _rctxtTokenCopy.m_rgDeclarations.begin(), _rctxtTokenCopy.m_rgDeclarations.end(), lambdaCompareNamespacePrefix );
     std::sort( _rctxtTokenCopy.m_rgReferences.begin(), _rctxtTokenCopy.m_rgReferences.end(), lambdaCompareNamespacePrefix );
     // Now move through finding the any declaration that matches a set of references.
-    const _TyLexValue ** pplvalCurDeclaration = &_rctxtTokenCopy.m_rgDeclarations[0];
-    const _TyLexValue ** const pplvalEndDeclarations = pplvalCurDeclaration + _rctxtTokenCopy.m_rgDeclarations.size();
-    const _TyLexValue ** pplvalCurReference = &_rctxtTokenCopy.m_rgDeclarations[0];
-    const _TyLexValue ** const pplvalEndReferences = pplvalCurReference + _rctxtTokenCopy.m_rgReferences.size();
+    _TyLexValue * const * pplvalCurDeclaration = &_rctxtTokenCopy.m_rgDeclarations[0];
+    _TyLexValue * const * const pplvalEndDeclarations = pplvalCurDeclaration + _rctxtTokenCopy.m_rgDeclarations.size();
+    _TyLexValue * const * pplvalCurReference = &_rctxtTokenCopy.m_rgDeclarations[0];
+    _TyLexValue * const * const pplvalEndReferences = pplvalCurReference + _rctxtTokenCopy.m_rgReferences.size();
     for ( ; ( pplvalCurDeclaration != pplvalEndDeclarations ) && ( pplvalCurReference != pplvalEndReferences ); )
     {
       if ( lambdaCompareNamespacePrefix( *pplvalCurDeclaration, *pplvalCurReference ) )
@@ -351,7 +355,7 @@ public:
         // A declaration that corresponds to no reference. If this isn't a namespace declaration attribute then we need
         //  to add such an attribute.
         bool fIsAttrNamespaceDecl;
-        if ( !_FIsAttribute( *pplvalCurDeclaration, &fIsAttrNamespaceDecl ) || !fIsAttrNamespaceDecl )
+        if ( !_FIsAttribute( **pplvalCurDeclaration, &fIsAttrNamespaceDecl ) || !fIsAttrNamespaceDecl )
         {
           // Then a new namespace (prefix,URI) that hasn't been declared yet. Declare it. This has the effect of leaving a
           //  namespace reference in its place which happens to be exactly what we want. This adds one to rnTagNamespaceDecls internally.
@@ -371,7 +375,7 @@ public:
         // Then a declaration corresponds to some set of references.
         // Move through all matching references and see if one of them is the actual declaration, unless the declaration is the declaration:
         bool fIsAttrNamespaceDecl;
-        if ( _FIsAttribute( *pplvalCurDeclaration, &fIsAttrNamespaceDecl ) && fIsAttrNamespaceDecl )
+        if ( _FIsAttribute( **pplvalCurDeclaration, &fIsAttrNamespaceDecl ) && fIsAttrNamespaceDecl )
         {
           ++rnTagNamespaceDecls; // A declaration on the attr declaration, nothing to fixup - must skip all matching references.
           for ( ++pplvalCurReference; ( pplvalCurReference != pplvalEndReferences ) && !lambdaCompareNamespacePrefix( *pplvalCurDeclaration, *pplvalCurReference ); ++pplvalCurReference )
@@ -382,7 +386,7 @@ public:
           bool fFoundDeclaration = false; // must skip all matching references even after finding the declaration.
           do
           {
-            if ( !fFoundDeclaration && _FIsAttribute( *pplvalCurReference, &fIsAttrNamespaceDecl ) && fIsAttrNamespaceDecl )
+            if ( !fFoundDeclaration && _FIsAttribute( **pplvalCurReference, &fIsAttrNamespaceDecl ) && fIsAttrNamespaceDecl )
             {
               // We found the actual declaration in the reference - just swap the two - add one to the number of declarations:
               ++rnTagNamespaceDecls;
@@ -397,7 +401,7 @@ public:
   }
   // Return if the array of _l_values indicates an attribute and if _pfIsAttrNamespaceDecl then
   //  find out if it is an attribute namespace declaration.
-  bool _FIsAttribute( _TyLexValue const & _rrgval, bool * _pfIsAttrNamespaceDecl = nullptr )
+  bool _FIsAttribute( _TyLexValue const & _rrgval, bool * _pfIsAttrNamespaceDecl = nullptr ) const
   {
     if ( _rrgval.GetSize() == 4 ) // This is currently the way of doing it - could change - this is easy.
     {
@@ -585,7 +589,7 @@ protected:
   }
 
 #if ASSERTSENABLED
-  void _AssertValidName( const _TyLexValue & _rrgvName, size_t & _rnNamespaceDecls, const _TyXmlNamespaceValueWrap ** _ppxnvw )
+  void _AssertValidName( const _TyLexValue & _rrgvName, size_t & _rnNamespaceDecls, const _TyXmlNamespaceValueWrap ** _ppxnvw ) const
   {
     const _TyLexValue & rvName = _rrgvName[vknNameIdx];
     Assert( ( rvName.FHasTypedData() && !rvName.FEmptyTypedData() ) || rvName.FIsString() );
@@ -602,7 +606,7 @@ protected:
         ++_rnNamespaceDecls;
     }
   }
-  void _AssertValidTag()
+  void _AssertValidTag() const
   {
     _TyLexValue const & rvRoot = GetValue();
     Assert( vknTagArrayCount == rvRoot.GetSize() );
@@ -614,7 +618,7 @@ protected:
       if ( vknTagName_ArrayCount == rvTag.GetSize() )
       {
         const _TyXmlNamespaceValueWrap * pxnvw;
-        _AssertValidName( rvTag, &pxnvw, nNamespaceDecls );
+        _AssertValidName( rvTag, nNamespaceDecls, &pxnvw );
         Assert( !pxnvw || pxnvw->FIsNamespaceReference() );
         Assert( rvTag[vknTagName_NNamespaceDeclsIdx].FIsA<size_t>() );
       }
@@ -624,7 +628,7 @@ protected:
       {
         const typename _TyLexValue::_TySegArrayValues & rsaAttrs = rrgvAttrs.GetValueArray();
         rsaAttrs.ApplyContiguous( 0, rsaAttrs.NElements(),
-          [this]( const _TyLexValue * _pvBegin, const _TyLexValue * _pvEnd )
+          [this,&nNamespaceDecls]( const _TyLexValue * _pvBegin, const _TyLexValue * _pvEnd )
           {
             for ( const _TyLexValue * pvCur = _pvBegin; _pvEnd != pvCur; ++pvCur )
             {
@@ -632,9 +636,9 @@ protected:
               if ( vknAttr_ArrayCount == pvCur->GetSize() )
               {
                 const _TyXmlNamespaceValueWrap * pxnvw;
-                _AssertValidName( *pvCur, &pxnvw, nNamespaceDecls );
+                _AssertValidName( *pvCur, nNamespaceDecls, &pxnvw );
                 bool fIsAttrNamespaceDecl;
-                bool fIsAttr = _FIsAttribute( **pvCur, &fIsAttrNamespaceDecl );
+                bool fIsAttr = _FIsAttribute( *pvCur, &fIsAttrNamespaceDecl );
                 Assert( fIsAttr );
                 Assert( !pxnvw || !pxnvw->FIsNull() );
                 Assert( fIsAttrNamespaceDecl == ( !!pxnvw && pxnvw->FIsNamespaceDeclaration() ) );
@@ -649,13 +653,13 @@ protected:
       Assert( ( vknTagName_ArrayCount != rvTag.GetSize() ) || ( nNamespaceDecls == rvTag[vknTagName_NNamespaceDeclsIdx].GetVal<size_t>() ) );
     }
   }
-  void _AssertValidComment()
+  void _AssertValidComment() const
   {
     _TyLexValue const & rvRoot = GetValue();
     // An empty comment is not valid - but we might allow it here and just fix up to a single space on output.
     Assert( ( rvRoot.FHasTypedData() && !rvRoot.FEmptyTypedData() ) || rvRoot.FIsString() );
   }
-  void _AssertValidXMLDecl()
+  void _AssertValidXMLDecl() const
   {
     _TyLexValue const & rvRoot = GetValue();
     Assert( rvRoot.FIsNull() || rvRoot.FIsArray() ); // null for a pseudo token here.
@@ -673,19 +677,19 @@ protected:
       }
     }
   }
-  void _AssertValidCDataSection()
+  void _AssertValidCDataSection() const
   {
     // An empty CDataSection is valid - why you would want one is questionable.
     _TyLexValue const & rvRoot = GetValue();
     Assert( rvRoot.FHasTypedData() || rvRoot.FIsString() );
   }
-  void _AssertValidCharData()
+  void _AssertValidCharData() const
   {
     // Empty CharData is not valid - production-wise - but we would just not write anything at all.
     _TyLexValue const & rvRoot = GetValue();
     Assert( ( rvRoot.FHasTypedData() && !rvRoot.FEmptyTypedData() ) || rvRoot.FIsString() );
   }
-  void _AssertValidProcessingInstruction()
+  void _AssertValidProcessingInstruction() const
   {
     _TyLexValue const & rvRoot = GetValue();
     Assert( rvRoot.FIsArray() );

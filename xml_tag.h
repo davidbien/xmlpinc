@@ -120,7 +120,7 @@ protected:
       }
       else
       { // recurse.
-        std::get< _TyThis >( rvCur )->ToXmlStream( _rxw );
+        std::get< _TyThis >( rvCur ).ToXmlStream( _rxw );
       }
     }
   }
@@ -199,7 +199,7 @@ public:
   }
   // Write this XML document to the given xml_writer<>.
   template < class t_TyXmlTransportOut >
-  void ToXmlStream( xml_writer< t_TyXmlTransportOut > & _rxw )
+  void ToXmlStream( xml_writer< t_TyXmlTransportOut > & _rxw ) const
   {
     // Just write everything to the writer.
     // The writer itself writes the XMLDecl tag based on the output encoding (which it knows about), etc.

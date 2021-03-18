@@ -179,6 +179,7 @@ public:
   typedef xml_namespace_value_wrap< _TyChar > _TyXmlNamespaceValueWrap;
   typedef _xml_token_copy_context< _TyChar > _TyTokenCopyContext;
   typedef typename _TyTokenCopyContext::_TyLexValue _TyLexValue;
+  typedef typename _TyLexUserObj::_TyEntityMap _TyEntityMap;
 
   void Init( bool _fStandalone, EFileCharacterEncoding _efce, bool _fUseNamespaces, const _TyPrFormatContext * _pprFormatContext = nullptr )
   {
@@ -224,6 +225,16 @@ public:
     Assert( !!m_optprFormatContext );
     return !m_optprFormatContext ? false : m_optprFormatContext->first.FIncludePrefixesInAttrNames();
   }
+  _TyLexUserObj & GetUserObj()
+  {
+    Assert( !!m_upUserObj );
+    return *m_upUserObj;
+  }
+  const _TyLexUserObj & GetUserObj() const
+  {
+    Assert( !!m_upUserObj );
+    return *m_upUserObj;
+  }
   template < class t_TyStrViewOrString >
   typename _TyUriAndPrefixMap::value_type const & RStrAddPrefix( t_TyStrViewOrString const & _rs )
   {
@@ -257,6 +268,11 @@ public:
   bool FIsActiveNamespace( _TyXmlNamespaceValueWrap const & _rxnvw ) const
   {
     return MapNamespaces().FIsActiveNamespace( _rxnvw );
+  }
+  const _TyEntityMap & GetEntityMap() const
+  {
+    Assert( !!m_upUserObj );
+    return m_upUserObj->GetEntityMap();
   }
   _TyXmlNamespaceMap & MapNamespaces()
   {

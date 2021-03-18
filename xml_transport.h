@@ -108,6 +108,10 @@ public:
     }
     return !iResult;
   }
+  static constexpr EFileCharacterEncoding GetEncoding()
+  {
+    return GetCharacterEncoding< _TyChar, _TyFSwitchEndian >();
+  }
 protected:
   // Don't throw - return 0 on success, non-zero on failure.
   int _CheckGrowMapNoThrow( size_t _charsByAtLeast ) noexcept

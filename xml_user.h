@@ -154,6 +154,14 @@ public:
     _TyBase::swap( _r );
     m_mapEntities.swap( _r.m_mapEntities );
   }
+  _TyEntityMap & GetEntityMap()
+  {
+    return m_mapEntities;
+  }
+  const _TyEntityMap & GetEntityMap() const
+  {
+    return m_mapEntities;
+  }
   void SetFilterWhitespaceCharData( bool _fFilterWhitespaceCharData )
   {
     m_fFilterWhitespaceCharData = _fFilterWhitespaceCharData;
@@ -398,7 +406,8 @@ public:
     typedef typename t_TyToken::_TyValue::template get_string_type< typename t_TyStringView::value_type > _TyStrConvertTo;
     _TyStrConvertTo strConverted;
     GetString( strConverted, _rcxt, _rtok, _rval );
-    _rsvDest = _rval.emplaceVal( std::move( strConverted ) );
+    _TyStrConvertTo & rstr = _rval.emplaceVal( std::move( strConverted ) );
+    _rsvDest = t_TyStringView( (const typename t_TyStringView::value_type *)&rstr[0], rstr.length() );
   }
   template < class t_TyStringView, class t_TyString, class t_TyToken, class t_TyTransportCtxt >
   bool FGetStringViewOrString( t_TyStringView & _rsvDest, t_TyString & _rstrDest, t_TyTransportCtxt & _rcxt, t_TyToken & _rtok, typename t_TyToken::_TyValue const & _rval ) const
@@ -408,6 +417,7 @@ public:
     Assert( _rsvDest.empty() );
     Assert( _rstrDest.empty() );
     GetString( _rstrDest, _rcxt, _rtok, _rval );
+    _rsvDest = t_TyStringView( (const typename t_TyStringView::value_type*)&_rstrDest[0], _rstrDest.length() );;
     return false;
   }
 // var transport:
@@ -522,6 +532,7 @@ public:
     if ( !kdtr.FContainsSingleDataRange(s_kdtPlainText) )
     {
       GetString( _rstrDest, _rcxt, _rtok, _rval );
+      _rsvDest = t_TyStringView( (const typename t_TyStringView::value_type*)&_rstrDest[0], _rstrDest.length() );;
       return false;
     }
     else

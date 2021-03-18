@@ -263,6 +263,7 @@ public:
       return true;
     // Allow conversion to any character type:
     ConvertString( _rstr, *m_pvtUri );
+    _rsv = t_TyStringView( (const typename t_TyStringView::value_type*)&_rstr[0], _rstr.length() );;
     return false;
   }
   template < class t_TyJsoValue >
