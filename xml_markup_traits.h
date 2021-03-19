@@ -31,6 +31,12 @@ struct xml_markup_traits< char32_t >
   static constexpr const _TyChar s_kszDoubleQuote[] = U"\"";
   static constexpr const _TyChar s_kszSingleQuote[] = U"'";
 
+  static constexpr const _TyChar s_kszEntityLessThan[] = U"&lt;";
+  static constexpr const _TyChar s_kszEntityGreaterThan[] = U"&gt;";
+  static constexpr const _TyChar s_kszEntityApostrophe[] = U"&apos;";
+  static constexpr const _TyChar s_kszEntityAmpersand[] = U"&amp;";
+  static constexpr const _TyChar s_kszEntityDoubleQuote[] = U"&quot;";
+  
   static constexpr const _TyChar s_kszEntityRefRefBegin[] = U"&";
   static constexpr const _TyChar s_kszCharDecRefBegin[] = U"&#";
   static constexpr const _TyChar s_kszCharHexRefBegin[] = U"&#x";
@@ -72,6 +78,12 @@ struct xml_markup_traits< char16_t >
   static constexpr const _TyChar s_kszEqualSign[] = u"=";
   static constexpr const _TyChar s_kszDoubleQuote[] = u"\"";
   static constexpr const _TyChar s_kszSingleQuote[] = u"'";
+
+  static constexpr const _TyChar s_kszEntityLessThan[] = u"&lt;";
+  static constexpr const _TyChar s_kszEntityGreaterThan[] = u"&gt;";
+  static constexpr const _TyChar s_kszEntityApostrophe[] = u"&apos;";
+  static constexpr const _TyChar s_kszEntityAmpersand[] = u"&amp;";
+  static constexpr const _TyChar s_kszEntityDoubleQuote[] = u"&quot;";
   
   static constexpr const _TyChar s_kszEntityRefRefBegin[] = u"&";
   static constexpr const _TyChar s_kszCharDecRefBegin[] = u"&#";
@@ -114,6 +126,12 @@ struct xml_markup_traits< char8_t >
   static constexpr const _TyChar s_kszEqualSign[] = u8"=";
   static constexpr const _TyChar s_kszDoubleQuote[] = u8"\"";
   static constexpr const _TyChar s_kszSingleQuote[] = u8"'";
+
+  static constexpr const _TyChar s_kszEntityLessThan[] = u8"&lt;";
+  static constexpr const _TyChar s_kszEntityGreaterThan[] = u8"&gt;";
+  static constexpr const _TyChar s_kszEntityApostrophe[] = u8"&apos;";
+  static constexpr const _TyChar s_kszEntityAmpersand[] = u8"&amp;";
+  static constexpr const _TyChar s_kszEntityDoubleQuote[] = u8"&quot;";
 
   static constexpr const _TyChar s_kszEntityRefRefBegin[] = u8"&";
   static constexpr const _TyChar s_kszCharDecRefBegin[] = u8"&#";

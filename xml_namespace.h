@@ -178,6 +178,7 @@ public:
     AssertValid();
     return *m_pvtPrefix;
   }
+  
   // This doesn't do a full compare - only the correct thing for comparing unique attributes.
   std::strong_ordering ICompareForUniqueAttr( const _TyThis & _r ) const
   {

@@ -290,7 +290,7 @@ public:
       case s_kdtEntityRef:
       {
         if ( s_kfSupportDTD )
-          nLen = _RLookupEntity(_rdr,_rcxt).length();
+          nLen = RStrLookupEntity(_rdr,_rcxt).length();
         else
           nLen = 1; // We don't need to parse here since we can parse later. All standard entity refs are 1 character.
       }
@@ -371,7 +371,7 @@ public:
       break;
       case s_kdtEntityRef:
       {
-        _rsv = _RLookupEntity(_rdr,_rcxt);
+        _rsv = RStrLookupEntity(_rdr,_rcxt);
       }
       break;
       case s_kdtPEReference:
@@ -386,17 +386,36 @@ public:
     return tchRtn;
   }
   template < class t_TyTransportCtxt >
-  const _TyStdStr & _RLookupEntity( _l_data_typed_range const & _rdr, t_TyTransportCtxt const & _rcxt ) const
+  const _TyStdStr & RStrLookupEntity( _l_data_typed_range const & _rdr, t_TyTransportCtxt const & _rcxt ) const
   {
     _TyStrView sv;
     _rcxt.GetStringView( sv, _rdr );
     typename _TyEntityMap::const_iterator cit = m_mapEntities.find( sv );
     if ( m_mapEntities.end() == cit )
-    {
-      _TyStdStr str( sv );
-      THROWXMLPARSEEXCEPTION("Can't find entity [%s].", str.c_str() );
-    }
+      THROWXMLPARSEEXCEPTION( "Can't find entity [%s].", StrConvertString<char>( sv ).c_str() );
     return cit->second;
+  }
+  _TyStrView _SvLookupEntity( _TyStrView const & _rsv ) const
+  {
+    typename _TyEntityMap::const_iterator cit = m_mapEntities.find( _rsv );
+    if ( m_mapEntities.end() == cit )
+      return _TyStrView();
+    return cit->second;
+  }
+  // Lookup the given entity in the entity map. May require encoding conversion on to and from.
+  // Use TGetConversionBuffer_t<> to obtain the appropriate conversion buffer.
+  template < class t_TyStrViewOrString >
+  _TyStrView SvLookupEntity( t_TyStrViewOrString const & _rsv )
+    requires( TAreSameSizeTypes_v< _TyChar, typename t_TyStrViewOrString::value_type > ) // non-converting version.
+  {
+    return _SvLookupEntity( _rsv );
+  }
+  template < class t_TyStrViewOrString >
+  _TyStrView SvLookupEntity( t_TyStrViewOrString const & _rsv )
+    requires( !TAreSameSizeTypes_v< _TyChar, typename t_TyStrViewOrString::value_type > )
+  {
+    _TyStdStr strConvertBuf;
+    return _SvLookupEntity( StrViewConvertString( _rsv, strConvertBuf ) );
   }
 
   template < class t_TyStringView, class t_TyToken, class t_TyTransportCtxt >

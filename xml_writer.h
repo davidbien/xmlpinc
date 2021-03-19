@@ -768,12 +768,12 @@ protected:
         {
           typedef _l_state_proto< t_TyChar > _TyStateProto;
           const _TyStateProto* const kpspValidateTokenStart = t_tempGetStartToken< t_TyChar >::s_kpspStart;
-          const bool kfIsPITargetMeat = (kpspValidateTokenStart == PspGetPITargetMeatStart< t_TyChar >());
+          const bool kfIsPITargetMeat = ( kpspValidateTokenStart == TGetPITargetMeatStart< t_TyChar >::s_kpspStart );
           // In this case there is no remedy to any encountered anti-accept state, but we want to know if we hit one
           //  so we can give a more informative error message.
           const _TyStateProto* pspAccept;
           const t_TyChar* pcMatch = _l_match< t_TyChar >::PszMatch(kpspValidateTokenStart, _pcBegin, _pcEnd - _pcBegin, &pspAccept);
-          VerifyThrowSz(!(!pspAccept || pspAccept->IsAntiAcceptingState() || (pcMatch != _pcEnd)),
+          VerifyThrowSz(!(!pspAccept || pspAccept->FIsAntiAcceptingState() || (pcMatch != _pcEnd)),
             kfIsPITargetMeat ? "Invalid characters found in PITargetMeat." : "Invalid characters found in PITarget.");
           _WriteTransportRaw(_pcBegin, _pcEnd);
         }
@@ -952,20 +952,22 @@ protected:
                     }
                     else
                     {
-                      typedef basic_string_view< t_TyCharApplyString > _TyStrView;
-                      typedef basic_string< t_TyCharApplyString > _TyString;
+                      typedef basic_string_view< t_TyCharApplyString > _TyStrViewApply;
+                      typedef basic_string< t_TyCharApplyString > _TyStringApply;
+                      typedef basic_string< _TyChar > _TyStrOutput;
+                      typedef basic_string_view< _TyChar > _TyStrViewOutput;
                       switch( pspAccept->m_tidAccept )
                       {
                         case s_knTokenEntityRef:
                         {
                           // Must be a valid reference:
-                          _TyStrView svRef( pcCur, pcMatchReference - 1 );
-                          const _TyEntityMap & rmapEntities = m_xdcxtDocumentContext.GetEntityMap();
-                          bool fFoundEntityReference = ( rmapEntities.end() != rmapEntities.find( svRef ) );
+                          _TyStrViewApply svRef( pcCur, pcMatchReference - 1 );
+                          _TyStrViewOutput svEntity = m_xdcxtDocumentContext.GetUserObj().SvLookupEntity( svRef );
+                          bool fFoundEntityReference = !svEntity.empty();
                           VerifyThrowSz( fFoundEntityReference || ( edrAutoReferenceNoError == _edrDetectReferences ), "Entity reference to [%s] not found.", StrConvertString<char>( svRef ).c_str() );
                           if ( fFoundEntityReference )
                           { // write it out.
-                            _WriteTransportRaw( pcCur - 1, pcMatchReference );
+                            _WriteTransportRaw( &svEntity[0], svEntity.length() );
                           }
                           else
                           {
@@ -981,8 +983,8 @@ protected:
                         {
                           // The production ensures we have a valid set of characters, we must validate overflow.
                           // Character references are always in UTF32.
-                          _TyStrView svRef( pcCur + ( pspAccept->m_tidAccept == s_knTokenCharRefDec ? 1 : 2 ), pcMatchReference - 1 );
-                          [[maybe_unused]] char32_t utf32;
+                          _TyStrViewApply svRef( pcCur + ( pspAccept->m_tidAccept == s_knTokenCharRefDec ? 1 : 2 ), pcMatchReference - 1 );
+                          char32_t utf32;
                           int iResult = IReadPositiveNum( s_knTokenCharRefDec == pspAccept->m_tidAccept ? 10 : 16, &svRef[0], svRef.length(), utf32, _l_char_type_map<char32_t>::ms_kcMax, false );
                           if ( !!iResult && ( edrAutoReferenceNoError != _edrDetectReferences ) ) // error - should be overflow since the production validates content.
                           {

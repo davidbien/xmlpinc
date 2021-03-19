@@ -192,9 +192,9 @@ public:
       _stLenTag = StrNLen(  _pcTagName );
     VerifyThrow( _stLenTag );
     // Translate everything to our output character type before processing further.
-    TGetConversionBuffer_t< _TyChar, t_TyChar > cbufName;
+    TGetConversionBuffer_t< t_TyChar, _TyChar > cbufName;
     _TyStrView svTagName = StrViewConvertString( _pcTagName, _stLenTag, cbufName );
-    TGetConversionBuffer_t< _TyChar, t_TyChar > cbufPrefix, cbufUri;
+    TGetConversionBuffer_t< t_TyChar, _TyChar > cbufPrefix, cbufUri;
     _TyStrView svPrefix, svUri;
     if ( _ppuNamespace )
     {
@@ -215,7 +215,7 @@ public:
       _stLenTag = StrNLen(  _pcTagName );
     VerifyThrow( _stLenTag );
     // Translate everything to our output character type before processing further.
-    TGetConversionBuffer_t< _TyChar, t_TyChar > cbufName;
+    TGetConversionBuffer_t< t_TyChar, _TyChar > cbufName;
     _TyStrView svTagName = StrViewConvertString( _pcTagName, _stLenTag, cbufName );
     _SetTagName( _rcxtDoc, svTagName, nullptr, nullptr, &_rnsvw );
   }
@@ -233,7 +233,7 @@ public:
     Assert( FIsTag() );
     VerifyThrow( FIsTag() && !GetValue().FIsNull() ); // We should have already called SetTagName().
     // First translate to the character set of the token:
-    TGetConversionBuffer_t< _TyChar, t_TyChar > cbufPrefix, cbufUri;
+    TGetConversionBuffer_t< t_TyChar, _TyChar > cbufPrefix, cbufUri;
     _TyStrView svPrefix = StrViewConvertString( _rpuNamespace.first, cbufPrefix );
     _TyStrView svUri = StrViewConvertString( _rpuNamespace.first, cbufUri );
     AddNamespace( _rcxtDoc, svPrefix, svUri );
@@ -288,7 +288,7 @@ public:
         Assert( StrNLen( _pcAttrValue, _stLenAttrValue ) == _stLenAttrValue ); // no embedded nulls.
     }
     // Convert encodings if necessary:
-    TGetConversionBuffer_t< _TyChar, t_TyChar > cbufName, cbufValue;
+    TGetConversionBuffer_t< t_TyChar, _TyChar > cbufName, cbufValue;
     _TyStrView svName = StrViewConvertString( _pcAttrName, _stLenAttrName, cbufName );
     _TyStrView svValue = StrViewConvertString( _pcAttrValue, _stLenAttrValue, cbufValue );
     _AddAttribute( _rcxtDoc, svName, svValue, _pxnvw );

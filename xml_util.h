@@ -13,7 +13,7 @@ __XMLP_BEGIN_NAMESPACE
 // If the same prefix declares the same URI then we will will ignore it because I cannot see an interpretation of this in the W3C XML Namespace Specification.
 // We will throw an error for any duplicate prefix declarations if _fStrict is on because other parsers may barf on such declarations.
 template < class t_TyLexToken >
-void CheckDuplicateTokenAttrs( bool _fStrict, t_TyLexToken & _rltok, bool _fSkipIfAllTypedData = false )
+void CheckDuplicateTokenAttrs( bool _fStrict, const t_TyLexToken & _rltok, bool _fSkipIfAllTypedData = false )
 {
   typedef t_TyLexToken _TyLexToken;
   typedef typename _TyLexToken::_TyValue _TyLexValue;
@@ -26,7 +26,7 @@ void CheckDuplicateTokenAttrs( bool _fStrict, t_TyLexToken & _rltok, bool _fSkip
   typedef std::vector< _TyPtrLexValue, default_init_allocator< _TyPtrLexValue > > _TyVectorPtrs;
   _TyVectorPtrs rgPointers;
   static constexpr size_t knptrMaxAllocaSize = vknbyMaxAllocaSize / sizeof( _TyLexValue* );
-  _TyLexValue & rrgAttrs = _rltok[vknAttributesIdx];
+  const _TyLexValue & rrgAttrs = _rltok[vknAttributesIdx];
   size_t nAttrs = rrgAttrs.GetSize();
   const _TyLexValue ** ppvalBegin;
   const _TyLexValue ** ppvalEnd;

@@ -171,6 +171,7 @@ public:
   typedef t_TyLexUserObj _TyLexUserObj;
   typedef typename _TyLexUserObj::_TyChar _TyChar;
   typedef typename _xml_namespace_map_traits< _TyChar >::_TyUriAndPrefixMap _TyUriAndPrefixMap;
+  typedef basic_string< _TyChar > _TyStdStr;
   typedef xml_namespace_map< _TyChar > _TyXmlNamespaceMap;
   typedef XMLDeclProperties< _TyChar > _TyXMLDeclProperties;
   typedef _xml_output_format _TyXMLOutputFormat;
@@ -321,8 +322,9 @@ public:
     Assert( _rvalNSVW.FIsNull() );
     Assert( !!_ptccCopyCtxt && !!_ptccCopyCtxt->m_plvalContainerCur ); // We always pass this in - we expect to be within a container.
     // First, regardless, we must get a (prefix,uri) from the other nsvw:
-    typedef _TyXmlNamespaceValueWrap::_TyPrStrPrefixUri prstrPrefixUri;
-    _rxnvwOther.GetPrefixUri( prstrPrefixUri );
+    typedef pair< _TyStdStr, _TyStdStr > _TyPrStrPrefixUri;
+    _TyPrStrPrefixUri prstrPrefixUri;
+    _rxnvwOther.GetPrStrPrefixUri( prstrPrefixUri );
 
     // Record the containers for all declarations and references - this lets us fix things up pretty easily.    
     _TyXmlNamespaceValueWrap xnvwThis = GetNamespaceValueWrap( &prstrPrefixUri.first, &prstrPrefixUri.second );
