@@ -1080,13 +1080,13 @@ protected:
   typedef array< vtyTokenIdent, s_knMaxSkippedTokens > _TySkipArray;
 
 // DS:
+  _TyXmlNamespaceMap m_mapNamespaces; // Make sure this is around for destruction.
   _TyXmlParser * m_pXp{nullptr}; // the pointer to the XML parser we are reading tokens from.
   const _TyStateProto * m_pspStartXmlDecl{nullptr};
   const _TyStateProto * m_pspStartAll{nullptr};
   _TyListReadContexts m_lContexts;
   unique_ptr< _TyLexToken > m_pltokLookahead;
   typename _TyListReadContexts::iterator m_itCurContext{m_lContexts.end()};
-  _TyXmlNamespaceMap m_mapNamespaces;
 // State:
   // The current skip token array and the number of elements in it. This is passed to the lexical analyzer to cut token processing off optimally.
   _TySkipArray m_rgSkipTokensCur{0};

@@ -80,7 +80,7 @@ public:
   {
     m_tokToken.swap( _r.m_tokToken );
   }
-  void AssertValid() const
+  void AssertValid( bool _fUseNamespaces = false ) const
   {
 #if ASSERTSENABLED
     switch( m_tokToken.GetTokenId() )
@@ -90,7 +90,7 @@ public:
       break;
       case s_knTokenSTag:
       case s_knTokenEmptyElemTag:
-        _AssertValidTag();
+        _AssertValidTag( _fUseNamespaces );
       break;
       case s_knTokenComment:
         _AssertValidComment();
@@ -346,11 +346,12 @@ public:
     // Now move through finding the any declaration that matches a set of references.
     _TyLexValue * const * pplvalCurDeclaration = &_rctxtTokenCopy.m_rgDeclarations[0];
     _TyLexValue * const * const pplvalEndDeclarations = pplvalCurDeclaration + _rctxtTokenCopy.m_rgDeclarations.size();
-    _TyLexValue * const * pplvalCurReference = &_rctxtTokenCopy.m_rgDeclarations[0];
+    _TyLexValue * const * pplvalCurReference = &_rctxtTokenCopy.m_rgReferences[0];
     _TyLexValue * const * const pplvalEndReferences = pplvalCurReference + _rctxtTokenCopy.m_rgReferences.size();
-    for ( ; ( pplvalCurDeclaration != pplvalEndDeclarations ) && ( pplvalCurReference != pplvalEndReferences ); )
+    // We must traverse all the declarations but we can ignore references once we are finished with the declarations.
+    for ( ; ( pplvalCurDeclaration != pplvalEndDeclarations ); )
     {
-      if ( lambdaCompareNamespacePrefix( *pplvalCurDeclaration, *pplvalCurReference ) )
+      if ( ( pplvalCurReference == pplvalEndReferences ) || lambdaCompareNamespacePrefix( *pplvalCurDeclaration, *pplvalCurReference ) )
       {
         // A declaration that corresponds to no reference. If this isn't a namespace declaration attribute then we need
         //  to add such an attribute.
@@ -360,8 +361,12 @@ public:
           // Then a new namespace (prefix,URI) that hasn't been declared yet. Declare it. This has the effect of leaving a
           //  namespace reference in its place which happens to be exactly what we want. This adds one to rnTagNamespaceDecls internally.
           _DeclareNamespace( _rcxtDoc, std::move( (**pplvalCurDeclaration)[vknNamespaceIdx].GetVal< _TyXmlNamespaceValueWrap >() ) );
-          ++pplvalCurDeclaration;
         }
+        else
+        {
+          ++rnTagNamespaceDecls;
+        }
+        ++pplvalCurDeclaration;
       }
       else
       if ( lambdaCompareNamespacePrefix( *pplvalCurReference, *pplvalCurDeclaration ) )
@@ -394,6 +399,7 @@ public:
             }
           }
           while( ( ++pplvalCurReference != pplvalEndReferences ) && !lambdaCompareNamespacePrefix( *pplvalCurDeclaration, *pplvalCurReference ) );
+          ++pplvalCurDeclaration;
         }
       }
     }
@@ -606,7 +612,7 @@ protected:
         ++_rnNamespaceDecls;
     }
   }
-  void _AssertValidTag() const
+  void _AssertValidTag( bool _fUseNamespaces ) const
   {
     _TyLexValue const & rvRoot = GetValue();
     Assert( vknTagArrayCount == rvRoot.GetSize() );
@@ -628,7 +634,7 @@ protected:
       {
         const typename _TyLexValue::_TySegArrayValues & rsaAttrs = rrgvAttrs.GetValueArray();
         rsaAttrs.ApplyContiguous( 0, rsaAttrs.NElements(),
-          [this,&nNamespaceDecls]( const _TyLexValue * _pvBegin, const _TyLexValue * _pvEnd )
+          [this,&nNamespaceDecls,&_fUseNamespaces]( const _TyLexValue * _pvBegin, const _TyLexValue * _pvEnd )
           {
             for ( const _TyLexValue * pvCur = _pvBegin; _pvEnd != pvCur; ++pvCur )
             {
@@ -641,7 +647,8 @@ protected:
                 bool fIsAttr = _FIsAttribute( *pvCur, &fIsAttrNamespaceDecl );
                 Assert( fIsAttr );
                 Assert( !pxnvw || !pxnvw->FIsNull() );
-                Assert( fIsAttrNamespaceDecl == ( !!pxnvw && pxnvw->FIsNamespaceDeclaration() ) );
+                Assert( !( !!pxnvw && pxnvw->FIsNamespaceDeclaration() ) || fIsAttrNamespaceDecl );
+                Assert( !_fUseNamespaces || !fIsAttrNamespaceDecl || ( !!pxnvw && !pxnvw->FIsNull() ) );
                 const _TyLexValue & rvValue = (*pvCur)[vknAttr_ValueIdx];
                 Assert( ( rvValue.FHasTypedData() && !rvValue.FEmptyTypedData() ) || rvValue.FIsString() );
                 Assert( (*pvCur)[vknAttr_FDoubleQuoteIdx].FIsBool() );
@@ -650,7 +657,7 @@ protected:
           }
         );
       }
-      Assert( ( vknTagName_ArrayCount != rvTag.GetSize() ) || ( nNamespaceDecls == rvTag[vknTagName_NNamespaceDeclsIdx].GetVal<size_t>() ) );
+      Assert( !_fUseNamespaces || ( vknTagName_ArrayCount != rvTag.GetSize() ) || ( nNamespaceDecls == rvTag[vknTagName_NNamespaceDeclsIdx].GetVal<size_t>() ) );
     }
   }
   void _AssertValidComment() const

@@ -65,12 +65,21 @@ public:
   typedef xml_token< _TyTransportCtxt, _TyLexUserObj, _TyTpValueTraitsPack > _TyXmlToken;
   typedef _l_action_object_base< _TyChar, false > _TyAxnObjBase;
 
-  xml_write_context( _TyLexUserObj & _ruoUserObj, vtyTokenIdent _tidAccept )
-    : m_xtkToken( _ruoUserObj, _tidAccept )
+  xml_write_context( _TyXmlWriter * _pxwWriter, _TyLexUserObj & _ruoUserObj, vtyTokenIdent _tidAccept )
+    : m_pxwWriter( _pxwWriter ),
+      m_xtkToken( _ruoUserObj, _tidAccept )
   {
   }
-  xml_write_context( _TyLexUserObj & _ruoUserObj, const _TyAxnObjBase * _paobCurToken )
-    : m_xtkToken( _ruoUserObj, _paobCurToken )
+#if 0
+  xml_write_context( _TyXmlWriter * _pxwWriter, _TyLexUserObj & _ruoUserObj, const _TyAxnObjBase * _paobCurToken )
+    : m_pxwWriter( _pxwWriter ),
+      m_xtkToken( _ruoUserObj, _paobCurToken )
+  {
+  }
+#endif //0
+  xml_write_context( _TyXmlWriter * _pxwWriter, _TyXmlToken && _rrxtkToken )
+    : m_pxwWriter( _pxwWriter ),
+      m_xtkToken( std::move( _rrxtkToken ) )
   {
   }
   void SetDetectReferences( EDetectReferences _edrDetectReferences = edrDetectReferencesCount )
@@ -372,8 +381,8 @@ public:
       //  ' version="1.0" encoding="'.
       _WriteTransportRaw( m_xdcxtDocumentContext.FAttributeValuesDoubleQuote() ? _TyMarkupTraits::s_kszXMLDeclBeginEtcDoubleQuote : _TyMarkupTraits::s_kszXMLDeclBeginEtcSingleQuote, 
           StaticStringLen( _TyMarkupTraits::s_kszXMLDeclBeginEtcSingleQuote ) );
-      const _TyChar * pszEncoding = PszCharacterEncodingName< _TyChar >( _TyXmlTransportOut::GetEncoding() );
-      _WriteTransportRaw( pszEncoding, StrNLen( pszEncoding ) );
+      basic_string_view< _TyChar > svEncoding = SvCharacterEncodingName< _TyChar >( _TyXmlTransportOut::GetEncoding() );
+      _WriteTransportRaw( &svEncoding[0], svEncoding.length() );
       _WriteTransportRaw( m_xdcxtDocumentContext.FAttributeValuesDoubleQuote() ? _TyMarkupTraits::s_kszStandaloneEtcDoubleQuote : _TyMarkupTraits::s_kszStandaloneEtcSingleQuote, 
         StaticStringLen( _TyMarkupTraits::s_kszStandaloneEtcDoubleQuote) );
       if ( _fStandalone )
@@ -383,7 +392,7 @@ public:
       _WriteTransportRaw(m_xdcxtDocumentContext.FAttributeValuesDoubleQuote() ? _TyMarkupTraits::s_kszXMLDeclEndEtcDoubleQuote : _TyMarkupTraits::s_kszXMLDeclEndEtcSingleQuote, 
         StaticStringLen( _TyMarkupTraits::s_kszXMLDeclEndEtcDoubleQuote) );
     }
-    m_lContexts.emplace_back( m_xdcxtDocumentContext.GetUserObj(), s_knTokenXMLDecl  ); // create the XMLDecl pseudo-tag.
+    m_lContexts.emplace_back( this, m_xdcxtDocumentContext.GetUserObj(), s_knTokenXMLDecl  ); // create the XMLDecl pseudo-tag.
   }
   template < template < class ... > class t_tempTyXmlTransportOut >
   void OpenFileVar( const char * _pszFileName, bool _fStandalone = true )
@@ -473,7 +482,7 @@ public:
   {
     _CheckCommitCur();
     // Add a new tag as the top of the context.
-    _TyWriteContext & rwcxNew = m_lContexts.emplace_back( m_xdcxtDocumentContext.GetUserObj(), s_knTokenSTag );
+    _TyWriteContext & rwcxNew = m_lContexts.emplace_back( this, m_xdcxtDocumentContext.GetUserObj(), s_knTokenSTag );
     rwcxNew.GetToken().SetTagName( m_xdcxtDocumentContext, _pszTagName, _stLenTag, _ppuNamespace );
     return _TyXmlWriteTag( rwcxNew );
   }
@@ -484,7 +493,7 @@ public:
   {
     _CheckCommitCur();
     // Add a new tag as the top of the context.
-    _TyWriteContext & rwcxNew = m_lContexts.emplace_back( m_xdcxtDocumentContext.GetUserObj(), s_knTokenSTag );
+    _TyWriteContext & rwcxNew = m_lContexts.emplace_back( this, m_xdcxtDocumentContext.GetUserObj(), s_knTokenSTag );
     rwcxNew.GetToken().SetTagName( m_xdcxtDocumentContext, _rxnvw, _pszTagName, _stLenTag );
     return _TyXmlWriteTag( rwcxNew );
   }
@@ -495,6 +504,7 @@ public:
   _TyXmlWriteTag StartTag( t_TyXmlToken const & _rtok )
   {
     VerifyThrowSz( _rtok.FIsTag(), "Trying to start a tag with a non-tag token." );
+    _rtok.AssertValid();
     // Here's how things will work: We call to copy the lex token that is inside of the xml token.
     // We pass the m_xdcxtDocumentContext with the token to copy.
     // If the namespace *reference* on the tag isn't the current URI for that (prefix,URI) then the namespace on the token copy
@@ -513,8 +523,11 @@ public:
     //  i.e. there is no need to write an attribute declaration that has a namespace reference and not a namespace declaration attached to it.
     // Note that these references shouldn't be part of vknTagName_NNamespaceDeclsIdx's count of namespace declarations - even if the references are part of
     //  a attribute namespace declaration. Only actual declaration objects.
-    tokThis._FixupNamespaceDeclarations( m_xdcxtDocumentContext, ctxtTokenCopy );
-    tokThis.AssertValid();
+    if ( m_fUseNamespaces )
+      tokThis._FixupNamespaceDeclarations( m_xdcxtDocumentContext, ctxtTokenCopy );
+    tokThis.AssertValid( m_fUseNamespaces );
+    _TyWriteContext & rwcxNew = m_lContexts.emplace_back( this, std::move( tokThis ) );
+    return _TyXmlWriteTag( rwcxNew );
   }
   
   // Start a tag by moving its contents into this object.
@@ -531,10 +544,13 @@ public:
       rvNameCopy = _rrtok[vknTagNameIdx][vknNameIdx];
     typename _TyXmlDocumentContext::_TyTokenCopyContext ctxtTokenCopy;
     _TyXmlToken tokThis( m_xdcxtDocumentContext, std::move( _rrtok.GetLexToken() ), &ctxtTokenCopy );
-    tokThis._FixupNamespaceDeclarations( m_xdcxtDocumentContext, ctxtTokenCopy );
-    tokThis.AssertValid();
+    if ( m_fUseNamespaces )
+      tokThis._FixupNamespaceDeclarations( m_xdcxtDocumentContext, ctxtTokenCopy );
+    tokThis.AssertValid( m_fUseNamespaces );
     if ( _fKeepTagName )
       _rrtok[vknTagNameIdx][vknNameIdx] = std::move( rvNameCopy );
+    _TyWriteContext & rwcxNew = m_lContexts.emplace_back( this, std::move( tokThis ) );
+    return _TyXmlWriteTag( rwcxNew );
   }
   // We are writing a token - we are not writing the end tag for a token.
   void _CheckCommitCur()

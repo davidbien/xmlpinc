@@ -23,13 +23,13 @@ public:
   XMLDeclProperties & operator=( XMLDeclProperties && ) = default;
   XMLDeclProperties( bool _fStandalone, EFileCharacterEncoding _efce )
     : m_fStandalone( _fStandalone ),
-      m_strEncoding( PszCharacterEncodingName< _TyChar >( _efce ) )
+      m_strEncoding( SvCharacterEncodingName< _TyChar >( _efce ) )
   {
   }
   void Init( bool _fStandalone, EFileCharacterEncoding _efce )
   {
     m_fStandalone = _fStandalone;
-    m_strEncoding = PszCharacterEncodingName< _TyChar >( _efce );
+    m_strEncoding = SvCharacterEncodingName< _TyChar >( _efce );
   }
   void swap( _TyThis & _r )
   {
@@ -237,22 +237,22 @@ public:
     return *m_upUserObj;
   }
   template < class t_TyStrViewOrString >
-  typename _TyUriAndPrefixMap::value_type const & RStrAddPrefix( t_TyStrViewOrString const & _rs )
+  typename _TyUriAndPrefixMap::value_type const & RStrAddPrefix( t_TyStrViewOrString && _rrs )
   {
-    typename _TyUriAndPrefixMap::const_iterator cit = m_mapPrefixes.find( _rs );
+    typename _TyUriAndPrefixMap::const_iterator cit = m_mapPrefixes.find( _rrs );
     if ( m_mapPrefixes.end() != cit )
       return *cit;
-    pair< typename _TyUriAndPrefixMap::iterator, bool > pib = m_mapPrefixes.insert( _TyStdStr( _rs ) );
+    pair< typename _TyUriAndPrefixMap::iterator, bool > pib = m_mapPrefixes.insert( std::forward< t_TyStrViewOrString >( _rrs ) );
     Assert( pib.second );
     return *pib.first;
   }
   template < class t_TyStrViewOrString >
-  typename _TyUriAndPrefixMap::value_type const & RStrAddUri( t_TyStrViewOrString const & _rs )
+  typename _TyUriAndPrefixMap::value_type const & RStrAddUri( t_TyStrViewOrString && _rrs )
   {
-    typename _TyUriAndPrefixMap::const_iterator cit = m_mapUris.find( _rs );
+    typename _TyUriAndPrefixMap::const_iterator cit = m_mapUris.find( _rrs );
     if ( m_mapUris.end() != cit )
       return *cit;
-    pair< typename _TyUriAndPrefixMap::iterator, bool > pib = m_mapUris.insert( _TyStdStr( _rs ) );
+    pair< typename _TyUriAndPrefixMap::iterator, bool > pib = m_mapUris.insert( std::forward< t_TyStrViewOrString >( _rrs ) );
     Assert( pib.second );
     return *pib.first;
   }
@@ -292,6 +292,12 @@ public:
     return MapNamespaces().GetNamespaceValueWrap( *this, _psvPrefix, _psvUri );
   }
   template < class t_TyStrViewOrString >
+  _TyXmlNamespaceValueWrap GetNamespaceValueWrap( t_TyStrViewOrString && _rrsvPrefix, t_TyStrViewOrString && _rrsvUri )
+    requires TAreSameSizeTypes_v< typename t_TyStrViewOrString::value_type, _TyChar >
+  {
+    return MapNamespaces().GetNamespaceValueWrap( *this, std::forward< t_TyStrViewOrString >( _rrsvPrefix ), std::forward< t_TyStrViewOrString >( _rrsvUri ) );
+  }
+  template < class t_TyStrViewOrString >
   _TyXmlNamespaceValueWrap GetNamespaceValueWrap( const t_TyStrViewOrString & _rsvPrefix )
     requires TAreSameSizeTypes_v< typename t_TyStrViewOrString::value_type, _TyChar >
   {
@@ -327,7 +333,7 @@ public:
     _rxnvwOther.GetPrStrPrefixUri( prstrPrefixUri );
 
     // Record the containers for all declarations and references - this lets us fix things up pretty easily.    
-    _TyXmlNamespaceValueWrap xnvwThis = GetNamespaceValueWrap( &prstrPrefixUri.first, &prstrPrefixUri.second );
+    _TyXmlNamespaceValueWrap xnvwThis = GetNamespaceValueWrap( std::move( prstrPrefixUri.first ), std::move( prstrPrefixUri.second ) );
     _TyXmlNamespaceValueWrap & rxnvwInValue = _rvalNSVW.emplaceVal< _TyXmlNamespaceValueWrap >( std::move( xnvwThis ) );
     if ( rxnvwInValue.FIsNamespaceDeclaration() )
       _ptccCopyCtxt->m_rgDeclarations.push_back( _ptccCopyCtxt->m_plvalContainerCur );
