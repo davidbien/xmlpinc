@@ -23,6 +23,7 @@ public:
   XMLDeclProperties & operator=( XMLDeclProperties && ) = default;
   XMLDeclProperties( bool _fStandalone, EFileCharacterEncoding _efce )
     : m_fStandalone( _fStandalone ),
+      m_fHasEncoding( true ),
       m_strEncoding( SvCharacterEncodingName< _TyChar >( _efce ) )
   {
   }
@@ -30,6 +31,7 @@ public:
   {
     m_fStandalone = _fStandalone;
     m_strEncoding = SvCharacterEncodingName< _TyChar >( _efce );
+    m_fHasEncoding = true;
   }
   void swap( _TyThis & _r )
   {
@@ -40,8 +42,13 @@ public:
   void clear()
   {
     m_strEncoding.clear();
-    m_fStandalone = false;
+    m_fStandalone = true;
     m_nVersionMinorNumber = 0;
+    m_fVersionDoubleQuote = true;
+    m_fEncodingDoubleQuote = true;
+    m_fStandaloneDoubleQuote = true;
+    m_fHasEncoding = false;
+    m_fHasStandalone = true;
   }
   template < class t_TyLexToken >
   void FromXMLDeclToken( t_TyLexToken const & _rltok )
@@ -51,16 +58,34 @@ public:
     if ( !rrgVals.FIsNull() )
     {
       Assert( rrgVals.FIsArray() );
-      m_fStandalone = rrgVals[vknXMLDecl_StandaloneIdx].template GetVal<bool>();
-      rrgVals[vknXMLDecl_EncodingIdx].GetString( _rltok, m_strEncoding );
+      bool fStandaloneYes = rrgVals[vknXMLDecl_StandaloneYesIdx].GetVal<bool>();
+      m_fHasStandalone = fStandaloneYes || rrgVals[vknXMLDecl_StandaloneNoIdx].GetVal<bool>();
+      m_fStandalone = m_fHasStandalone ? fStandaloneYes : true;
+      bool fEncodingDoubleQuote = rrgVals[vknXMLDecl_EncodingDoubleQuoteIdx].GetVal<bool>();
+      m_fHasEncoding = fEncodingDoubleQuote || rrgVals[vknXMLDecl_EncodingSingleQuoteIdx].GetVal<bool>();
+      if ( m_fHasEncoding )
+      {
+        m_fEncodingDoubleQuote = fEncodingDoubleQuote;
+        rrgVals[vknXMLDecl_EncodingIdx].GetString( _rltok, m_strEncoding );
+      }
+      else
+      {
+        m_strEncoding.clear();
+        m_fEncodingDoubleQuote = true;
+      }
       _TyStdStr strMinorVNum;
       rrgVals[vknXMLDecl_VersionMinorNumberIdx].GetString( _rltok, strMinorVNum );
       m_nVersionMinorNumber = uint8_t( strMinorVNum[0] - _TyChar('0') );
     }
   }
   _TyStdStr m_strEncoding;
-  bool m_fStandalone{false};
+  bool m_fStandalone{true};
   uint8_t m_nVersionMinorNumber{0};
+  bool m_fVersionDoubleQuote{true};
+  bool m_fEncodingDoubleQuote{true};
+  bool m_fStandaloneDoubleQuote{true};
+  bool m_fHasEncoding{false};
+  bool m_fHasStandalone{true};
 };
 
 // _xml_output_format:

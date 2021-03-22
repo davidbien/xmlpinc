@@ -328,7 +328,7 @@ public:
   void _FixupNamespaceDeclarations( _TyXmlDocumentContext & _rcxtDoc, typename _TyXmlDocumentContext::_TyTokenCopyContext & _rctxtTokenCopy )
   {
     Assert( FIsTag() );
-    if ( !_rctxtTokenCopy.m_rgDeclarations.size() && !_rctxtTokenCopy.m_rgReferences.size() )
+    if ( !_rctxtTokenCopy.m_rgDeclarations.size() )
       return; // nada para hacer.
     // zero the count of namespace decls - we will accumulate it here correctly.
     size_t & rnTagNamespaceDecls = ( GetValue()[vknTagNameIdx][vknTagName_NNamespaceDeclsIdx].GetVal<size_t>() = 0 );
@@ -650,7 +650,7 @@ protected:
                 Assert( !( !!pxnvw && pxnvw->FIsNamespaceDeclaration() ) || fIsAttrNamespaceDecl );
                 Assert( !_fUseNamespaces || !fIsAttrNamespaceDecl || ( !!pxnvw && !pxnvw->FIsNull() ) );
                 const _TyLexValue & rvValue = (*pvCur)[vknAttr_ValueIdx];
-                Assert( ( rvValue.FHasTypedData() && !rvValue.FEmptyTypedData() ) || rvValue.FIsString() );
+                Assert( rvValue.FHasTypedData() || rvValue.FIsString() ); // might be empty.
                 Assert( (*pvCur)[vknAttr_FDoubleQuoteIdx].FIsBool() );
               }
             }
@@ -675,10 +675,12 @@ protected:
       Assert( vknXMLDecl_ArrayCount == rvRoot.GetSize() );
       if ( vknXMLDecl_ArrayCount == rvRoot.GetSize() )
       {
-        Assert( rvRoot[vknXMLDecl_StandaloneIdx].FIsBool() );
+        Assert( rvRoot[vknXMLDecl_StandaloneYesIdx].FIsBool() );
+        Assert( rvRoot[vknXMLDecl_StandaloneYesNo].FIsBool() );
         Assert( rvRoot[vknXMLDecl_StandaloneDoubleQuoteIdx].FIsBool() );
         Assert( rvRoot[vknXMLDecl_EncodingIdx].FHasTypedData() || rvRoot[vknXMLDecl_EncodingIdx].FIsString() );
         Assert( rvRoot[vknXMLDecl_EncodingDoubleQuoteIdx].FIsBool() );
+        Assert( rvRoot[vknXMLDecl_EncodingSingleQuoteIdx].FIsBool() );
         Assert( rvRoot[vknXMLDecl_VersionMinorNumberIdx].FHasTypedData() || rvRoot[vknXMLDecl_VersionMinorNumberIdx].FIsString() );
         Assert( rvRoot[vknXMLDecl_VersionMinorNumberDoubleQuoteIdx].FIsBool() );
       }

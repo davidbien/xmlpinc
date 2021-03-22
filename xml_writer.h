@@ -557,6 +557,7 @@ public:
   {
     if ( !FInsideDocumentTag() )
       return;
+    _CheckWriteTagEnd( true );
     _TyWriteContext & rwcxCur = m_lContexts.back();
     rwcxCur.CommitTagData();
   }
@@ -720,8 +721,11 @@ protected:
     {
       const _TyXmlNamespaceValueWrap & rxnvw = rvalNS.GetVal< _TyXmlNamespaceValueWrap >();
       _TyStrView svPrefix = rxnvw.RStringPrefix();
-      _WriteTransportRaw( &svPrefix[0], svPrefix.length() );
-      _WriteTransportRaw( _TyMarkupTraits::s_kszTagColon, StaticStringLen( _TyMarkupTraits::s_kszTagColon ) );
+      if ( !svPrefix.empty() )
+      {
+        _WriteTransportRaw( &svPrefix[0], svPrefix.length() );
+        _WriteTransportRaw( _TyMarkupTraits::s_kszTagColon, StaticStringLen( _TyMarkupTraits::s_kszTagColon ) );
+      }
     }
     // Now write the name.
     if ( !rvalName.FHasTypedData() )
@@ -737,6 +741,26 @@ protected:
       _WriteTypedData( _rtok, rvalName );
   }
 
+#if 0
+  // Write the XMLDecl token. 
+  template < class t_TyXmlToken >
+  void _WriteXmlDecl( t_TyXmlToken const & _rtok )
+  {
+    typedef typename t_TyXmlToken::_TyLexValue _TyLexValue;
+    _CheckCommitCur();
+    _WriteTransportRaw( _TyMarkupTraits::s_kszProcessingInstructionBegin, StaticStringLen( _TyMarkupTraits::s_kszProcessingInstructionBegin ) );
+    const _TyLexValue & rval = _rtok.GetValue();
+    VerifyThrow( rval.FIsArray() );
+    // We may have just a PITarget or a PITarget + PITargetMeat.
+    _WritePIPortion< TGetPITargetStart >( _rtok, rval[vknProcessingInstruction_PITargetIdx] );
+    if ( ( rval.GetSize() > 1 ) && !rval[vknProcessingInstruction_MeatIdx].FEmptyTypedData() )
+    {
+      _WriteTransportRaw( _TyMarkupTraits::s_kszSpace, StaticStringLen( _TyMarkupTraits::s_kszSpace ) );
+      _WritePIPortion< TGetPITargetMeatStart >( _rtok, rval[vknProcessingInstruction_MeatIdx] );
+    }
+    _WriteTransportRaw( _TyMarkupTraits::s_kszProcessingInstructionEnd, StaticStringLen( _TyMarkupTraits::s_kszProcessingInstructionEnd ) );
+  }
+#endif //0
   template < class t_TyXmlToken >
   void _WriteComment( t_TyXmlToken const & _rtok )
   {
@@ -1038,56 +1062,59 @@ protected:
       typedef basic_string_view< typename t_TyXmlToken::_TyChar > _TyStrView;
       typedef _l_data<> _TyData;
       _TyData const & krdtCharData = _rval.GetTypedData();
-      krdtCharData.Apply(
-        [this,&_rtok]( const _l_data_typed_range * _pdtrBegin, const _l_data_typed_range * _pdtrEnd )
-        {
-          for ( const _l_data_typed_range * pdtrCur = _pdtrBegin; _pdtrEnd != pdtrCur; ++pdtrCur )
+      if ( !krdtCharData.FIsNull() )
+      {
+        krdtCharData.Apply(
+          [this,&_rtok]( const _l_data_typed_range * _pdtrBegin, const _l_data_typed_range * _pdtrEnd )
           {
-            // We could use type() or id() here - but the type is more flexible.
-            switch( pdtrCur->type() )
+            for ( const _l_data_typed_range * pdtrCur = _pdtrBegin; _pdtrEnd != pdtrCur; ++pdtrCur )
             {
-              case s_kdtPlainText:
+              // We could use type() or id() here - but the type is more flexible.
+              switch( pdtrCur->type() )
               {
-                _TyStrView svPlain;
-                _rtok.GetLexToken().KGetStringView( svPlain, pdtrCur->GetRangeBase() );
-                _WriteTransportRaw( &svPlain[0], svPlain.length() );
-              }
-              break;
-              case s_kdtCharDecRef:
-              {
-                _WriteTransportRaw( _TyMarkupTraits::s_kszCharDecRefBegin, StaticStringLen( _TyMarkupTraits::s_kszCharDecRefBegin ) );
-                _TyStrView svCharDecRef;
-                _rtok.GetLexToken().KGetStringView( svCharDecRef, pdtrCur->GetRangeBase() );
-                _WriteTransportRaw( &svCharDecRef[0], svCharDecRef.length() );
-                _WriteTransportRaw( _TyMarkupTraits::s_kszReferenceEnd, StaticStringLen( _TyMarkupTraits::s_kszReferenceEnd ) );
-              }
-              break;
-              case s_kdtCharHexRef:
-              {
-                _WriteTransportRaw( _TyMarkupTraits::s_kszCharHexRefBegin, StaticStringLen( _TyMarkupTraits::s_kszCharHexRefBegin ) );
-                _TyStrView svCharHexRef;
-                _rtok.GetLexToken().KGetStringView( svCharHexRef, pdtrCur->GetRangeBase() );
-                _WriteTransportRaw( &svCharHexRef[0], svCharHexRef.length() );
-                _WriteTransportRaw( _TyMarkupTraits::s_kszReferenceEnd, StaticStringLen( _TyMarkupTraits::s_kszReferenceEnd ) );
-              }
-              break;
-              case s_kdtEntityRef:
-              {
-                _WriteTransportRaw( _TyMarkupTraits::s_kszEntityRefRefBegin, StaticStringLen( _TyMarkupTraits::s_kszEntityRefRefBegin ) );
-                _TyStrView svEntityRef;
-                _rtok.GetLexToken().KGetStringView( svEntityRef, pdtrCur->GetRangeBase() );
-                _WriteTransportRaw( &svEntityRef[0], svEntityRef.length() );
-                _WriteTransportRaw( _TyMarkupTraits::s_kszReferenceEnd, StaticStringLen( _TyMarkupTraits::s_kszReferenceEnd ) );
-              }
-              break;
-              default:
-              {
-                VerifyThrowSz( false, "Invalid data type()[%u]", pdtrCur->type() );
+                case s_kdtPlainText:
+                {
+                  _TyStrView svPlain;
+                  _rtok.GetLexToken().KGetStringView( svPlain, pdtrCur->GetRangeBase() );
+                  _WriteTransportRaw( &svPlain[0], svPlain.length() );
+                }
+                break;
+                case s_kdtCharDecRef:
+                {
+                  _WriteTransportRaw( _TyMarkupTraits::s_kszCharDecRefBegin, StaticStringLen( _TyMarkupTraits::s_kszCharDecRefBegin ) );
+                  _TyStrView svCharDecRef;
+                  _rtok.GetLexToken().KGetStringView( svCharDecRef, pdtrCur->GetRangeBase() );
+                  _WriteTransportRaw( &svCharDecRef[0], svCharDecRef.length() );
+                  _WriteTransportRaw( _TyMarkupTraits::s_kszReferenceEnd, StaticStringLen( _TyMarkupTraits::s_kszReferenceEnd ) );
+                }
+                break;
+                case s_kdtCharHexRef:
+                {
+                  _WriteTransportRaw( _TyMarkupTraits::s_kszCharHexRefBegin, StaticStringLen( _TyMarkupTraits::s_kszCharHexRefBegin ) );
+                  _TyStrView svCharHexRef;
+                  _rtok.GetLexToken().KGetStringView( svCharHexRef, pdtrCur->GetRangeBase() );
+                  _WriteTransportRaw( &svCharHexRef[0], svCharHexRef.length() );
+                  _WriteTransportRaw( _TyMarkupTraits::s_kszReferenceEnd, StaticStringLen( _TyMarkupTraits::s_kszReferenceEnd ) );
+                }
+                break;
+                case s_kdtEntityRef:
+                {
+                  _WriteTransportRaw( _TyMarkupTraits::s_kszEntityRefRefBegin, StaticStringLen( _TyMarkupTraits::s_kszEntityRefRefBegin ) );
+                  _TyStrView svEntityRef;
+                  _rtok.GetLexToken().KGetStringView( svEntityRef, pdtrCur->GetRangeBase() );
+                  _WriteTransportRaw( &svEntityRef[0], svEntityRef.length() );
+                  _WriteTransportRaw( _TyMarkupTraits::s_kszReferenceEnd, StaticStringLen( _TyMarkupTraits::s_kszReferenceEnd ) );
+                }
+                break;
+                default:
+                {
+                  VerifyThrowSz( false, "Invalid data type()[%u]", pdtrCur->type() );
+                }
               }
             }
           }
-        }
-      );
+        );
+      }
     }
   }
   typedef optional< _TyXmlTransportOut > _TyOptTransportOut;

@@ -185,13 +185,15 @@ static const size_t vknProcessingInstruction_MeatIdx = 1;
 static const size_t vknProcessingInstruction_ArrayCount = 2;
 
 // Positions in the _l_value<> aggregate for XMLDecl.
-static const size_t vknXMLDecl_StandaloneIdx = 0;
-static const size_t vknXMLDecl_StandaloneDoubleQuoteIdx = 1;
-static const size_t vknXMLDecl_EncodingIdx = 2;
-static const size_t vknXMLDecl_EncodingDoubleQuoteIdx = 3;
-static const size_t vknXMLDecl_VersionMinorNumberIdx = 4;
-static const size_t vknXMLDecl_VersionMinorNumberDoubleQuoteIdx = 5;
-static const size_t vknXMLDecl_ArrayCount = 6;
+static const size_t vknXMLDecl_StandaloneYesIdx = 0;
+static const size_t vknXMLDecl_StandaloneNoIdx = 1;
+static const size_t vknXMLDecl_StandaloneDoubleQuoteIdx = 2;
+static const size_t vknXMLDecl_EncodingIdx = 3;
+static const size_t vknXMLDecl_EncodingDoubleQuoteIdx = 4;
+static const size_t vknXMLDecl_EncodingSingleQuoteIdx = 5;
+static const size_t vknXMLDecl_VersionMinorNumberIdx = 6;
+static const size_t vknXMLDecl_VersionMinorNumberDoubleQuoteIdx = 7;
+static const size_t vknXMLDecl_ArrayCount = 8;
 
 // Declare all the various types of the triggers and tokens for the XML lexical analyzer.
 static const vtyActionIdent s_knTriggerPITargetStart = 1;
@@ -305,6 +307,9 @@ using TyGetTriggerCommentEnd = _l_trigger_string< t_TyLexTraits, s_knTriggerComm
 static const vtyActionIdent s_knTriggerStandaloneYes = 27;
 template < class t_TyLexTraits, bool t_fInLexGen = true >
 using TyGetTriggerStandaloneYes = _l_trigger_bool< t_TyLexTraits, s_knTriggerStandaloneYes, t_fInLexGen >;
+static const vtyActionIdent s_knTriggerStandaloneNo = 44;
+template < class t_TyLexTraits, bool t_fInLexGen = true >
+using TyGetTriggerStandaloneNo = _l_trigger_bool< t_TyLexTraits, s_knTriggerStandaloneNo, t_fInLexGen >;
 static const vtyActionIdent s_knTriggerStandaloneDoubleQuote = 28;
 template < class t_TyLexTraits, bool t_fInLexGen = true >
 using TyGetTriggerStandaloneDoubleQuote = _l_trigger_bool< t_TyLexTraits, s_knTriggerStandaloneDoubleQuote, t_fInLexGen >;
@@ -318,6 +323,9 @@ using TyGetTriggerEncodingNameEnd = _l_trigger_string< t_TyLexTraits, s_knTrigge
 static const vtyActionIdent s_knTriggerEncDeclDoubleQuote = 31;
 template < class t_TyLexTraits, bool t_fInLexGen = true >
 using TyGetTriggerEncDeclDoubleQuote = _l_trigger_bool< t_TyLexTraits, s_knTriggerEncDeclDoubleQuote, t_fInLexGen >;
+static const vtyActionIdent s_knTriggerEncDeclSingleQuote = 45;
+template < class t_TyLexTraits, bool t_fInLexGen = true >
+using TyGetTriggerEncDeclSingleQuote = _l_trigger_bool< t_TyLexTraits, s_knTriggerEncDeclSingleQuote, t_fInLexGen >;
 
 static const vtyActionIdent s_knTriggerVersionNumBegin = 32;
 static const vtyActionIdent s_knTriggerVersionNumEnd = 33;
@@ -383,8 +391,10 @@ using TyGetTokenComment = _l_action_token< _l_trigger_noop< t_TyLexTraits, s_knT
 
 static const vtyActionIdent s_knTokenXMLDecl = 1004;
 template < class t_TyLexTraits, bool t_fInLexGen = true >
-using TyGetTokenXMLDecl = _l_action_token< _l_action_save_data_single< s_knTokenXMLDecl, TyGetTriggerStandaloneYes<t_TyLexTraits,t_fInLexGen>, TyGetTriggerStandaloneDoubleQuote<t_TyLexTraits,t_fInLexGen>, 
-  TyGetTriggerEncodingNameEnd<t_TyLexTraits,t_fInLexGen>, TyGetTriggerEncDeclDoubleQuote<t_TyLexTraits,t_fInLexGen>, TyGetTriggerVersionNumEnd<t_TyLexTraits,t_fInLexGen>, TyGetTriggerVersionNumDoubleQuote<t_TyLexTraits,t_fInLexGen> > >;
+using TyGetTokenXMLDecl = _l_action_token< _l_action_save_data_single< s_knTokenXMLDecl, 
+  TyGetTriggerStandaloneYes<t_TyLexTraits,t_fInLexGen>, TyGetTriggerStandaloneNo<t_TyLexTraits,t_fInLexGen>, TyGetTriggerStandaloneDoubleQuote<t_TyLexTraits,t_fInLexGen>, 
+  TyGetTriggerEncodingNameEnd<t_TyLexTraits,t_fInLexGen>, TyGetTriggerEncDeclDoubleQuote<t_TyLexTraits,t_fInLexGen>, TyGetTriggerEncDeclSingleQuote<t_TyLexTraits,t_fInLexGen>, 
+  TyGetTriggerVersionNumEnd<t_TyLexTraits,t_fInLexGen>, TyGetTriggerVersionNumDoubleQuote<t_TyLexTraits,t_fInLexGen> > >;
 
 static const vtyActionIdent s_knTokenCDataSection = 1005;
 template < class t_TyLexTraits, bool t_fInLexGen = true >
