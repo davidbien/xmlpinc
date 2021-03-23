@@ -27,9 +27,30 @@ public:
       m_strEncoding( SvCharacterEncodingName< _TyChar >( _efce ) )
   {
   }
+  // Copy properties from a different encoding's version.
+  template < class t_TyChar >
+  XMLDeclProperties( XMLDeclProperties< t_TyChar > const & _rOther, EFileCharacterEncoding _efce = efceFileCharacterEncodingCount )
+    : m_fStandalone( _rOther.m_fStandalone ),
+      m_nVersionMinorNumber( _rOther.m_nVersionMinorNumber ),
+      m_fVersionDoubleQuote( _rOther.m_fVersionDoubleQuote ),
+      m_fEncodingDoubleQuote( _rOther.m_fEncodingDoubleQuote ),
+      m_fStandaloneDoubleQuote( _rOther.m_fStandaloneDoubleQuote ),
+      m_fHasEncoding( _rOther.m_fHasEncoding ),
+      m_fHasStandalone( _rOther.m_fHasStandalone )
+  {
+    if ( _efce != efceFileCharacterEncodingCount )
+      SetEncoding( _efce );
+    else
+    if ( m_fHasEncoding )
+      ConvertString( m_strEncoding, _rOther.m_strEncoding );
+  }
   void Init( bool _fStandalone, EFileCharacterEncoding _efce )
   {
     m_fStandalone = _fStandalone;
+    SetEncoding( _efce );
+  }
+  void SetEncoding( EFileCharacterEncoding _efce )
+  {
     m_strEncoding = SvCharacterEncodingName< _TyChar >( _efce );
     m_fHasEncoding = true;
   }
@@ -48,7 +69,7 @@ public:
     m_fEncodingDoubleQuote = true;
     m_fStandaloneDoubleQuote = true;
     m_fHasEncoding = false;
-    m_fHasStandalone = true;
+    m_fHasStandalone = false;
   }
   template < class t_TyLexToken >
   void FromXMLDeclToken( t_TyLexToken const & _rltok )
@@ -85,7 +106,7 @@ public:
   bool m_fEncodingDoubleQuote{true};
   bool m_fStandaloneDoubleQuote{true};
   bool m_fHasEncoding{false};
-  bool m_fHasStandalone{true};
+  bool m_fHasStandalone{false};
 };
 
 // _xml_output_format:
@@ -102,11 +123,6 @@ public:
   int8_t m_byNSpacesPerIndent{2};
 // This is the maximum indentation level for which spaces/tabs are added. After this the maximum is used.
   size_t m_nMaximumIndentLevelForWhitespace{32};
-// This isn't really an "output" format but it determines what the tags look like while we have them in there.
-// The xml_read_cursor has this same option and thus it is easy to keep things in sync when we are just copying
-//  an entire XML node, etc.
-// Note that it is faster to write the tag to the file since we have to write any prefix.
-  bool m_fIncludePrefixesInAttrNames{true};
 
   ~_xml_output_format() = default;
   _xml_output_format() = default;
@@ -120,7 +136,6 @@ public:
     std::swap( m_fAttributeValuesDoubleQuote, _r.m_fAttributeValuesDoubleQuote );
     std::swap( m_byNSpacesPerIndent, _r.m_byNSpacesPerIndent );
     std::swap( m_nMaximumIndentLevelForWhitespace, _r.m_nMaximumIndentLevelForWhitespace );
-    std::swap( m_fIncludePrefixesInAttrNames, _r.m_fIncludePrefixesInAttrNames );
   }
   bool FUseTabsForIndent() const
   {
@@ -129,10 +144,6 @@ public:
   size_t NSpacesPerIndent() const
   {
     return -1 == m_byNSpacesPerIndent ? 0 : m_byNSpacesPerIndent;
-  }
-  bool FIncludePrefixesInAttrNames() const
-  {
-    return m_fIncludePrefixesInAttrNames;
   }
   bool FAttributeValuesDoubleQuote() const
   {
@@ -207,11 +218,19 @@ public:
   typedef typename _TyTokenCopyContext::_TyLexValue _TyLexValue;
   typedef typename _TyLexUserObj::_TyEntityMap _TyEntityMap;
 
-  void Init( bool _fStandalone, EFileCharacterEncoding _efce, bool _fUseNamespaces, const _TyPrFormatContext * _pprFormatContext = nullptr )
+  void Init(  EFileCharacterEncoding _efce, bool _fUseNamespaces, 
+              const _TyXMLDeclProperties * _pXmlDeclProperties = nullptr, const _TyPrFormatContext * _pprFormatContext = nullptr )
   {
     // Create the user object - it will create all the default entities in its entity map.
     m_upUserObj = make_unique< _TyLexUserObj >();
-    m_XMLDeclProperties.Init( _fStandalone, _efce );
+    if ( _pXmlDeclProperties )
+    {
+      m_XMLDeclProperties = *_pXmlDeclProperties;
+      if ( efceFileCharacterEncodingCount != _efce )
+        m_XMLDeclProperties.SetEncoding( _efce );
+    }
+    else
+      m_XMLDeclProperties.Init( true, _efce );
     m_mapUris.clear();
     m_mapPrefixes.clear();
     if ( _fUseNamespaces )
@@ -240,6 +259,7 @@ public:
     m_optMapNamespaces.swap( _r.m_optMapNamespaces );
     m_optprFormatContext.swap( _r.m_optprFormatContext );
     m_xnvwDefaultAttributeNamespace.swap( _r.m_xnvwDefaultAttributeNamespace );
+    std::swap( m_fIncludePrefixesInAttrNames, _r.m_fIncludePrefixesInAttrNames );
   }
   bool FAttributeValuesDoubleQuote() const
   {
@@ -248,8 +268,11 @@ public:
   }
   bool FIncludePrefixesInAttrNames() const
   {
-    Assert( !!m_optprFormatContext );
-    return !m_optprFormatContext ? false : m_optprFormatContext->first.FIncludePrefixesInAttrNames();
+    return m_fIncludePrefixesInAttrNames;
+  }
+  void SetIncludePrefixesInAttrNames( bool _fIncludePrefixesInAttrNames )
+  {
+    m_fIncludePrefixesInAttrNames = _fIncludePrefixesInAttrNames;
   }
   _TyLexUserObj & GetUserObj()
   {
@@ -260,6 +283,14 @@ public:
   {
     Assert( !!m_upUserObj );
     return *m_upUserObj;
+  }
+  _TyXMLDeclProperties & GetXMLDeclProperties()
+  {
+    return m_XMLDeclProperties;
+  }
+  const _TyXMLDeclProperties & GetXMLDeclProperties() const
+  {
+    return m_XMLDeclProperties;
   }
   template < class t_TyStrViewOrString >
   typename _TyUriAndPrefixMap::value_type const & RStrAddPrefix( t_TyStrViewOrString && _rrs )
@@ -311,22 +342,22 @@ public:
     return *m_optMapNamespaces;
   }
   template < class t_TyStrViewOrString >
-  _TyXmlNamespaceValueWrap GetNamespaceValueWrap( const t_TyStrViewOrString * _psvPrefix, const t_TyStrViewOrString * _psvUri )
+  _TyXmlNamespaceValueWrap GetNamespaceValueWrap( ENamespaceReferenceType _enrtReferenceType, const t_TyStrViewOrString * _psvPrefix, const t_TyStrViewOrString * _psvUri )
     requires TAreSameSizeTypes_v< typename t_TyStrViewOrString::value_type, _TyChar >
   {
-    return MapNamespaces().GetNamespaceValueWrap( *this, _psvPrefix, _psvUri );
+    return MapNamespaces().GetNamespaceValueWrap( *this, _enrtReferenceType, _psvPrefix, _psvUri );
   }
   template < class t_TyStrViewOrString >
-  _TyXmlNamespaceValueWrap GetNamespaceValueWrap( t_TyStrViewOrString && _rrsvPrefix, t_TyStrViewOrString && _rrsvUri )
+  _TyXmlNamespaceValueWrap GetNamespaceValueWrap( ENamespaceReferenceType _enrtReferenceType, t_TyStrViewOrString && _rrsvPrefix, t_TyStrViewOrString && _rrsvUri )
     requires TAreSameSizeTypes_v< typename t_TyStrViewOrString::value_type, _TyChar >
   {
-    return MapNamespaces().GetNamespaceValueWrap( *this, std::forward< t_TyStrViewOrString >( _rrsvPrefix ), std::forward< t_TyStrViewOrString >( _rrsvUri ) );
+    return MapNamespaces().GetNamespaceValueWrap( *this, _enrtReferenceType, std::forward< t_TyStrViewOrString >( _rrsvPrefix ), std::forward< t_TyStrViewOrString >( _rrsvUri ) );
   }
   template < class t_TyStrViewOrString >
-  _TyXmlNamespaceValueWrap GetNamespaceValueWrap( const t_TyStrViewOrString & _rsvPrefix )
+  _TyXmlNamespaceValueWrap GetNamespaceValueWrap( ENamespaceReferenceType _enrtReferenceType, const t_TyStrViewOrString & _rsvPrefix )
     requires TAreSameSizeTypes_v< typename t_TyStrViewOrString::value_type, _TyChar >
   {
-    return MapNamespaces().GetNamespaceValueWrap( _rsvPrefix );
+    return MapNamespaces().GetNamespaceValueWrap( _enrtReferenceType, _rsvPrefix );
   }
 // Default attribute namespace support.
   bool FHasDefaultAttributeNamespace() const
@@ -340,7 +371,7 @@ public:
   void SetDefaultAttributeNamespace( _TyXmlNamespaceValueWrap const & _rxnvw )
   {
     VerifyThrowSz( !m_xnvwDefaultAttributeNamespace.FIsDefaultNamespace(), "Attributes cannot use the default namespace." );
-    m_xnvwDefaultAttributeNamespace = _rxnvw.ShedReference();
+    m_xnvwDefaultAttributeNamespace = _rxnvw.ShedReference( enrtStandaloneReference );
   }
   _TyXmlNamespaceValueWrap const & GetDefaultAttributeNamespace() const
   {
@@ -358,7 +389,7 @@ public:
     _rxnvwOther.GetPrStrPrefixUri( prstrPrefixUri );
 
     // Record the containers for all declarations and references - this lets us fix things up pretty easily.    
-    _TyXmlNamespaceValueWrap xnvwThis = GetNamespaceValueWrap( std::move( prstrPrefixUri.first ), std::move( prstrPrefixUri.second ) );
+    _TyXmlNamespaceValueWrap xnvwThis = GetNamespaceValueWrap( _rxnvwOther.GetReferenceType(), std::move( prstrPrefixUri.first ), std::move( prstrPrefixUri.second ) );
     _TyXmlNamespaceValueWrap & rxnvwInValue = _rvalNSVW.emplaceVal< _TyXmlNamespaceValueWrap >( std::move( xnvwThis ) );
     if ( rxnvwInValue.FIsNamespaceDeclaration() )
       _ptccCopyCtxt->m_rgDeclarations.push_back( _ptccCopyCtxt->m_plvalContainerCur );
@@ -381,6 +412,9 @@ public:
   _TyOptPrFormatContext m_optprFormatContext;
   // This can be set and it will be used as the default attribute namespace for all declared attributes.
   _TyXmlNamespaceValueWrap m_xnvwDefaultAttributeNamespace;
+// The xml_read_cursor has this same option and thus it is easy to keep things in sync when we are just copying
+//  an entire XML node, etc.
+  bool m_fIncludePrefixesInAttrNames{true};
 };
 
 // _xml_document_context_transport: This is a document context that includes the tranport type, etc. 
@@ -408,6 +442,9 @@ public:
   using _TyBase::m_mapUris;
   using _TyBase::m_mapPrefixes;
   using _TyBase::m_XMLDeclProperties;
+  using _TyBase::GetXMLDeclProperties;
+  using _TyBase::m_fIncludePrefixesInAttrNames;
+  using _TyBase::FIncludePrefixesInAttrNames;
   // For some transports where the backing is mapped memory it is convenient to store the transport here because it
   //  allows the parser object to go away entirely.
   typedef optional< _TyTransport > _TyOptTransport;

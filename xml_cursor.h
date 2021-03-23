@@ -130,9 +130,9 @@ public:
   {
     return m_saTokens.NApplyContiguous( _nTokenBegin+1, _nTokenEnd+1, std::forward< t_TyFunctor >( _rrftor ) );
   }
-  void AddToken( _TyLexToken && _rrtok )
+  _TyXmlToken & AddToken( _TyLexToken && _rrtok )
   {
-    m_saTokens.emplaceAtEnd( std::move( _rrtok ) );
+    return m_saTokens.emplaceAtEnd( std::move( _rrtok ) );
   }
   // Coalesce all content CharData and CDataSection content tokens into a single string of the given character type.
   // The non-const version of this will store rendered strings in their elements.
@@ -437,12 +437,10 @@ public:
     return *m_itCurContext;
   }
 
-  _TyXmlToken & GetXMLDeclToken( _TyXMLDeclProperties * _pXMLDeclProperties = 0 )
+  const _TyXMLDeclProperties & GetXMLDeclProperties() const
   {
     Assert( m_pXp );
-    if ( _pXMLDeclProperties )
-      *_pXMLDeclProperties = m_XMLDeclProperties;
-    return m_lContexts.front().GetTag();
+    return m_XMLDeclProperties;
   }
   _TyXmlToken & XMLDeclAcquireDocumentContext( _TyXmlDocumentContext & _rxdcDocumentContext )
   {
@@ -458,6 +456,7 @@ public:
     // Some transports don't require moving. Also the var_transport will report if it's current transport requires moving. We won't touch the transport but we may need it to remain open.
     if ( GetXmlParser().GetTransport().FDependentTransportContexts() )
       _rxdcDocumentContext.m_opttpImpl.emplace( std::move( GetXmlParser().GetTransport() ) );
+    _rxdcDocumentContext.m_fIncludePrefixesInAttrNames = m_fIncludePrefixesInAttrNames;
     return m_lContexts.front().GetTag();
   }
 
@@ -738,12 +737,14 @@ protected:
   void _PushNewContext( _TyLexToken & _rltok )
   {
     m_lContexts.emplace_back( std::move( _rltok ) );
+    m_lContexts.back().GetTag().AssertValid( m_fUseXMLNamespaces );
     if ( 1 == m_lContexts.size() )
       m_itCurContext = m_lContexts.begin();
   }
   void _AppendContextContent( _TyLexToken & _rltok )
   {
-    m_lContexts.back().AddToken( std::move( _rltok ) );
+    _TyXmlToken & _rxtok = m_lContexts.back().AddToken( std::move( _rltok ) );
+    _rxtok.AssertValid( m_fUseXMLNamespaces );
   }
   void _PopContext( _TyOptXmlToken * _popttokRtnSpentTag )
   {
@@ -930,10 +931,6 @@ protected:
   // Process any namespace declarations in this token and then process any namespace references.
   void _ProcessNamespaces( _TyLexToken & _rltok )
   {
-    // There is this annoying bit of verbiage:
-    // "The prefix xml is by definition bound to the namespace name http://www.w3.org/XML/1998/namespace. It MAY, but need not, be declared, 
-    //    and MUST NOT be bound to any other namespace name. Other prefixes MUST NOT be bound to this namespace name, and it MUST NOT be declared as the default namespace."
-    // I don't think I am going to worry about this actually.
     // First thing to do is to move through all attributes and obtain all namespace declarations and at the same time ensure they are valid.
     typedef AllocaList< const typename _TyUriAndPrefixMap::value_type *, false > _TyListPrefixes;
     _TyListPrefixes lPrefixesUsed; // Can't declare the same prefix in the same tag.
@@ -947,7 +944,6 @@ protected:
       rrgAttr[vknNameIdx].KGetStringView( _rltok, svName );
       if ( !svName.compare( str_array_cast< _TyChar >("xmlns") ) )
       {
-        ++nNamespaceDecls;
         // We have a namespace declaration!
         _TyStrView svPrefix;
         rrgAttr[vknNamespaceIdx].KGetStringView( _rltok, svPrefix );
@@ -959,7 +955,9 @@ protected:
         rrgAttr[vknAttr_ValueIdx].KGetStringView( _rltok, svUri );
         _ProcessTagName( rrgAttr ); // For xmlns attr names we process the same as we process the tag name. We want to leave both "xmlns" and any colon and prefix in the attr name.
         // Add the (prefix,uri) pair and put a _TyXmlNamespaceValueWrap in the _l_value to track its lifetime:
-        rrgAttr[vknNamespaceIdx].emplaceVal( m_mapNamespaces.GetNamespaceValueWrap( *m_pXp, svPrefix, svUri ) );
+        _TyXmlNamespaceValueWrap & rnsvwNew = rrgAttr[vknNamespaceIdx].emplaceVal( m_mapNamespaces.GetNamespaceValueWrap( *m_pXp, enrtAttrNamespaceDeclReference, svPrefix, svUri ) );
+        if ( rnsvwNew.FIsNamespaceDeclaration() )
+          ++nNamespaceDecls; // rnsvwNew may be a reference and not a declaration since it may already be an active namespace.
       }
     }
     // Now parse the namespace on the tag:
@@ -974,7 +972,7 @@ protected:
         rrgTagName[vknNameIdx].KGetStringView( _rltok, svPrefix );
         // Update the tag name so that it includes the prefix as is necessary for XML end tag matching.
         rdtPrefix.DataRangeGetSingle().m_posEnd = krdtName.DataRangeGetSingle().m_posEnd;
-        rrgTagName[vknNamespaceIdx].emplaceVal( m_mapNamespaces.GetNamespaceValueWrap( &svPrefix ) );
+        rrgTagName[vknNamespaceIdx].emplaceVal( m_mapNamespaces.GetNamespaceValueWrap( enrtTagNameReference, &svPrefix ) );
       }
       else
       {
@@ -1012,7 +1010,7 @@ protected:
         rdtPrefix.DataRangeGetSingle().m_posEnd = krdtName.DataRangeGetSingle().m_posEnd;
       else
         rdtPrefix.DataRangeGetSingle() = krdtName.DataRangeGetSingle(); // The user just wants the name without the prefix.
-      rrgAttr[vknNamespaceIdx].emplaceVal( m_mapNamespaces.GetNamespaceValueWrap( &svPrefix ) );
+      rrgAttr[vknNamespaceIdx].emplaceVal( m_mapNamespaces.GetNamespaceValueWrap( enrtAttrNameReference, &svPrefix ) );
     }
     // Now if the user wants to check for duplicate attributes - before we update the attribute names to include the prefixes.
     if ( m_fCheckDuplicateAttrs )

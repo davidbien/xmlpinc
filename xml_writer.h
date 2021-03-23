@@ -247,7 +247,7 @@ public:
   // Use this to set the default namespace for any added attributes.
   void SetDefaultAttributeNamespace( _TyXmlNamespaceValueWrap const & _rxnvw )
   {
-    m_xnvwAttributes = _rxnvw.ShedReference();
+    m_xnvwAttributes = _rxnvw.ShedReference( enrtStandaloneReference );
   }
   void ClearDefaultAttributeNamespace()
   {
@@ -338,6 +338,7 @@ public:
   // We need to have our own local namespace map which means we need the full on document context:
   typedef _xml_document_context< _TyLexUserObj > _TyXmlDocumentContext;
   typedef typename _TyXmlDocumentContext::_TyPrFormatContext _TyPrFormatContext;
+  typedef typename _TyXmlDocumentContext::_TyXMLDeclProperties _TyXMLDeclProperties;
   typedef typename _xml_namespace_map_traits< _TyChar >::_TyNamespaceMap _TyNamespaceMap;
   typedef xml_write_context< _TyXmlTransportOut > _TyWriteContext;
   friend _TyWriteContext;
@@ -355,43 +356,30 @@ public:
   // This will also write the XMLDecl if we are to do so, and regardless it will create a
   //  write context stack containing a single element which is the XMLDecl element regardless
   //  if we are to write the element.
-  void OpenFile( const char * _pszFileName, bool _fStandalone = true, const _xml_output_format * _pxofFormat = nullptr )
+  // Unless _fKeepEncoding is false we will always write the encoding with the XMLDecl from the encoding of the output transport.
+  void OpenFile( const char * _pszFileName, _TyXMLDeclProperties const & _rXmlDeclProperties = _TyXMLDeclProperties(), const _xml_output_format * _pxofFormat = nullptr, bool _fKeepEncoding = false )
   {
     _TyPrFormatContext prFormatContext;
     if ( _pxofFormat )
       prFormatContext.first = *_pxofFormat;
-    m_xdcxtDocumentContext.Init( _fStandalone, _TyXmlTransportOut::GetEncoding(), m_fUseNamespaces, &prFormatContext );
+    // Always obtain the encoding from the passed XMLDeclProperties.
+    m_xdcxtDocumentContext.Init( _fKeepEncoding ? efceFileCharacterEncodingCount : _TyXmlTransportOut::GetEncoding(), m_fUseNamespaces, &_rXmlDeclProperties, &prFormatContext );
     m_strFileName = _pszFileName;
     FileObj foFile( CreateWriteOnlyFile( _pszFileName ) );
     VerifyThrowSz( foFile.FIsOpen(), "Unable to open file[%s]", _pszFileName );
     // emplace the transport - it will write the BOM or not:
     emplaceTransport( foFile, m_fWriteBOM );
-    _Init( _fStandalone ); // This might write the XMLDecl tag to the file, but definitely will init the context stack.
+    _Init(); // This might write the XMLDecl tag to the file, but definitely will init the context stack.
   }
   // Initialize the xml_writer. Write the XMLDecl root "tag" if that is desired. Regardless create a XMLDecl pseudo
   //  tag as the root of the context list.
-  void _Init( bool _fStandalone )
+  void _Init()
   {
     m_lContexts.clear();
     m_fWroteFirstTag = false;
     m_fHaveUnendedTag = false;
     if ( m_fWriteXMLDecl )
-    {
-      // Just write the XML declaration brute force - no reason to get fancy here. Note that this also includes
-      //  ' version="1.0" encoding="'.
-      _WriteTransportRaw( m_xdcxtDocumentContext.FAttributeValuesDoubleQuote() ? _TyMarkupTraits::s_kszXMLDeclBeginEtcDoubleQuote : _TyMarkupTraits::s_kszXMLDeclBeginEtcSingleQuote, 
-          StaticStringLen( _TyMarkupTraits::s_kszXMLDeclBeginEtcSingleQuote ) );
-      basic_string_view< _TyChar > svEncoding = SvCharacterEncodingName< _TyChar >( _TyXmlTransportOut::GetEncoding() );
-      _WriteTransportRaw( &svEncoding[0], svEncoding.length() );
-      _WriteTransportRaw( m_xdcxtDocumentContext.FAttributeValuesDoubleQuote() ? _TyMarkupTraits::s_kszStandaloneEtcDoubleQuote : _TyMarkupTraits::s_kszStandaloneEtcSingleQuote, 
-        StaticStringLen( _TyMarkupTraits::s_kszStandaloneEtcDoubleQuote) );
-      if ( _fStandalone )
-        _WriteTransportRaw( _TyMarkupTraits::s_kszXMLDeclYes, StaticStringLen( _TyMarkupTraits::s_kszXMLDeclYes ) );
-      else
-        _WriteTransportRaw( _TyMarkupTraits::s_kszXMLDeclNo, StaticStringLen( _TyMarkupTraits::s_kszXMLDeclNo ) );
-      _WriteTransportRaw(m_xdcxtDocumentContext.FAttributeValuesDoubleQuote() ? _TyMarkupTraits::s_kszXMLDeclEndEtcDoubleQuote : _TyMarkupTraits::s_kszXMLDeclEndEtcSingleQuote, 
-        StaticStringLen( _TyMarkupTraits::s_kszXMLDeclEndEtcDoubleQuote) );
-    }
+      _WriteXmlDecl();
     m_lContexts.emplace_back( this, m_xdcxtDocumentContext.GetUserObj(), s_knTokenXMLDecl  ); // create the XMLDecl pseudo-tag.
   }
   template < template < class ... > class t_tempTyXmlTransportOut >
@@ -435,6 +423,18 @@ public:
   EDetectReferences EGetDefaultDetectReferences() const
   {
     return m_edrDefaultDetectReferences;
+  }
+  void SetIncludePrefixesInAttrNames( bool _fIncludePrefixesInAttrNames )
+  {
+    if ( _fIncludePrefixesInAttrNames != m_xdcxtDocumentContext.FIncludePrefixesInAttrNames() )
+    {
+      VerifyThrowSz( !FInsideDocumentTag(), "Can't change _fIncludePrefixesInAttrNames once we have written the first tag." );
+      m_xdcxtDocumentContext.SetIncludePrefixesInAttrNames( _fIncludePrefixesInAttrNames );
+    }
+  }
+  bool FIncludePrefixesInAttrNames() const
+  {
+    return m_xdcxtDocumentContext.FIncludePrefixesInAttrNames();
   }
 // status:
   bool FIsOpen() const
@@ -720,11 +720,14 @@ protected:
     if ( !rvalNS.FIsBool() && !m_xdcxtDocumentContext.FIncludePrefixesInAttrNames() )
     {
       const _TyXmlNamespaceValueWrap & rxnvw = rvalNS.GetVal< _TyXmlNamespaceValueWrap >();
-      _TyStrView svPrefix = rxnvw.RStringPrefix();
-      if ( !svPrefix.empty() )
+      if ( !rxnvw.FIsNamespaceDeclaration() ) // namespace declarations always include the prefix.
       {
-        _WriteTransportRaw( &svPrefix[0], svPrefix.length() );
-        _WriteTransportRaw( _TyMarkupTraits::s_kszTagColon, StaticStringLen( _TyMarkupTraits::s_kszTagColon ) );
+        _TyStrView svPrefix = rxnvw.RStringPrefix();
+        if ( !svPrefix.empty() )
+        {
+          _WriteTransportRaw( &svPrefix[0], svPrefix.length() );
+          _WriteTransportRaw( _TyMarkupTraits::s_kszTagColon, StaticStringLen( _TyMarkupTraits::s_kszTagColon ) );
+        }
       }
     }
     // Now write the name.
@@ -740,27 +743,40 @@ protected:
     else
       _WriteTypedData( _rtok, rvalName );
   }
-
-#if 0
-  // Write the XMLDecl token. 
-  template < class t_TyXmlToken >
-  void _WriteXmlDecl( t_TyXmlToken const & _rtok )
+  // Write the XMLDecl object that is contained in m_xdcxtDocumentContext.
+  // We always validate the encoding because its origin is unknown at this point.
+  void _WriteXmlDecl()
   {
-    typedef typename t_TyXmlToken::_TyLexValue _TyLexValue;
-    _CheckCommitCur();
-    _WriteTransportRaw( _TyMarkupTraits::s_kszProcessingInstructionBegin, StaticStringLen( _TyMarkupTraits::s_kszProcessingInstructionBegin ) );
-    const _TyLexValue & rval = _rtok.GetValue();
-    VerifyThrow( rval.FIsArray() );
-    // We may have just a PITarget or a PITarget + PITargetMeat.
-    _WritePIPortion< TGetPITargetStart >( _rtok, rval[vknProcessingInstruction_PITargetIdx] );
-    if ( ( rval.GetSize() > 1 ) && !rval[vknProcessingInstruction_MeatIdx].FEmptyTypedData() )
+    _TyXMLDeclProperties const & rxdp = m_xdcxtDocumentContext.GetXMLDeclProperties();
+    _WriteTransportRaw( _TyMarkupTraits::s_kszXMLDeclBegin, StaticStringLen( _TyMarkupTraits::s_kszXMLDeclBegin ) );
+    _WriteTransportRaw( rxdp.m_fVersionDoubleQuote ? _TyMarkupTraits::s_kszXMLDeclVersionDoubleQuote : _TyMarkupTraits::s_kszXMLDeclVersionSingleQuote, 
+        StaticStringLen( _TyMarkupTraits::s_kszXMLDeclVersionDoubleQuote ) );
+    if ( rxdp.m_fHasEncoding )
     {
-      _WriteTransportRaw( _TyMarkupTraits::s_kszSpace, StaticStringLen( _TyMarkupTraits::s_kszSpace ) );
-      _WritePIPortion< TGetPITargetMeatStart >( _rtok, rval[vknProcessingInstruction_MeatIdx] );
+      _WriteTransportRaw( _TyMarkupTraits::s_kszXMLDeclEncodingEquals, StaticStringLen( _TyMarkupTraits::s_kszXMLDeclEncodingEquals ) );
+      _WriteTransportRaw( rxdp.m_fEncodingDoubleQuote ? _TyMarkupTraits::s_kszDoubleQuote : _TyMarkupTraits::s_kszSingleQuote, StaticStringLen( _TyMarkupTraits::s_kszDoubleQuote ) );
+      if ( rxdp.m_strEncoding.length() )
+      {
+        const _TyChar * pcBeg = &rxdp.m_strEncoding[0];
+        const _TyChar * pcEnd = pcBeg + rxdp.m_strEncoding.length();
+        VerifyThrowSz( pcEnd == _l_match< _TyChar >::PszMatch( PspGetEncNameStart< _TyChar >(), pcBeg, rxdp.m_strEncoding.length() ), 
+          "Invalid encoding name in XML declaration." );
+        _WriteTransportRaw( pcBeg, rxdp.m_strEncoding.length() );
+      }
+      _WriteTransportRaw( rxdp.m_fEncodingDoubleQuote ? _TyMarkupTraits::s_kszDoubleQuote : _TyMarkupTraits::s_kszSingleQuote, StaticStringLen( _TyMarkupTraits::s_kszDoubleQuote ) );
     }
-    _WriteTransportRaw( _TyMarkupTraits::s_kszProcessingInstructionEnd, StaticStringLen( _TyMarkupTraits::s_kszProcessingInstructionEnd ) );
+    if ( rxdp.m_fHasStandalone )
+    {
+      _WriteTransportRaw( _TyMarkupTraits::s_kszXMLDeclStandaloneEquals, StaticStringLen( _TyMarkupTraits::s_kszXMLDeclStandaloneEquals ) );
+      _WriteTransportRaw( rxdp.m_fStandaloneDoubleQuote ? _TyMarkupTraits::s_kszDoubleQuote : _TyMarkupTraits::s_kszSingleQuote, StaticStringLen( _TyMarkupTraits::s_kszDoubleQuote ) );
+      if ( rxdp.m_fStandalone )
+        _WriteTransportRaw( _TyMarkupTraits::s_kszXMLDeclYes, StaticStringLen( _TyMarkupTraits::s_kszXMLDeclYes ) );
+      else
+        _WriteTransportRaw( _TyMarkupTraits::s_kszXMLDeclNo, StaticStringLen( _TyMarkupTraits::s_kszXMLDeclNo ) );
+      _WriteTransportRaw( rxdp.m_fStandaloneDoubleQuote ? _TyMarkupTraits::s_kszDoubleQuote : _TyMarkupTraits::s_kszSingleQuote, StaticStringLen( _TyMarkupTraits::s_kszDoubleQuote ) );
+    }
+    _WriteTransportRaw( _TyMarkupTraits::s_kszXMLDeclEnd, StaticStringLen( _TyMarkupTraits::s_kszXMLDeclEnd ) );
   }
-#endif //0
   template < class t_TyXmlToken >
   void _WriteComment( t_TyXmlToken const & _rtok )
   {

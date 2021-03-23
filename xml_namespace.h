@@ -49,6 +49,21 @@ protected:
   const _TyUriValue * m_pvtUriMap{nullptr};
 };
 
+// ENamespaceReferenceType:
+// When the xml_namespace_value_wrap<> indicates a reference then this information is also available.
+enum ENamespaceReferenceType
+{
+  enrtStandaloneReference,
+    // This namespace reference is standalone - it doesn't refer to any xml element.
+  enrtTagNameReference,
+    // This namespace reference is on a tag name.
+  enrtAttrNameReference,
+    // This namespace reference is on a attribute name.
+  enrtAttrNamespaceDeclReference,
+    // This namespace reference is on a attribute namespace declaration that is a redundant declaration.
+  enrtNamespaceReferenceTypeCount // This always at the end.
+};
+
 // Define a wrapper for namespace map value of some type.
 template < class t_TyChar >
 class xml_namespace_value_wrap
@@ -69,25 +84,41 @@ public:
     ResetNamespaceDecls();
   }
   xml_namespace_value_wrap() = default;
-  xml_namespace_value_wrap( _TyNamespaceMapValue & _rvt, _TyNamespaceMap * _pmapReleaseOnDestruct )
+  xml_namespace_value_wrap( _TyNamespaceMapValue & _rvt, _TyNamespaceMap * _pmapReleaseOnDestruct, ENamespaceReferenceType _enrtReferenceType )
     : m_pvtNamespaceMap( !_pmapReleaseOnDestruct ? nullptr : &_rvt ),
       m_pmapReleaseOnDestruct( _pmapReleaseOnDestruct ),
       m_pvtUri( &_rvt.second.second.front().RStrUri() ),
       m_pvtPrefix( _rvt.second.first )
   {
+    if ( !_pmapReleaseOnDestruct )
+    {
+      m_stReferenceTypeMarker = size_t(-1);
+      m_enrtReferenceType = _enrtReferenceType;
+    }
   }
-  void Init( _TyNamespaceMapValue & _rvt, _TyNamespaceMap * _pmapReleaseOnDestruct )
+  void Init( _TyNamespaceMapValue & _rvt, _TyNamespaceMap * _pmapReleaseOnDestruct, ENamespaceReferenceType _enrtReferenceType )
   {
     Assert( FIsNull() );
-    m_pvtNamespaceMap = !_pmapReleaseOnDestruct ? nullptr : &_rvt;
-    m_pmapReleaseOnDestruct = _pmapReleaseOnDestruct;
+    Assert( !_pmapReleaseOnDestruct == ( enrtNamespaceReferenceTypeCount != _enrtReferenceType ) );
+    if ( _pmapReleaseOnDestruct )
+    {
+      m_pvtNamespaceMap = &_rvt;
+      m_pmapReleaseOnDestruct = _pmapReleaseOnDestruct;
+    }
+    else
+    {
+      m_stReferenceTypeMarker = size_t(-1);
+      m_enrtReferenceType = _enrtReferenceType;
+    }
     m_pvtUri = &_rvt.second.second.front().RStrUri();
     m_pvtPrefix = _rvt.second.first;
     AssertValid();
   }
-  xml_namespace_value_wrap( const _TyUriAndPrefixValue * _pvtPrefix, const _TyUriAndPrefixValue * _pvtUri )
+  xml_namespace_value_wrap( const _TyUriAndPrefixValue * _pvtPrefix, const _TyUriAndPrefixValue * _pvtUri, ENamespaceReferenceType _enrtReferenceType )
     : m_pvtPrefix( _pvtPrefix ),
-      m_pvtUri( _pvtUri )
+      m_pvtUri( _pvtUri ),
+      m_stReferenceTypeMarker( size_t(-1) ),
+      m_enrtReferenceType( _enrtReferenceType ) 
   {
     AssertValid();
   }
@@ -113,60 +144,81 @@ public:
   void AssertValid() const
   {
 #if ASSERTSENABLED
-    Assert( !m_pvtNamespaceMap == !m_pmapReleaseOnDestruct );
-    Assert( !m_pmapReleaseOnDestruct || ( m_pmapReleaseOnDestruct->end() != m_pmapReleaseOnDestruct->find( m_pvtNamespaceMap->first ) ) );
-    Assert( !m_pmapReleaseOnDestruct || ( m_pvtNamespaceMap == &*m_pmapReleaseOnDestruct->find( m_pvtNamespaceMap->first ) ) );
-    Assert( !m_pmapReleaseOnDestruct || ( m_pvtUri == &m_pvtNamespaceMap->second.second.front().RStrUri() ) );
-    Assert( !m_pmapReleaseOnDestruct || ( m_pvtPrefix == m_pvtNamespaceMap->second.first ) );
+    _TyNamespaceMap * pmapReleaseOnDestruct = PMapReleaseOnDestruct();
+    _TyNamespaceMapValue * pvtNamespaceMap = PvtNamespaceMap();
+    Assert( !pvtNamespaceMap == !pmapReleaseOnDestruct );
+    Assert( !pmapReleaseOnDestruct || ( pmapReleaseOnDestruct->end() != pmapReleaseOnDestruct->find( pvtNamespaceMap->first ) ) );
+    Assert( !pmapReleaseOnDestruct || ( pvtNamespaceMap == &*pmapReleaseOnDestruct->find( pvtNamespaceMap->first ) ) );
+    Assert( !pmapReleaseOnDestruct || ( m_pvtUri == &pvtNamespaceMap->second.second.front().RStrUri() ) );
+    Assert( !pmapReleaseOnDestruct || ( m_pvtPrefix == pvtNamespaceMap->second.first ) );
     Assert( !m_pvtUri == !m_pvtPrefix );
-    Assert( !m_pvtNamespaceMap || !!m_pvtPrefix );
+    Assert( !pvtNamespaceMap || !!m_pvtPrefix );
 #endif //ASSERTSENABLED
+  }
+  _TyNamespaceMap * PMapReleaseOnDestruct() const
+  {
+    return ( m_stReferenceTypeMarker == size_t(-1) ) ? nullptr : m_pmapReleaseOnDestruct;
+  }
+  _TyNamespaceMapValue * PvtNamespaceMap() const
+  {
+    return ( m_stReferenceTypeMarker == size_t(-1) ) ? nullptr : m_pvtNamespaceMap;
+  }
+  ENamespaceReferenceType GetReferenceType() const
+  {
+    return ( m_stReferenceTypeMarker == size_t(-1) ) ? m_enrtReferenceType :  enrtNamespaceReferenceTypeCount;
   }
   void ResetNamespaceDecls()
   {
     AssertValid();
-    if ( m_pmapReleaseOnDestruct )
+    _TyNamespaceMap * pmapReleaseOnDestruct = PMapReleaseOnDestruct();
+    if ( pmapReleaseOnDestruct )
     {
-      if ( m_pvtUri == &m_pvtNamespaceMap->second.second.front().RStrUri() )
-      {
-        m_pvtNamespaceMap->second.second.pop();
-        if ( m_pvtNamespaceMap->second.second.empty() ) // If the list of Uris became empty...
-        {
-          size_t stErased = m_pmapReleaseOnDestruct->erase( m_pvtNamespaceMap->first );
-          Assert( 1 == stErased );
-        }
-      }
+      Assert( m_pvtNamespaceMap );
+      _TyNamespaceMapValue * pvtNamespaceMap = m_pvtNamespaceMap;
       // regardless we nullify these.
       m_pmapReleaseOnDestruct = nullptr;
       m_pvtNamespaceMap = nullptr;
+      if ( m_pvtUri == &pvtNamespaceMap->second.second.front().RStrUri() )
+      {
+        pvtNamespaceMap->second.second.pop();
+        if ( pvtNamespaceMap->second.second.empty() ) // If the list of Uris became empty...
+        {
+          size_t stErased = pmapReleaseOnDestruct->erase( pvtNamespaceMap->first );
+          Assert( 1 == stErased );
+        }
+      }
     }
   }
   // Shed a non-namespace-declaration reference to this same namespace:
-  _TyThis ShedReference() const
+  _TyThis ShedReference( ENamespaceReferenceType _enrtReferenceType ) const
   {
-    return _TyThis( m_pvtPrefix, m_pvtUri );
+    return _TyThis( m_pvtPrefix, m_pvtUri, _enrtReferenceType );
   }
   bool FIsNull() const
   {
     AssertValid();
     return !m_pvtUri;
   }
-  bool FIsNamespaceReference() const
+  bool FIsNamespaceReference( ENamespaceReferenceType * _penrtReferenceType = nullptr ) const
   {
-    return !FIsNull() && !m_pmapReleaseOnDestruct;
+    AssertValid();
+    bool fIsNamespaceRef = ( m_stReferenceTypeMarker == size_t(-1) );
+    if ( fIsNamespaceRef && !!_penrtReferenceType )
+      *_penrtReferenceType = m_enrtReferenceType;
+    return fIsNamespaceRef;
   }
   bool FIsNamespaceDeclaration() const
   {
     AssertValid();
-    return !!m_pmapReleaseOnDestruct;
+    return ( m_stReferenceTypeMarker != size_t(-1) ) && m_stReferenceTypeMarker;
   }
   const _TyNamespaceMap * PGetNamespaceMap() const
   {
-    return m_pmapReleaseOnDestruct;
+    return PMapReleaseOnDestruct();
   }
   const _TyNamespaceMapValue * PVtNamespaceMapValue() const
   {
-    return m_pvtNamespaceMap;
+    return PvtNamespaceMap();
   }
   const _TyStdStr & RStringUri() const
   {
@@ -303,8 +355,16 @@ public:
 protected:
   // If these are non-null then destruction of this object will pop the top of m_pvtNamespaceMap->second's list.
   // These are only non-null for namespace declaration attributes.
-  _TyNamespaceMapValue * m_pvtNamespaceMap{nullptr};
-  _TyNamespaceMap * m_pmapReleaseOnDestruct{nullptr};
+  union
+  {
+    _TyNamespaceMapValue * m_pvtNamespaceMap{nullptr};
+    size_t m_stReferenceTypeMarker; // When this value is size_t(-1) then 
+  };
+  union
+  {
+    _TyNamespaceMap * m_pmapReleaseOnDestruct{nullptr};
+    ENamespaceReferenceType m_enrtReferenceType; // This is only valid then m_stMarker is size_t(-1).
+  };
   const _TyUriAndPrefixValue * m_pvtUri{nullptr};
   const _TyUriAndPrefixValue * m_pvtPrefix{nullptr};
 };
@@ -351,7 +411,7 @@ public:
     typename _TyNamespaceMap::iterator it = m_mapNamespaces.find( _TyStrView() );
     bool fHasDefault = ( m_mapNamespaces.end() != it ) && !it->second.second.front().RStrUri().empty();
     if ( fHasDefault )
-      *_pxnvw = _TyXmlNamespaceValueWrap( *it, nullptr );
+      *_pxnvw = _TyXmlNamespaceValueWrap( *it, nullptr, enrtTagNameReference );
     return fHasDefault;
   }
   // Check to see that the passed _TyXmlNamespaceValueWrap is the currently active URI for the prefix given.
@@ -375,40 +435,41 @@ public:
   // If only _psvPrefix passed then return a xml_namespace_value_wrap that references (*_psvPrefix) in the 
   //  namespace map or throw.
   template < class t_TyUriPrefixContainer, class t_TyStrViewOrString >
-  _TyXmlNamespaceValueWrap GetNamespaceValueWrap( t_TyUriPrefixContainer & _rcontUriPrefix, const t_TyStrViewOrString * _psvPrefix, const t_TyStrViewOrString * _psvUri = nullptr )
+  _TyXmlNamespaceValueWrap GetNamespaceValueWrap( t_TyUriPrefixContainer & _rcontUriPrefix, ENamespaceReferenceType _enrtReferenceType, 
+                                                  const t_TyStrViewOrString * _psvPrefix, const t_TyStrViewOrString * _psvUri = nullptr )
     requires TAreSameSizeTypes_v< typename t_TyStrViewOrString::value_type, _TyChar >
   {
     // If both are null then we are asking for the current default namespace - and we will throw later if there isn't one.
     VerifyThrowSz( ( !_psvPrefix && !_psvUri ) || ( !!_psvPrefix && ( ( !!_psvUri && !_psvUri->empty() ) || _psvPrefix->empty() ) ), "Must pass at least a prefix and must pass a non-empty URI unless the prefix is empty." );
     if ( !_psvUri )
-      return GetNamespaceValueWrap( *_psvPrefix );
+      return GetNamespaceValueWrap( _enrtReferenceType, *_psvPrefix );
     else
-      return _GetNamespaceValueWrap( _rcontUriPrefix, *_psvPrefix, *_psvUri );
+      return _GetNamespaceValueWrap( _rcontUriPrefix, _enrtReferenceType, *_psvPrefix, *_psvUri );
   }
   template < class t_TyUriPrefixContainer, class t_TyStrViewOrString >
-  _TyXmlNamespaceValueWrap GetNamespaceValueWrap( t_TyUriPrefixContainer & _rcontUriPrefix, t_TyStrViewOrString && _rrsvPrefix, t_TyStrViewOrString && _rrsvUri )
+  _TyXmlNamespaceValueWrap GetNamespaceValueWrap( t_TyUriPrefixContainer & _rcontUriPrefix, ENamespaceReferenceType _enrtReferenceType, t_TyStrViewOrString && _rrsvPrefix, t_TyStrViewOrString && _rrsvUri )
     requires TAreSameSizeTypes_v< typename remove_cvref_t< t_TyStrViewOrString >::value_type, _TyChar >
   {
     VerifyThrowSz( !_rrsvUri.empty() || _rrsvPrefix.empty(), "Must pass a non-empty URI unless the prefix is empty." );
-    return _GetNamespaceValueWrap( _rcontUriPrefix, std::forward< t_TyStrViewOrString >( _rrsvPrefix ), std::forward< t_TyStrViewOrString >( _rrsvUri ) );
+    return _GetNamespaceValueWrap( _rcontUriPrefix, _enrtReferenceType, std::forward< t_TyStrViewOrString >( _rrsvPrefix ), std::forward< t_TyStrViewOrString >( _rrsvUri ) );
   }
   // Return the namespace reference for _rsvPrefix or the default namespace if any - throw if no namespace found.
   template < class t_TyStrViewOrString >
-  _TyXmlNamespaceValueWrap GetNamespaceValueWrap( const t_TyStrViewOrString * _psvPrefix = nullptr )
+  _TyXmlNamespaceValueWrap GetNamespaceValueWrap( ENamespaceReferenceType _enrtReferenceType, const t_TyStrViewOrString * _psvPrefix = nullptr )
     requires TAreSameSizeTypes_v< typename t_TyStrViewOrString::value_type, _TyChar >
   {
     typename _TyNamespaceMap::iterator itNM = m_mapNamespaces.find( !_psvPrefix ? _TyStrView() : *_psvPrefix );
     VerifyThrowSz( m_mapNamespaces.end() != itNM, !_psvPrefix ? "No active default namespace." : "No active namespace for prefix[%s].", StrConvertString< char >( *_psvPrefix ).c_str() );
-    return _TyXmlNamespaceValueWrap( *itNM, nullptr );
+    return _TyXmlNamespaceValueWrap( *itNM, nullptr, _enrtReferenceType );
   }
 protected:
   template < class t_TyUriPrefixContainer, class t_TyStrViewOrString >
-  _TyXmlNamespaceValueWrap _GetNamespaceValueWrap( t_TyUriPrefixContainer & _rcontUriPrefix, t_TyStrViewOrString && _rrsvPrefix, t_TyStrViewOrString && _rrsvUri )
+  _TyXmlNamespaceValueWrap _GetNamespaceValueWrap( t_TyUriPrefixContainer & _rcontUriPrefix, ENamespaceReferenceType _enrtReferenceType, t_TyStrViewOrString && _rrsvPrefix, t_TyStrViewOrString && _rrsvUri )
     requires TAreSameSizeTypes_v< typename remove_cvref_t< t_TyStrViewOrString >::value_type, _TyChar >
   {
     // in the map by now - add _rsvUri as the current URI for this prefix.
     pair< typename _TyNamespaceMap::iterator, bool > pib = _PibAddPrefixUri( _rcontUriPrefix, std::forward< t_TyStrViewOrString >( _rrsvPrefix ), std::forward< t_TyStrViewOrString >( _rrsvUri ) );
-    return _TyXmlNamespaceValueWrap( *pib.first, pib.second ? &m_mapNamespaces : nullptr );
+    return _TyXmlNamespaceValueWrap( *pib.first, pib.second ? &m_mapNamespaces : nullptr, _enrtReferenceType );
   }
   // Return the iterator for the prefix and whether we had to add the URI as the current URI or if it already was the current
   //  URI for the given prefix - in which case we didn't add it to the URI stack.

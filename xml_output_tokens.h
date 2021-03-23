@@ -28,6 +28,25 @@ const _l_state_proto< t_TyChar > * PspGetSpacesStart()
 {
   return (const _l_state_proto< t_TyChar > *)&startUTF8Spaces;
 }
+// PspGetEncNameStart:
+template < class t_TyChar >
+const _l_state_proto< t_TyChar > * PspGetEncNameStart()
+  requires( is_same_v< t_TyChar, char32_t > )
+{
+  return (const _l_state_proto< t_TyChar > *)&startUTF32EncName;
+}
+template < class t_TyChar >
+const _l_state_proto< t_TyChar > * PspGetEncNameStart()
+  requires( is_same_v< t_TyChar, char16_t > )
+{
+  return (const _l_state_proto< t_TyChar > *)&startUTF16EncName;
+}
+template < class t_TyChar >
+const _l_state_proto< t_TyChar > * PspGetEncNameStart()
+  requires( is_same_v< t_TyChar, char8_t > )
+{
+  return (const _l_state_proto< t_TyChar > *)&startUTF8EncName;
+}
 // PspGetCommentCharsStart:
 template < class t_TyChar >
 const _l_state_proto< t_TyChar > * PspGetCommentCharsStart()

@@ -26,6 +26,7 @@ public:
   typedef xml_read_cursor< _TyXmlTraits > _TyReadCursor;
   typedef std::variant< _TyThis, _TyXmlToken > _TyVariant;
   typedef std::vector< _TyVariant > _TyRgTokens;
+  typedef _xml_document_context_transport< _TyXmlTraits > _TyXmlDocumentContext;
 
   xml_tag() = default;
   xml_tag( xml_tag const & ) = default;
@@ -42,10 +43,31 @@ public:
     m_opttokTag.swap( _r.m_opttokTag );
     m_rgTokens.swap( _r.m_rgTokens );
   }
-
+  void AssertValid() const
+  {
+#if ASSERTSENABLED
+    if( !! m_opttokTag )
+      m_opttokTag->AssertValid();
+    typename _TyRgTokens::const_iterator citCur = m_rgTokens.begin();
+    typename _TyRgTokens::const_iterator citEnd = m_rgTokens.end();
+    for ( ; citEnd != citCur; ++citCur )
+    {
+      const _TyVariant & rvCur = *citCur;
+      if ( holds_alternative< _TyXmlToken >( rvCur ) )
+      {
+        std::get< _TyXmlToken >( rvCur ).AssertValid();
+      }
+      else
+      { // recurse.
+        std::get< _TyThis >( rvCur ).AssertValid();
+      }
+    }
+#endif //ASSERTSENABLED
+  }
   void AcquireTag( _TyXmlToken && _rrtok )
   {
     m_opttokTag = std::move( _rrtok );
+    m_opttokTag->AssertValid();
   }
   // Read from this read cursor into this object.
   void FromXmlStream( _TyReadCursor & _rxrc )
@@ -76,8 +98,16 @@ public:
     }
   }
   // Write this XML document to the given xml_writer<>.
+  // Need to pass the xml document context for the containing xml_document.
   template < class t_TyXmlTransportOut >
-  void ToXmlStream( xml_writer< t_TyXmlTransportOut > & _rxw ) const
+  void ToXmlStream( xml_writer< t_TyXmlTransportOut > & _rxw, _TyXmlDocumentContext const & _rxdcxtDocumentContext ) const
+  {
+    _rxw.SetIncludePrefixesInAttrNames( _rxdcxtDocumentContext.FIncludePrefixesInAttrNames() );
+    _ToXmlStream( _rxw );
+  }
+protected:
+  template < class t_TyXmlTransportOut >
+  void _ToXmlStream( xml_writer< t_TyXmlTransportOut > & _rxw ) const
   {
     typedef xml_writer< t_TyXmlTransportOut > _TyXmlWriter;
     typedef typename _TyXmlWriter::_TyXmlWriteTag _TyXmlWriteTag;
@@ -86,7 +116,6 @@ public:
     xwtTag.Commit();
     _WriteContent( _rxw ); // recurse, potentially.
   }
-protected:
   // Add all the current content from passed context.
   void _AcquireContent( _TyReadContext & _rctxt )
   {
@@ -94,7 +123,9 @@ protected:
       [this]( _TyXmlToken * _pxtBegin, _TyXmlToken * _pxtEnd )
       {
         for ( _TyXmlToken * pxtCur = _pxtBegin; _pxtEnd != pxtCur; ++pxtCur )
+        {
           m_rgTokens.emplace_back( std::move( *pxtCur ) );
+        }
       }
     );
     _rctxt.ClearContent(); // The above created a bunch of empty content nodes, and they would go away naturally without ill effect, but clear them to indicate they contain nothing at all.
@@ -120,7 +151,7 @@ protected:
       }
       else
       { // recurse.
-        std::get< _TyThis >( rvCur ).ToXmlStream( _rxw );
+        std::get< _TyThis >( rvCur )._ToXmlStream( _rxw );
       }
     }
   }
@@ -164,7 +195,20 @@ public:
     _TyBase::swap( _r );
     m_xdcxtDocumentContext.swap( _r.m_xdcxtDocumentContext );
   }
-
+  void AssertValid() const
+  {
+#if ASSERTSENABLED
+    _TyBase::AssertValid();
+#endif //ASSERTSENABLED
+  }
+  const _TyXMLDeclProperties & GetXMLDeclProperties() const
+  {
+    return m_xdcxtDocumentContext.GetXMLDeclProperties();
+  }
+  _TyXMLDeclProperties & GetXMLDeclProperties()
+  {
+    return m_xdcxtDocumentContext.GetXMLDeclProperties();
+  }
   // Read from this read cursor into this object.
   void FromXmlStream( _TyReadCursor & _rxrc )
   {
@@ -201,6 +245,7 @@ public:
   template < class t_TyXmlTransportOut >
   void ToXmlStream( xml_writer< t_TyXmlTransportOut > & _rxw ) const
   {
+    _rxw.SetIncludePrefixesInAttrNames( m_xdcxtDocumentContext.FIncludePrefixesInAttrNames() );
     // Just write everything to the writer.
     // The writer itself writes the XMLDecl tag based on the output encoding (which it knows about), etc.
     // So we use this method as a specialization to skip what would have happened in the base.

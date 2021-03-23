@@ -13,14 +13,14 @@ template <>
 struct xml_markup_traits< char32_t >
 {
   typedef char32_t _TyChar;
-  static constexpr const _TyChar s_kszXMLDeclBeginEtcDoubleQuote[] = U"<?xml version=\"1.0\" encoding=\"";
-  static constexpr const _TyChar s_kszStandaloneEtcDoubleQuote[] = U"\" standalone=\"";
-  static constexpr const _TyChar s_kszXMLDeclEndEtcDoubleQuote[] = U"\"?>";
-  static constexpr const _TyChar s_kszXMLDeclBeginEtcSingleQuote[] = U"<?xml version='1.0' encoding='";
-  static constexpr const _TyChar s_kszStandaloneEtcSingleQuote[] = U"' standalone='";
-  static constexpr const _TyChar s_kszXMLDeclEndEtcSingleQuote[] = U"'?>";
+  static constexpr const _TyChar s_kszXMLDeclBegin[] = U"<?xml version=";
+  static constexpr const _TyChar s_kszXMLDeclVersionDoubleQuote[] = U"\"1.0\"";
+  static constexpr const _TyChar s_kszXMLDeclVersionSingleQuote[] = U"'1.0'";
+  static constexpr const _TyChar s_kszXMLDeclEncodingEquals[] = U"\x20" "encoding=";
+  static constexpr const _TyChar s_kszXMLDeclStandaloneEquals[] = U"\x20" "standalone=";
   static constexpr const _TyChar s_kszXMLDeclYes[] = U"yes";
   static constexpr const _TyChar s_kszXMLDeclNo[] = U"no";
+  static constexpr const _TyChar s_kszXMLDeclEnd[] = U"?>";
 
   static constexpr const _TyChar s_kszTagBegin[] = U"<";
   static constexpr const _TyChar s_kszTagEnd[] = U">";
@@ -61,14 +61,14 @@ template <>
 struct xml_markup_traits< char16_t >
 {
   typedef char16_t _TyChar;
-  static constexpr const _TyChar s_kszXMLDeclBeginEtcDoubleQuote[] = u"<?xml version=\"1.0\" encoding=\"";
-  static constexpr const _TyChar s_kszStandaloneEtcDoubleQuote[] = u"\" standalone=\"";
-  static constexpr const _TyChar s_kszXMLDeclEndEtcDoubleQuote[] = u"\"?>";
-  static constexpr const _TyChar s_kszXMLDeclBeginEtcSingleQuote[] = u"<?xml version='1.0' encoding='";
-  static constexpr const _TyChar s_kszStandaloneEtcSingleQuote[] = u"' standalone='";
-  static constexpr const _TyChar s_kszXMLDeclEndEtcSingleQuote[] = u"'?>";
+  static constexpr const _TyChar s_kszXMLDeclBegin[] = u"<?xml version=";
+  static constexpr const _TyChar s_kszXMLDeclVersionDoubleQuote[] = u"\"1.0\"";
+  static constexpr const _TyChar s_kszXMLDeclVersionSingleQuote[] = u"'1.0'";
+  static constexpr const _TyChar s_kszXMLDeclEncodingEquals[] = u"\x20" "encoding=";
+  static constexpr const _TyChar s_kszXMLDeclStandaloneEquals[] = u"\x20" "standalone=";
   static constexpr const _TyChar s_kszXMLDeclYes[] = u"yes";
   static constexpr const _TyChar s_kszXMLDeclNo[] = u"no";
+  static constexpr const _TyChar s_kszXMLDeclEnd[] = u"?>";
 
   static constexpr const _TyChar s_kszTagBegin[] = u"<";
   static constexpr const _TyChar s_kszTagEnd[] = u">";
@@ -109,14 +109,14 @@ template <>
 struct xml_markup_traits< char8_t >
 {
   typedef char8_t _TyChar;
-  static constexpr const _TyChar s_kszXMLDeclBeginEtcDoubleQuote[] = u8"<?xml version=\"1.0\" encoding=\"";
-  static constexpr const _TyChar s_kszStandaloneEtcDoubleQuote[] = u8"\" standalone=\"";
-  static constexpr const _TyChar s_kszXMLDeclEndEtcDoubleQuote[] = u8"\"?>";
-  static constexpr const _TyChar s_kszXMLDeclBeginEtcSingleQuote[] = u8"<?xml version='1.0' encoding='";
-  static constexpr const _TyChar s_kszStandaloneEtcSingleQuote[] = u8"' standalone='";
-  static constexpr const _TyChar s_kszXMLDeclEndEtcSingleQuote[] = u8"'?>";
+  static constexpr const _TyChar s_kszXMLDeclBegin[] = u8"<?xml version=";
+  static constexpr const _TyChar s_kszXMLDeclVersionDoubleQuote[] = u8"\"1.0\"";
+  static constexpr const _TyChar s_kszXMLDeclVersionSingleQuote[] = u8"'1.0'";
+  static constexpr const _TyChar s_kszXMLDeclEncodingEquals[] = u8"\x20" "encoding=";
+  static constexpr const _TyChar s_kszXMLDeclStandaloneEquals[] = u8"\x20" "standalone=";
   static constexpr const _TyChar s_kszXMLDeclYes[] = u8"yes";
   static constexpr const _TyChar s_kszXMLDeclNo[] = u8"no";
+  static constexpr const _TyChar s_kszXMLDeclEnd[] = u8"?>";
 
   static constexpr const _TyChar s_kszTagBegin[] = u8"<";
   static constexpr const _TyChar s_kszTagEnd[] = u8">";

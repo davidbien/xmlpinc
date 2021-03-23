@@ -150,11 +150,11 @@ public:
     VerifyThrowSz( FIsTag(), "FHasNamespace() is only applicable to tags." );
     return !GetValue()[vknTagNameIdx][vknNamespaceIdx].FIsBool();
   }
-  _TyXmlNamespaceValueWrap GetNamespaceReference() const
+  _TyXmlNamespaceValueWrap GetNamespaceReference( ENamespaceReferenceType _enrtReferenceType ) const
   {
     Assert( FIsTag() && !GetValue()[vknTagNameIdx][vknNamespaceIdx].FIsBool() );
     VerifyThrowSz( FIsTag(), "GetNamespaceReference() is only applicable to tags." );
-    return GetValue()[vknTagNameIdx][vknNamespaceIdx].GetVal< _TyXmlNamespaceValueWrap >().ShedReference();
+    return GetValue()[vknTagNameIdx][vknNamespaceIdx].GetVal< _TyXmlNamespaceValueWrap >().ShedReference( _enrtReferenceType );
   }
   bool FIsComment() const
   {
@@ -219,6 +219,7 @@ public:
     _TyStrView svTagName = StrViewConvertString( _pcTagName, _stLenTag, cbufName );
     _SetTagName( _rcxtDoc, svTagName, nullptr, nullptr, &_rnsvw );
   }
+#if 0 // These are incomplete but will be completed
   // Add the namespace _rpuNamespace to this tag.
   // If the URI is the current URI for the given prefix then we don't add a namespace decl attribute.
   // Regardless we return a reference to the (prefix,uri) namespace.
@@ -246,7 +247,7 @@ public:
     // If this is a namespace declaraion then we need to add it to the set of attributes for this tag:
     if ( xnvw.FIsNamespaceDeclaration() )
     {
-      _DeclareNamespace( _rcxtDoc, std::move( xnvw ) );
+      _DeclareNamespace( _rcxtDoc, std::move( xnvw ), enrtTagNameReference ); // If xnvw ends up modifying anything it will be a tag.
       Assert( xnvw.FIsNamespaceReference() ); // Pass in a declaration, return a reference.
     }
     // Now check to see if the tag has a namespace and if it matches the new prefix and if so update it.
@@ -264,6 +265,7 @@ public:
       Assert( !rxnvw.FIsNamespaceDeclaration() ); // should never be the case.
     }
   }
+#endif //incomplete
   // Add an attribute to this tag token.
   // To apply a namespace to an attribute get a _TyXmlNamespaceValueWrap by calling AddNamespace() or get the namespace from
   //  a tag. The default (empty prefix) namespace cannot be applied to an attribute and we will throw if it is attempted.
@@ -356,11 +358,12 @@ public:
         // A declaration that corresponds to no reference. If this isn't a namespace declaration attribute then we need
         //  to add such an attribute.
         bool fIsAttrNamespaceDecl;
-        if ( !_FIsAttribute( **pplvalCurDeclaration, &fIsAttrNamespaceDecl ) || !fIsAttrNamespaceDecl )
+        bool fIsAttr;
+        if ( !( fIsAttr = _FIsAttribute( **pplvalCurDeclaration, &fIsAttrNamespaceDecl ) ) || !fIsAttrNamespaceDecl )
         {
           // Then a new namespace (prefix,URI) that hasn't been declared yet. Declare it. This has the effect of leaving a
           //  namespace reference in its place which happens to be exactly what we want. This adds one to rnTagNamespaceDecls internally.
-          _DeclareNamespace( _rcxtDoc, std::move( (**pplvalCurDeclaration)[vknNamespaceIdx].GetVal< _TyXmlNamespaceValueWrap >() ) );
+          _DeclareNamespace( _rcxtDoc, std::move( (**pplvalCurDeclaration)[vknNamespaceIdx].GetVal< _TyXmlNamespaceValueWrap >() ), fIsAttr ? enrtAttrNameReference : enrtTagNameReference );
         }
         else
         {
@@ -480,7 +483,7 @@ protected:
         {
           // Then we must declare the namespace as an attribute, this will
           //  add one to the number of namespace decls associated with this element.
-          _DeclareNamespace( _rcxtDoc, std::move( xnvw ) );
+          _DeclareNamespace( _rcxtDoc, std::move( xnvw ), enrtTagNameReference );
           Assert( xnvw.FIsNamespaceReference() ); // Pass in a declaration, return a reference.
         }
         rvalNS.emplaceVal( std::move( xnvw ) );
@@ -493,7 +496,7 @@ protected:
           // Note that we could allow this to switch the namespace as well - it's a matter of design.
         }
         // Update the tag's reference to the namespace:
-        rvalNS.emplaceVal( _pxnvw->ShedReference() );
+        rvalNS.emplaceVal( _pxnvw->ShedReference( enrtTagNameReference ) );
       }
     }
     else
@@ -525,7 +528,7 @@ protected:
       {
         VerifyThrowSz( !nPosColon || ( svPrefix == pxnvwDefaulted->RStringPrefix() ), "Prefix(when present) must match passed namespace(when present) object's prefix." );
         VerifyThrowSz( pxnvwDefaulted->FIsNamespaceDeclaration() || _rcxtDoc.FIsActiveNamespace( *pxnvwDefaulted ), "Trying to use an inactive namespace as the current namespace." );
-        rvalNS.emplaceVal( pxnvwDefaulted->ShedReference() );
+        rvalNS.emplaceVal( pxnvwDefaulted->ShedReference( enrtAttrNameReference ) );
       }
       // Now make sure that this isn't a default namespace because there is no way to indicate that on an attribute name...
       VerifyThrowSz( !rvalNS.GetVal< _TyXmlNamespaceValueWrap >().RStringPrefix().empty(), "Attempt to apply the default namespace to an attribute name. That don't feng shui." );
@@ -577,7 +580,7 @@ protected:
     return rvalAttrNew;
   }
   // Add the namespace to the set of attributes.
-  void _DeclareNamespace( _TyXmlDocumentContext & _rcxtDoc, _TyXmlNamespaceValueWrap && _rrxnvw )
+  void _DeclareNamespace( _TyXmlDocumentContext & _rcxtDoc, _TyXmlNamespaceValueWrap && _rrxnvw, ENamespaceReferenceType _enrtReferenceType )
   {
     Assert( _rrxnvw.FIsNamespaceDeclaration() );
     _TyLexValue & rvalAttrNew = _DeclareNewAttr( _rcxtDoc );
@@ -589,13 +592,13 @@ protected:
     rvalAttrNew[vknAttr_ValueIdx].emplaceArgs< _TyStrView >( _rrxnvw.RStringUri() );
     _TyXmlNamespaceValueWrap & rxnvw = rvalAttrNew[vknNamespaceIdx].emplaceVal( std::move( _rrxnvw ) ); // Now move the wrapper into place so that when the value is destroyed we remove the namespace.
     Assert( _rrxnvw.FIsNull() );
-    _rrxnvw = rxnvw.ShedReference(); // return a reference inside of the passed ref.
+    _rrxnvw = rxnvw.ShedReference( _enrtReferenceType ); // return a reference inside of the passed ref.
     // Add one to the count of attribute namespace declarations in this tag:
     ++GetValue()[vknTagNameIdx][vknTagName_NNamespaceDeclsIdx].GetVal<size_t>();
   }
 
 #if ASSERTSENABLED
-  void _AssertValidName( const _TyLexValue & _rrgvName, size_t & _rnNamespaceDecls, const _TyXmlNamespaceValueWrap ** _ppxnvw ) const
+  void _AssertValidName( bool _fIsTag, const _TyLexValue & _rrgvName, size_t & _rnNamespaceDecls, const _TyXmlNamespaceValueWrap ** _ppxnvw, bool _fIsAttrNamespaceDecl = false ) const
   {
     const _TyLexValue & rvName = _rrgvName[vknNameIdx];
     Assert( ( rvName.FHasTypedData() && !rvName.FEmptyTypedData() ) || rvName.FIsString() );
@@ -608,8 +611,36 @@ protected:
       const _TyXmlNamespaceValueWrap & rxnvw = rvNS.GetVal< _TyXmlNamespaceValueWrap >();
       if ( _ppxnvw )
         *_ppxnvw = &rxnvw;
+      Assert( !rxnvw.FIsNamespaceDeclaration() || !_fIsTag );
       if ( rxnvw.FIsNamespaceDeclaration() )
         ++_rnNamespaceDecls;
+      else
+      {
+        ENamespaceReferenceType enrtReferenceType;
+        Assert( rxnvw.FIsNamespaceReference( &enrtReferenceType ) );
+        // Make sure the reference is categorized correctly.
+        switch( enrtReferenceType )
+        {
+          default:
+          case enrtStandaloneReference:
+          case enrtNamespaceReferenceTypeCount:
+            Assert( false ); // Should never see these inside of an element.
+          break;
+          case enrtTagNameReference:
+            Assert( _fIsTag );
+          break;
+          case enrtAttrNameReference:
+            Assert( !_fIsTag && !_fIsAttrNamespaceDecl );
+          break;
+          case enrtAttrNamespaceDeclReference:
+            Assert( !_fIsTag && _fIsAttrNamespaceDecl );
+          break;
+        };
+      }
+    }
+    else
+    {
+      Assert( !_fIsAttrNamespaceDecl ); // We shouldn't be indicating that it is a namespace declaration in the method.
     }
   }
   void _AssertValidTag( bool _fUseNamespaces ) const
@@ -624,7 +655,7 @@ protected:
       if ( vknTagName_ArrayCount == rvTag.GetSize() )
       {
         const _TyXmlNamespaceValueWrap * pxnvw;
-        _AssertValidName( rvTag, nNamespaceDecls, &pxnvw );
+        _AssertValidName( true, rvTag, nNamespaceDecls, &pxnvw );
         Assert( !pxnvw || pxnvw->FIsNamespaceReference() );
         Assert( rvTag[vknTagName_NNamespaceDeclsIdx].FIsA<size_t>() );
       }
@@ -642,9 +673,9 @@ protected:
               if ( vknAttr_ArrayCount == pvCur->GetSize() )
               {
                 const _TyXmlNamespaceValueWrap * pxnvw;
-                _AssertValidName( *pvCur, nNamespaceDecls, &pxnvw );
                 bool fIsAttrNamespaceDecl;
                 bool fIsAttr = _FIsAttribute( *pvCur, &fIsAttrNamespaceDecl );
+                _AssertValidName( false, *pvCur, nNamespaceDecls, &pxnvw, fIsAttrNamespaceDecl );
                 Assert( fIsAttr );
                 Assert( !pxnvw || !pxnvw->FIsNull() );
                 Assert( !( !!pxnvw && pxnvw->FIsNamespaceDeclaration() ) || fIsAttrNamespaceDecl );
@@ -676,7 +707,7 @@ protected:
       if ( vknXMLDecl_ArrayCount == rvRoot.GetSize() )
       {
         Assert( rvRoot[vknXMLDecl_StandaloneYesIdx].FIsBool() );
-        Assert( rvRoot[vknXMLDecl_StandaloneYesNo].FIsBool() );
+        Assert( rvRoot[vknXMLDecl_StandaloneNoIdx].FIsBool() );
         Assert( rvRoot[vknXMLDecl_StandaloneDoubleQuoteIdx].FIsBool() );
         Assert( rvRoot[vknXMLDecl_EncodingIdx].FHasTypedData() || rvRoot[vknXMLDecl_EncodingIdx].FIsString() );
         Assert( rvRoot[vknXMLDecl_EncodingDoubleQuoteIdx].FIsBool() );
