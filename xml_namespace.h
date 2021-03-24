@@ -153,6 +153,12 @@ public:
     Assert( !pmapReleaseOnDestruct || ( m_pvtPrefix == pvtNamespaceMap->second.first ) );
     Assert( !m_pvtUri == !m_pvtPrefix );
     Assert( !pvtNamespaceMap || !!m_pvtPrefix );
+    // Validty of namespace references: There should be a valid m_enrtReferenceType on every reference:
+    if ( !pmapReleaseOnDestruct && !!m_pvtPrefix )
+    {
+      Assert( m_stReferenceTypeMarker == size_t(-1) );
+      Assert( ( m_enrtReferenceType >= 0 ) && ( m_enrtReferenceType < enrtNamespaceReferenceTypeCount ) );
+    }
 #endif //ASSERTSENABLED
   }
   _TyNamespaceMap * PMapReleaseOnDestruct() const
@@ -167,6 +173,12 @@ public:
   {
     return ( m_stReferenceTypeMarker == size_t(-1) ) ? m_enrtReferenceType :  enrtNamespaceReferenceTypeCount;
   }
+  void SetReferenceType( ENamespaceReferenceType _enrt )
+  {
+    Assert( m_stReferenceTypeMarker == size_t(-1) );
+    if ( m_stReferenceTypeMarker == size_t(-1) )
+      m_enrtReferenceType = _enrt;
+  }
   void ResetNamespaceDecls()
   {
     AssertValid();
@@ -175,9 +187,10 @@ public:
     {
       Assert( m_pvtNamespaceMap );
       _TyNamespaceMapValue * pvtNamespaceMap = m_pvtNamespaceMap;
-      // regardless we nullify these.
-      m_pmapReleaseOnDestruct = nullptr;
-      m_pvtNamespaceMap = nullptr;
+      // This object decays into a reference referring to an attribute declaration.
+      m_stReferenceTypeMarker = size_t(-1);
+      m_enrtReferenceType = enrtAttrNamespaceDeclReference;
+      Assert( m_pvtUri == &pvtNamespaceMap->second.second.front().RStrUri() ); // not sure this should ever fail - vamos a ver.
       if ( m_pvtUri == &pvtNamespaceMap->second.second.front().RStrUri() )
       {
         pvtNamespaceMap->second.second.pop();
@@ -207,10 +220,20 @@ public:
       *_penrtReferenceType = m_enrtReferenceType;
     return fIsNamespaceRef;
   }
+  // This returns if this corresponds to an actual declaration - i.e. one that is registered with the current namespace map.
   bool FIsNamespaceDeclaration() const
   {
     AssertValid();
     return ( m_stReferenceTypeMarker != size_t(-1) ) && m_stReferenceTypeMarker;
+  }
+  // This returns if this corresponds with an "attribute namespace declaration".
+  bool FIsAttributeNamespaceDeclaration() const
+  {
+    AssertValid();
+    if ( m_stReferenceTypeMarker == size_t(-1) )
+      return ( enrtAttrNamespaceDeclReference == m_enrtReferenceType );
+    else
+      return !!m_stReferenceTypeMarker;
   }
   const _TyNamespaceMap * PGetNamespaceMap() const
   {

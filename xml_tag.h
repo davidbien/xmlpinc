@@ -168,8 +168,9 @@ class xml_document : protected xml_tag< t_TyXmlTraits >
   typedef xml_document _TyThis;
   typedef xml_tag< t_TyXmlTraits > _TyBase;
 protected:
-   using _TyBase::_AcquireContent;
+  using _TyBase::_AcquireContent;
   using _TyBase::_WriteContent;
+  using _TyBase::m_opttokTag;
 public:
   typedef t_TyXmlTraits _TyXmlTraits;
   typedef typename _TyXmlTraits::_TyChar _TyChar;
@@ -200,6 +201,12 @@ public:
 #if ASSERTSENABLED
     _TyBase::AssertValid();
 #endif //ASSERTSENABLED
+  }
+  // Returns whether the XMLDecl token is a "pseudo-token" - i.e. it was created not read.
+  bool FPseudoXMLDecl() const
+  {
+    VerifyThrowSz( !!m_opttokTag, "Empty xml_document." );
+    return m_opttokTag->GetValue().FIsNull();
   }
   const _TyXMLDeclProperties & GetXMLDeclProperties() const
   {

@@ -720,7 +720,7 @@ protected:
     if ( !rvalNS.FIsBool() && !m_xdcxtDocumentContext.FIncludePrefixesInAttrNames() )
     {
       const _TyXmlNamespaceValueWrap & rxnvw = rvalNS.GetVal< _TyXmlNamespaceValueWrap >();
-      if ( !rxnvw.FIsNamespaceDeclaration() ) // namespace declarations always include the prefix.
+      if ( !rxnvw.FIsAttributeNamespaceDeclaration() ) // attribute namespace declarations always include the prefix.
       {
         _TyStrView svPrefix = rxnvw.RStringPrefix();
         if ( !svPrefix.empty() )

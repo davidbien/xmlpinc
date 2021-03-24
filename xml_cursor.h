@@ -755,9 +755,10 @@ protected:
       {
         // Then we must check if we have any namespace declarations in this tag and if so undeclare them.
         _TyLexValue const & rrgvName = (**_popttokRtnSpentTag)[vknTagNameIdx];
-        size_t nNamespaceDecls = rrgvName[vknTagName_NNamespaceDeclsIdx].GetVal< size_t >();
+        vtySignedLvalueInt nNamespaceDecls = rrgvName[vknTagName_NNamespaceDeclsIdx].GetVal< vtySignedLvalueInt >();
         if ( nNamespaceDecls )
         {
+          Assert( nNamespaceDecls >= 0 );
           // Move through looking for namespace declarations and undeclare them. No need to do this in reverse.
           typename _TyLexValue::_TySegArrayValues & rsaAttrs = (**_popttokRtnSpentTag)[vknAttributesIdx].GetValueArray();
           (void)rsaAttrs.NApplyContiguous( 0, rsaAttrs.NElements(), 
@@ -935,7 +936,7 @@ protected:
     typedef AllocaList< const typename _TyUriAndPrefixMap::value_type *, false > _TyListPrefixes;
     _TyListPrefixes lPrefixesUsed; // Can't declare the same prefix in the same tag.
     _TyLexValue & rrgAttrs = _rltok[vknAttributesIdx];
-    size_t nNamespaceDecls = 0; // Count these so we can store with the tag and then know when we have finished processing on end-tag.
+    vtySignedLvalueInt nNamespaceDecls = 0; // Count these so we can store with the tag and then know when we have finished processing on end-tag.
     const size_t knAttrs = rrgAttrs.GetSize();
     for ( size_t nAttr = 0; nAttr < knAttrs; ++nAttr )
     {
@@ -963,7 +964,7 @@ protected:
     // Now parse the namespace on the tag:
     {//B
       _TyLexValue & rrgTagName = _rltok[vknNameIdx];
-      rrgTagName[vknTagName_NNamespaceDeclsIdx].template emplaceArgs< size_t >( nNamespaceDecls ); // record the count of namespace decls so we can know when we are done processing the end-tag.
+      rrgTagName[vknTagName_NNamespaceDeclsIdx].emplaceVal( nNamespaceDecls ); // record the count of namespace decls so we can know when we are done processing the end-tag.
       _TyData const & krdtName = rrgTagName[vknNamespaceIdx].GetVal< _TyData >();
       if ( !krdtName.FIsNull() )
       {
@@ -1053,7 +1054,7 @@ protected:
       _TyLexValue & rrgTagName = _rltok[vknTagNameIdx];
       _ProcessTagName( rrgTagName ); 
       rrgTagName[vknNamespaceIdx].emplaceVal( false );
-      rrgTagName[vknTagName_NNamespaceDeclsIdx].template emplaceArgs< size_t >( 0 ); // record the count of namespace decls so we can know when we are done processing the end-tag.
+      rrgTagName[vknTagName_NNamespaceDeclsIdx].template emplaceArgs< vtySignedLvalueInt >( 0 ); // record the count of namespace decls so we can know when we are done processing the end-tag.
     }//EB
     if ( m_fCheckDuplicateAttrs )
       _CheckDuplicateAttrs(  _rltok );

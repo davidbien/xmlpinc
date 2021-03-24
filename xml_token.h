@@ -333,7 +333,7 @@ public:
     if ( !_rctxtTokenCopy.m_rgDeclarations.size() )
       return; // nada para hacer.
     // zero the count of namespace decls - we will accumulate it here correctly.
-    size_t & rnTagNamespaceDecls = ( GetValue()[vknTagNameIdx][vknTagName_NNamespaceDeclsIdx].GetVal<size_t>() = 0 );
+    vtySignedLvalueInt & rnTagNamespaceDecls = ( GetValue()[vknTagNameIdx][vknTagName_NNamespaceDeclsIdx].GetVal<vtySignedLvalueInt>() = 0 );
     // Declare a lambda to sort the value pointers by the prefix contained in the namespace declaration/reference:
     auto lambdaCompareNamespacePrefix = []( const _TyLexValue * _plvalNameLeft, const _TyLexValue * _plvalNameRight ) -> bool
     {
@@ -348,8 +348,8 @@ public:
     // Now move through finding the any declaration that matches a set of references.
     _TyLexValue * const * pplvalCurDeclaration = &_rctxtTokenCopy.m_rgDeclarations[0];
     _TyLexValue * const * const pplvalEndDeclarations = pplvalCurDeclaration + _rctxtTokenCopy.m_rgDeclarations.size();
-    _TyLexValue * const * pplvalCurReference = &_rctxtTokenCopy.m_rgReferences[0];
-    _TyLexValue * const * const pplvalEndReferences = pplvalCurReference + _rctxtTokenCopy.m_rgReferences.size();
+    _TyLexValue * const * pplvalCurReference = _rctxtTokenCopy.m_rgReferences.size() ? &_rctxtTokenCopy.m_rgReferences[0] : nullptr;
+    _TyLexValue * const * const pplvalEndReferences = !pplvalCurReference ? nullptr : ( pplvalCurReference + _rctxtTokenCopy.m_rgReferences.size() );
     // We must traverse all the declarations but we can ignore references once we are finished with the declarations.
     for ( ; ( pplvalCurDeclaration != pplvalEndDeclarations ); )
     {
@@ -383,7 +383,8 @@ public:
         // Then a declaration corresponds to some set of references.
         // Move through all matching references and see if one of them is the actual declaration, unless the declaration is the declaration:
         bool fIsAttrNamespaceDecl;
-        if ( _FIsAttribute( **pplvalCurDeclaration, &fIsAttrNamespaceDecl ) && fIsAttrNamespaceDecl )
+        bool fIsAttr;
+        if ( ( fIsAttr = _FIsAttribute( **pplvalCurDeclaration, &fIsAttrNamespaceDecl ) ) && fIsAttrNamespaceDecl )
         {
           ++rnTagNamespaceDecls; // A declaration on the attr declaration, nothing to fixup - must skip all matching references.
           for ( ++pplvalCurReference; ( pplvalCurReference != pplvalEndReferences ) && !lambdaCompareNamespacePrefix( *pplvalCurDeclaration, *pplvalCurReference ); ++pplvalCurReference )
@@ -398,7 +399,9 @@ public:
             {
               // We found the actual declaration in the reference - just swap the two - add one to the number of declarations:
               ++rnTagNamespaceDecls;
-              (**pplvalCurDeclaration)[vknNamespaceIdx].GetVal< _TyXmlNamespaceValueWrap >().swap( (**pplvalCurReference)[vknNamespaceIdx].GetVal< _TyXmlNamespaceValueWrap >() );
+              _TyXmlNamespaceValueWrap & rxnvwFixup = (**pplvalCurDeclaration)[vknNamespaceIdx].GetVal< _TyXmlNamespaceValueWrap >();
+              rxnvwFixup.swap( (**pplvalCurReference)[vknNamespaceIdx].GetVal< _TyXmlNamespaceValueWrap >() );
+              rxnvwFixup.SetReferenceType( fIsAttr ? enrtAttrNameReference : enrtTagNameReference );
             }
           }
           while( ( ++pplvalCurReference != pplvalEndReferences ) && !lambdaCompareNamespacePrefix( *pplvalCurDeclaration, *pplvalCurReference ) );
@@ -594,11 +597,11 @@ protected:
     Assert( _rrxnvw.FIsNull() );
     _rrxnvw = rxnvw.ShedReference( _enrtReferenceType ); // return a reference inside of the passed ref.
     // Add one to the count of attribute namespace declarations in this tag:
-    ++GetValue()[vknTagNameIdx][vknTagName_NNamespaceDeclsIdx].GetVal<size_t>();
+    ++GetValue()[vknTagNameIdx][vknTagName_NNamespaceDeclsIdx].GetVal<vtySignedLvalueInt>();
   }
 
 #if ASSERTSENABLED
-  void _AssertValidName( bool _fIsTag, const _TyLexValue & _rrgvName, size_t & _rnNamespaceDecls, const _TyXmlNamespaceValueWrap ** _ppxnvw, bool _fIsAttrNamespaceDecl = false ) const
+  void _AssertValidName( bool _fIsTag, const _TyLexValue & _rrgvName, vtySignedLvalueInt & _rnNamespaceDecls, const _TyXmlNamespaceValueWrap ** _ppxnvw, bool _fIsAttrNamespaceDecl = false ) const
   {
     const _TyLexValue & rvName = _rrgvName[vknNameIdx];
     Assert( ( rvName.FHasTypedData() && !rvName.FEmptyTypedData() ) || rvName.FIsString() );
@@ -649,7 +652,7 @@ protected:
     Assert( vknTagArrayCount == rvRoot.GetSize() );
     if ( vknTagArrayCount == rvRoot.GetSize() )
     {
-      size_t nNamespaceDecls = 0;
+      vtySignedLvalueInt nNamespaceDecls = 0;
       _TyLexValue const & rvTag = rvRoot[vknTagNameIdx];
       Assert( vknTagName_ArrayCount == rvTag.GetSize() );
       if ( vknTagName_ArrayCount == rvTag.GetSize() )
@@ -657,7 +660,7 @@ protected:
         const _TyXmlNamespaceValueWrap * pxnvw;
         _AssertValidName( true, rvTag, nNamespaceDecls, &pxnvw );
         Assert( !pxnvw || pxnvw->FIsNamespaceReference() );
-        Assert( rvTag[vknTagName_NNamespaceDeclsIdx].FIsA<size_t>() );
+        Assert( rvTag[vknTagName_NNamespaceDeclsIdx].FIsA<vtySignedLvalueInt>() );
       }
       _TyLexValue const & rrgvAttrs = rvRoot[vknAttributesIdx];
       Assert( rrgvAttrs.FIsArray() );
@@ -688,7 +691,7 @@ protected:
           }
         );
       }
-      Assert( !_fUseNamespaces || ( vknTagName_ArrayCount != rvTag.GetSize() ) || ( nNamespaceDecls == rvTag[vknTagName_NNamespaceDeclsIdx].GetVal<size_t>() ) );
+      Assert( !_fUseNamespaces || ( vknTagName_ArrayCount != rvTag.GetSize() ) || ( nNamespaceDecls == rvTag[vknTagName_NNamespaceDeclsIdx].GetVal<vtySignedLvalueInt>() ) );
     }
   }
   void _AssertValidComment() const
