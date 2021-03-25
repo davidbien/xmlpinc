@@ -20,6 +20,8 @@ class xml_write_transport_file
 public:
   typedef t_TyChar _TyChar;
   typedef t_TyFSwitchEndian _TyFSwitchEndian;
+  // We don't need to open a xml_write_transport_file read/write, as we do for a xml_write_transport_mapped.
+  typedef false_type _TyFOpenFileReadWrite;
 
   xml_write_transport_file( FileObj & _rfoFile, bool _fWriteBOM )
     : m_foFile( std::move( _rfoFile ) )
@@ -81,6 +83,8 @@ class xml_write_transport_mapped
 public:
   typedef t_TyChar _TyChar;
   typedef t_TyFSwitchEndian _TyFSwitchEndian;
+  // We must map a xml_write_transport_mapped read/write because we must map it read/write.
+  typedef true_type _TyFOpenFileReadWrite;
   static const size_t s_knGrowFileByBytes = 16384 * sizeof( _TyChar ); // As we write the file grow it in this increment.
 
   xml_write_transport_mapped( FileObj & _rfoFile, bool _fWriteBOM )
@@ -91,7 +95,7 @@ public:
     if ( _fWriteBOM )
       WriteBOM< _TyChar, _TyFSwitchEndian >( m_foFile.HFileGet() );
     // Leave the file right where it is and map it here - the mapping will take care of correctly offsetting everything.
-	  m_nbyMapAtPosition = (size_t)NFileSeekAndThrow(_rfoFile.HFileGet(), 0, vkSeekCur);
+	  m_nbyMapAtPosition = (size_t)NFileSeekAndThrow(m_foFile.HFileGet(), 0, vkSeekCur);
     size_t stMapBytes = s_knGrowFileByBytes;
     int iResult = FileSetSize( m_foFile.HFileGet(), m_nbyMapAtPosition + stMapBytes ); // Set initial size.
     if ( !!iResult )
@@ -109,7 +113,7 @@ public:
   ~xml_write_transport_mapped()
   {
     bool fInUnwinding = !!std::uncaught_exceptions();
-    _Close( !fInUnwinding ); // Only throw on error from close if we are not currently unwinding.
+    (void)_Close( !fInUnwinding ); // Only throw on error from close if we are not currently unwinding.
   }
 
   // Write any character type to the transport - it will do the appropriate translation and it needn't even buffer anything...
@@ -156,6 +160,7 @@ protected:
     {
       if ( size_t( m_pcEnd - m_pcCur ) < _charsByAtLeast )
         _GrowMap( _charsByAtLeast );
+      return 0;
     }
     catch( std::exception const & _rexc )
     {
@@ -186,7 +191,7 @@ protected:
     m_pcCur = m_pcBase + nchOffsetCur;
   }
   // Allow throwing on error because closing actually does something and we need to know if it succeeds.
-  void _Close( bool _fThrowOnError ) noexcept(false)
+  int _Close( bool _fThrowOnError ) noexcept(false)
   {
     if ( !m_fmoMap.FIsOpen() )
     {

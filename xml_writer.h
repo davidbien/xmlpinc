@@ -365,7 +365,7 @@ public:
     // Always obtain the encoding from the passed XMLDeclProperties.
     m_xdcxtDocumentContext.Init( _fKeepEncoding ? efceFileCharacterEncodingCount : _TyXmlTransportOut::GetEncoding(), m_fUseNamespaces, &_rXmlDeclProperties, &prFormatContext );
     m_strFileName = _pszFileName;
-    FileObj foFile( CreateWriteOnlyFile( _pszFileName ) );
+    FileObj foFile( CreateFileMaybeReadWrite< typename _TyXmlTransportOut::_TyFOpenFileReadWrite >( _pszFileName ) );
     VerifyThrowSz( foFile.FIsOpen(), "Unable to open file[%s]", _pszFileName );
     // emplace the transport - it will write the BOM or not:
     emplaceTransport( foFile, m_fWriteBOM );
@@ -481,8 +481,8 @@ public:
   _TyXmlWriteTag StartTag( const t_TyChar * _pszTagName, size_t _stLenTag = 0, TGetPrefixUri< t_TyChar > const * _ppuNamespace = nullptr )
   {
     _CheckCommitCur();
-    // Add a new tag as the top of the context.
-    _TyWriteContext & rwcxNew = m_lContexts.emplace_back( this, m_xdcxtDocumentContext.GetUserObj(), s_knTokenSTag );
+    // Add a new tag as the top of the context. Setting it as s_knTokenEmptyElemTag allows "empty element tag" ending.
+    _TyWriteContext & rwcxNew = m_lContexts.emplace_back( this, m_xdcxtDocumentContext.GetUserObj(), s_knTokenEmptyElemTag );
     rwcxNew.GetToken().SetTagName( m_xdcxtDocumentContext, _pszTagName, _stLenTag, _ppuNamespace );
     return _TyXmlWriteTag( rwcxNew );
   }
@@ -493,7 +493,7 @@ public:
   {
     _CheckCommitCur();
     // Add a new tag as the top of the context.
-    _TyWriteContext & rwcxNew = m_lContexts.emplace_back( this, m_xdcxtDocumentContext.GetUserObj(), s_knTokenSTag );
+    _TyWriteContext & rwcxNew = m_lContexts.emplace_back( this, m_xdcxtDocumentContext.GetUserObj(), s_knTokenEmptyElemTag );
     rwcxNew.GetToken().SetTagName( m_xdcxtDocumentContext, _rxnvw, _pszTagName, _stLenTag );
     return _TyXmlWriteTag( rwcxNew );
   }
