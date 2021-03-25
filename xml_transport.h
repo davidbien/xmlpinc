@@ -38,9 +38,31 @@ public:
   }
   // We want these calls to be noexcept.
   bool FWrite( const _TyChar * _pcBuf, size_t _nch ) noexcept
+    requires( is_same_v< _TyFSwitchEndian, false_type > )
   {
     int iResult = FileWrite( m_foFile.HFileGet(), _pcBuf, _nch * sizeof ( _TyChar ) );
     return !iResult;
+  }
+  bool FWrite( const _TyChar * _pcBuf, size_t _nch ) noexcept
+    requires( is_same_v< _TyFSwitchEndian, true_type > )
+  {
+    // Copy piecewise to a buffer so we can switch endian:
+    // Opt to copy as much as possible at once as this is a system call.
+    // We call alloca here regardless because 1k shouldn't overflow the stack.
+    size_t nchPiece = (min)( _nch, ( vknbyMaxAllocaSize ? vknbyMaxAllocaSize : 1024 ) / sizeof( _TyChar ) );
+    _TyChar * rgcPiece = (_TyChar*)alloca( nchPiece * sizeof( _TyChar ) );
+    const _TyChar * const pcEnd = _pcBuf + _nch; 
+    for ( const _TyChar * pcCur = _pcBuf; ( pcEnd != pcCur ); )
+    {
+      size_t nchCopyCur = (min)( size_t( pcEnd - pcCur ), nchPiece );
+      memcpy( rgcPiece, pcCur, nchCopyCur * sizeof( _TyChar ) );
+      SwitchEndian( rgcPiece, nchCopyCur );
+      int iResult = FileWrite( m_foFile.HFileGet(), rgcPiece, nchCopyCur * sizeof ( _TyChar ) );
+      if ( iResult )
+        return false;
+      pcCur += nchCopyCur;
+    }
+    return true;
   }
   static constexpr EFileCharacterEncoding GetEncoding()
   {
@@ -99,11 +121,25 @@ public:
   }
   // We want these calls to be noexcept.
   bool FWrite( const _TyChar * _pcBuf, size_t _nch ) noexcept
+    requires( is_same_v< _TyFSwitchEndian, false_type > )
   {
     int iResult = _CheckGrowMapNoThrow( _nch );
     if ( !iResult )
     {
       memcpy( m_pcCur, _pcBuf, _nch * sizeof( _TyChar ) );
+      m_pcCur += _nch;
+    }
+    return !iResult;
+  }
+  // We want these calls to be noexcept.
+  bool FWrite( const _TyChar * _pcBuf, size_t _nch ) noexcept
+    requires( is_same_v< _TyFSwitchEndian, true_type > )
+  {
+    int iResult = _CheckGrowMapNoThrow( _nch );
+    if ( !iResult )
+    {
+      memcpy( m_pcCur, _pcBuf, _nch * sizeof( _TyChar ) );
+      SwitchEndian( m_pcCur, _nch );
       m_pcCur += _nch;
     }
     return !iResult;

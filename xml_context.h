@@ -79,6 +79,7 @@ public:
     if ( !rrgVals.FIsNull() )
     {
       Assert( rrgVals.FIsArray() );
+      m_fVersionDoubleQuote = rrgVals[vknXMLDecl_VersionMinorNumberDoubleQuoteIdx].GetVal<bool>();
       bool fStandaloneYes = rrgVals[vknXMLDecl_StandaloneYesIdx].GetVal<bool>();
       m_fHasStandalone = fStandaloneYes || rrgVals[vknXMLDecl_StandaloneNoIdx].GetVal<bool>();
       m_fStandalone = m_fHasStandalone ? fStandaloneYes : true;

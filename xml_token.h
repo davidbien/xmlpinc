@@ -332,8 +332,8 @@ public:
     Assert( FIsTag() );
     if ( !_rctxtTokenCopy.m_rgDeclarations.size() )
       return; // nada para hacer.
-    // zero the count of namespace decls - we will accumulate it here correctly.
-    vtySignedLvalueInt & rnTagNamespaceDecls = ( GetValue()[vknTagNameIdx][vknTagName_NNamespaceDeclsIdx].GetVal<vtySignedLvalueInt>() = 0 );
+    // The number of declarations is always equal to the count of declarations in the array:
+    vtySignedLvalueInt & rnTagNamespaceDecls = ( GetValue()[vknTagNameIdx][vknTagName_NNamespaceDeclsIdx].GetVal<vtySignedLvalueInt>() = _rctxtTokenCopy.m_rgDeclarations.size() );
     // Declare a lambda to sort the value pointers by the prefix contained in the namespace declaration/reference:
     auto lambdaCompareNamespacePrefix = []( const _TyLexValue * _plvalNameLeft, const _TyLexValue * _plvalNameRight ) -> bool
     {
@@ -362,12 +362,9 @@ public:
         if ( !( fIsAttr = _FIsAttribute( **pplvalCurDeclaration, &fIsAttrNamespaceDecl ) ) || !fIsAttrNamespaceDecl )
         {
           // Then a new namespace (prefix,URI) that hasn't been declared yet. Declare it. This has the effect of leaving a
-          //  namespace reference in its place which happens to be exactly what we want. This adds one to rnTagNamespaceDecls internally.
+          //  namespace reference in its place which happens to be exactly what we want. This adds one to rnTagNamespaceDecls internally, so we subtract one:
+          --rnTagNamespaceDecls;
           _DeclareNamespace( _rcxtDoc, std::move( (**pplvalCurDeclaration)[vknNamespaceIdx].GetVal< _TyXmlNamespaceValueWrap >() ), fIsAttr ? enrtAttrNameReference : enrtTagNameReference );
-        }
-        else
-        {
-          ++rnTagNamespaceDecls;
         }
         ++pplvalCurDeclaration;
       }
@@ -386,7 +383,7 @@ public:
         bool fIsAttr;
         if ( ( fIsAttr = _FIsAttribute( **pplvalCurDeclaration, &fIsAttrNamespaceDecl ) ) && fIsAttrNamespaceDecl )
         {
-          ++rnTagNamespaceDecls; // A declaration on the attr declaration, nothing to fixup - must skip all matching references.
+          // A declaration on the attr declaration, nothing to fixup - must skip all matching references.
           for ( ++pplvalCurReference; ( pplvalCurReference != pplvalEndReferences ) && !lambdaCompareNamespacePrefix( *pplvalCurDeclaration, *pplvalCurReference ); ++pplvalCurReference )
             ;
         }
@@ -397,8 +394,7 @@ public:
           {
             if ( !fFoundDeclaration && _FIsAttribute( **pplvalCurReference, &fIsAttrNamespaceDecl ) && fIsAttrNamespaceDecl )
             {
-              // We found the actual declaration in the reference - just swap the two - add one to the number of declarations:
-              ++rnTagNamespaceDecls;
+              // We found the actual declaration in the reference - just swap the two:
               _TyXmlNamespaceValueWrap & rxnvwFixup = (**pplvalCurDeclaration)[vknNamespaceIdx].GetVal< _TyXmlNamespaceValueWrap >();
               rxnvwFixup.swap( (**pplvalCurReference)[vknNamespaceIdx].GetVal< _TyXmlNamespaceValueWrap >() );
               rxnvwFixup.SetReferenceType( fIsAttr ? enrtAttrNameReference : enrtTagNameReference );
