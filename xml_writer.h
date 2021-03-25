@@ -578,9 +578,12 @@ void _EndTag( _TyWriteContext * _pwcxEnd )
 {
   VerifyThrowSz( _pwcxEnd == &m_lContexts.back(), "Ending a tag that is not at the top of the context stack." );
   // So if we currently have an unended tag then there must be no content and we needn't write a separate end tag token.
-  if ( m_fHaveUnendedTag )
-    _CheckWriteTagEnd( false );
-  else
+  // NOPE: We want to be able to duplicate the input as much as possible while still allowing any options for the internal user
+  //  so in that regard we will check the token id and when we a s_knTokenSTag we know if was paired with a s_knTokenETag when read from a file.
+  bool fHadUnendedTag;
+  if ( fHadUnendedTag = m_fHaveUnendedTag )
+    _CheckWriteTagEnd( ( s_knTokenSTag == _pwcxEnd->GetToken().GetTokenId() ) );
+  if ( !fHadUnendedTag || ( s_knTokenSTag == _pwcxEnd->GetToken().GetTokenId() ) )
   {
     // We have already validate the tag name so we can just write it:
     _WriteTransportRaw( _TyMarkupTraits::s_kszEndTagBegin, StaticStringLen( _TyMarkupTraits::s_kszEndTagBegin ) );
