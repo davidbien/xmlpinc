@@ -244,21 +244,80 @@ protected:
   _TyChar * m_pcEnd{nullptr};
 };
 
-#if 0 // later. easy.
 // xml_write_transport_memstream:
-// Write XML to a memstream.
+// Write XML to a memstream - an in-memory stream impl.
 template < class t_TyChar, class t_TyFSwitchEndian >
 class xml_write_transport_memstream
 {
   typedef xml_write_transport_memstream _TyThis;
 public:
+  typedef t_TyChar _TyChar;
   typedef MemStream< size_t, false > _TyMemStream;
+  typedef MemFileContainer< size_t, false > _TyMemFileContainer;
+  static const size_t s_knbyChunkSizeMemStream = 4096; // Needs to be divisible by sizeof( char32_t ).
 
-
+  xml_write_transport_memstream( xml_write_transport_memstream const & ) = delete;
+  xml_write_transport_memstream & operator =( xml_write_transport_memstream const & ) = delete;
+  xml_write_transport_memstream( bool _fWriteBOM )
+  {
+    // Create a new memstream object. The MemFileContainer just goes away - just really there for creating the shared memfile object initially.
+    {//B
+      _TyMemFileContainer mfc( s_knbyChunkSizeMemStream );
+      mfc.OpenStream( m_msMemStream );
+    }//EB
+    EFileCharacterEncoding efce = GetCharacterEncoding< t_tyChar, t_tyFSwitchEndian >();
+    Assert( efceFileCharacterEncodingCount != efce );
+    VerifyThrowSz( efceFileCharacterEncodingCount != efce, "Unknown char/switch endian encoding." );
+    string strBOM = StrGetBOMForEncoding( efce );
+    m_msMemStream.Write( strBOM.c_str(), strBOM.length() );
+  }
+  xml_write_transport_memstream( _TyMemStream && _rrmsMemStream )
+    : m_msMemStream( std::move( _rrmsMemStream ) )
+    requires( is_same_v< _TyFSwitchEndian, false_type > )
+  {
+  }
+  xml_write_transport_memstream( _TyMemStream && _rrmsMemStream )
+    : m_msMemStream( std::move( _rrmsMemStream ) )
+    requires( is_same_v< _TyFSwitchEndian, true_type > )
+  {
+    // For switch endian we need to switch the bytes and we didn't write the code to switch bytes within
+    //  a single character that straddles a segment boundary in the SegArray.
+    VerifyThrowSz( !( m_msMemStream.GetCurPos() % sizeof( _TyChar ) ) );
+  }
+  // Write any character type to the transport - it will do the appropriate translation and it needn't even buffer anything...
+  template < class t_TyCharWrite >
+  void Write( const t_TyCharWrite * _pcBegin, const t_TyCharWrite * _pcEnd )
+  {
+    // We send to the conversion template which will call back into this:
+    VerifyThrow( FWriteUTFStream< _TyChar >( _pcBegin, _pcEnd - _pcBegin, *this ) );
+  }
+  // We want these calls to be noexcept.
+  bool FWrite( const _TyChar * _pcBuf, size_t _nch ) noexcept
+    requires( is_same_v< _TyFSwitchEndian, false_type > )
+  {
+    m_msMemStream.WriteNoExcept( _pcBuf, _nch * sizeof ( _TyChar ) );
+  }
+  // We want these calls to be noexcept.
+  bool FWrite( const _TyChar * _pcBuf, size_t _nch ) noexcept
+    requires( is_same_v< _TyFSwitchEndian, true_type > )
+  {
+    size_t nPosInit = m_msMemStream.GetCurPos();
+    m_msMemStream.WriteNoExcept( _pcBuf, _nch * sizeof ( _TyChar ) );
+    m_msMemStream.Apply( nPosInit, m_msMemStream.GetCurPos(), 
+      []( vtyMemStreamByteType * _pbyBegin, vtyMemStreamByteType * _pbyEnd )
+      {
+        Assert( !( _pbyEnd - _pbyBegin ) % sizeof ( _TyChar ) );
+        SwitchEndian( (_TyChar*)_pbyBegin, (_TyChar*)_pbyEnd );
+      }
+    );
+  }
+  static constexpr EFileCharacterEncoding GetEncoding()
+  {
+    return GetCharacterEncoding< _TyChar, _TyFSwitchEndian >();
+  }
 protected:
   _TyMemStream m_msMemStream;
 };
-#endif //0
 
 // xml_write_transport_var:
 // Variant transport. Not sure if this is necessary.

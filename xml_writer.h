@@ -359,22 +359,28 @@ public:
   // Unless _fKeepEncoding is false we will always write the encoding with the XMLDecl from the encoding of the output transport.
   void OpenFile( const char * _pszFileName, _TyXMLDeclProperties const & _rXmlDeclProperties = _TyXMLDeclProperties(), const _xml_output_format * _pxofFormat = nullptr, bool _fKeepEncoding = false )
   {
-    _TyPrFormatContext prFormatContext;
-    if ( _pxofFormat )
-      prFormatContext.first = *_pxofFormat;
-    // Always obtain the encoding from the passed XMLDeclProperties.
-    m_xdcxtDocumentContext.Init( _fKeepEncoding ? efceFileCharacterEncodingCount : _TyXmlTransportOut::GetEncoding(), m_fUseNamespaces, &_rXmlDeclProperties, &prFormatContext );
     m_strFileName = _pszFileName;
     FileObj foFile( CreateFileMaybeReadWrite< typename _TyXmlTransportOut::_TyFOpenFileReadWrite >( _pszFileName ) );
     VerifyThrowSz( foFile.FIsOpen(), "Unable to open file[%s]", _pszFileName );
     // emplace the transport - it will write the BOM or not:
     emplaceTransport( foFile, m_fWriteBOM );
-    _Init(); // This might write the XMLDecl tag to the file, but definitely will init the context stack.
+    _Init( _rXmlDeclProperties, _pxofFormat, _fKeepEncoding ); // This might write the XMLDecl tag to the file, but definitely will init the context stack.
+  }
+  // Memfile support:
+  void OpenMemFile( _TyXMLDeclProperties const & _rXmlDeclProperties = _TyXMLDeclProperties(), const _xml_output_format * _pxofFormat = nullptr, bool _fKeepEncoding = false )
+  {
+    emplaceTransport();
+    _Init( _rXmlDeclProperties, _pxofFormat, _fKeepEncoding ); // This might write the XMLDecl tag to the file, but definitely will init the context stack.
   }
   // Initialize the xml_writer. Write the XMLDecl root "tag" if that is desired. Regardless create a XMLDecl pseudo
   //  tag as the root of the context list.
-  void _Init()
+  void _Init( _TyXMLDeclProperties const & _rXmlDeclProperties, const _xml_output_format * _pxofFormat, bool _fKeepEncoding )
   {
+    _TyPrFormatContext prFormatContext;
+    if ( _pxofFormat )
+      prFormatContext.first = *_pxofFormat;
+    // Always obtain the encoding from the passed XMLDeclProperties.
+    m_xdcxtDocumentContext.Init( _fKeepEncoding ? efceFileCharacterEncodingCount : _TyXmlTransportOut::GetEncoding(), m_fUseNamespaces, &_rXmlDeclProperties, &prFormatContext );
     m_lContexts.clear();
     m_fWroteFirstTag = false;
     m_fHaveUnendedTag = false;
