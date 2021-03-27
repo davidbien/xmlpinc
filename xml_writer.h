@@ -473,15 +473,127 @@ public:
   {
     return m_fWroteFirstTag && ( 1 == m_lContexts.size() );
   }
-  // This will:
-  // 1) Call FMoveDown on _xrc
-  // 2) We must check and declare any namespace that we may encounter along the way as
-  //    these may have been declared above the current position of _rxrc, but we will
-  //    only know when we finally encounter a reference to them.
+  // Write from a read cursor.
+  // Will write up to _nNextTags if the current position of the output allows for that.
+  // 1) If the output context stack has a size of 1 (only XMLDecl node) then we can only write one tag.
+  // 2) If the output context stack has a size greater than 1 then we can write <n> tags at the same level.
+  // 3) If _nNextTags is zero, or we are in the epilog, then we will write all non-tags until the first tag.
+  //    We will stop at any non-blank CharData as well. This allows splicing comments and blank CharData at
+  //    the end of an XML document.
+  // Returns the number of NextTags written.
   template < class t_TyReadCursor >
-  void WriteFromReadCursor( t_TyReadCursor & _rxrc )
+  size_t NWriteFromReadCursor( t_TyReadCursor & _rxrc, size_t _nNextTags = size_t(-1) )
   {
+    if ( _nNextTags > 0 )
+      _nNextTags = FInProlog() ? 1 : ( FInEpilog() 0 : _nNextTags );
+    
+    // The read cursor is within *some* tag - which may be the initial XMLDecl "tag" or some subtag thereof.
+    bool fStartedInPrologWrite = FInProlog();
+    bool fStartedInPrologRead = _rxrc.FInProlog();
+    if ( fStartedInPrologWrite == fStartedInPrologRead )
+      _WriteReadCursorContent( _rxrc );
+    if ( !_nNextTags || !_rxrc.FMoveDown() )
+    {
+      VerifyThrowSz( !fStartedInPrologWrite, "Invalid XML document written - just content nodes - no tag was passed in the source read cursor _rxrc." );
+      return 0; // We copied the content and that is all we were supposed to do, or could do.
+    }
+
+    bool fNextTag;
+    do
+    {
+      _TyThis xmlTag;
+      xmlTag.FromXmlStream( _rxrc );
+      fNextTag = _rxrc.FNextTag( &xmlTag.m_opttokTag );
+      _AcquireContent( std::move( xmlTag ) );
+      if ( !fNextTag )
+      {
+        _AcquireContent( _rxrc.GetContextCur() );
+        fNextTag = _rxrc.FMoveDown();
+      }
+    }
+    while ( fNextTag );
+    
+
+
   }
+  // Add all the current content from passed context.
+  template < class t_TyReadCursor >
+  void _WriteReadCursorContent( t_TyReadCursor & _rxrc )
+  {
+    typedef typename t_TyReadCursor::_TyXmlToken _TyXmlToken;
+    typename t_TyReadCursor::_TyReadContext & rctxt = _rxrc.GetContextCur();
+    rctxt.ApplyContent( 0, rctxt.NContentTokens(),
+      [this]( const _TyXmlToken * _pxtBegin, const _TyXmlToken * _pxtEnd )
+      {
+        for ( const _TyXmlToken * pxtCur = _pxtBegin; _pxtEnd != pxtCur; ++pxtCur )
+          WriteToken( *pxtCur );
+      }
+    );
+    rctxt.ClearContent(); // Clear the content as a sanity check. The above doesn't modify the content tokens.
+  }
+#if 0
+  // Read from this read cursor into this object.
+  void FromXmlStream( _TyReadCursor & _rxrc )
+  {
+    Assert( _rxrc.FInsideDocumentTag() );
+    VerifyThrowSz( _rxrc.FInsideDocumentTag(), "Read cursor is in an invalid state." );
+   
+    // We can't acquire the token until the call the FNextTag().
+    _AcquireContent( _rxrc.GetContextCur() );
+
+    // We will move down into the next tag and that is the only tag we will capture into the xml_document... necessarily.
+    if ( _rxrc.FMoveDown() )
+    {
+      bool fNextTag;
+      do
+      {
+        _TyThis xmlTag;
+        xmlTag.FromXmlStream( _rxrc );
+        fNextTag = _rxrc.FNextTag( &xmlTag.m_opttokTag );
+        _AcquireContent( std::move( xmlTag ) );
+        if ( !fNextTag )
+        {
+          _AcquireContent( _rxrc.GetContextCur() );
+          fNextTag = _rxrc.FMoveDown();
+        }
+      }
+      while ( fNextTag );
+    }
+  }
+
+  // Read from this read cursor into this object.
+  void FromXmlStream( _TyReadCursor & _rxrc )
+  {
+    Assert( _rxrc.FInProlog() || _rxrc.FInsideDocumentTag() );
+    VerifyThrowSz( _rxrc.FInProlog() || _rxrc.FInsideDocumentTag(), "Read cursor is in an invalid state." );
+    // Read each element in order. When done transfer the user object, UriMap and PrefixMap over to this object.
+    // We can attach at any point during the iteration and we will glean the XMLDecl top node from the read cursor.
+    
+    bool fStartedInProlog = _rxrc.FInProlog();
+    // We only read the top-level content tokens if we are currently at the XMLDecl tag.
+    if ( fStartedInProlog )
+      _AcquireContent( _rxrc.GetContextCur() );
+
+    // We will move down into the next tag and that is the only tag we will capture into the xml_document... necessarily.
+    VerifyThrowSz( _rxrc.FMoveDown(), "No tag to copy.");
+    {//B
+      _TyBase xmlTagDocument; // The main actual document tag is a subtag of the XMLDecl tag.
+      xmlTagDocument.FromXmlStream( _rxrc );
+      bool fNextTag = _rxrc.FNextTag( &xmlTagDocument.m_opttokTag );
+      Assert( !fNextTag || !fStartedInProlog ); // If we started in the middle of an XML then we might see that there is a next tag.
+      _AcquireContent( std::move( xmlTagDocument ) );
+    }//EB
+    
+    // Similarly we will only acquire the ending content if we started in the prolog - otherwise it could be bogus CharData at the end of the file.
+    if ( fStartedInProlog )
+    {
+      Assert( _rxrc.FInEpilog() );
+      _AcquireContent( _rxrc.GetContextCur() );
+    }
+    // Since we are done we can obtain the root tag: The XMLDecl pseudo-tag.
+    _TyBase::AcquireTag( std::move( _rxrc.XMLDeclAcquireDocumentContext( m_xdcxtDocumentContext ) ) );
+  }
+#endif 0
 
   // Start the tag. If _ppvNamespace is non-null:
   // 1) Check to see if the (prefix,uri) happens to be current. If it isn't:
