@@ -102,6 +102,8 @@ template < class t_TyChar, class t_TyFSwitchEndian >
 class xml_write_transport_file;
 template < class t_TyChar, class t_TyFSwitchEndian >
 class xml_write_transport_mapped;
+template < class t_TyChar, class t_TyFSwitchEndian >
+class xml_write_transport_memstream;
 
 // xml_writer.h:
 template < class t_TyXmlTransportOut >
@@ -125,7 +127,7 @@ struct map_input_to_output_transport< _l_transport_mapped< t_TyChar, t_TyBoolSwi
   typedef xml_write_transport_mapped< t_TyChar, t_TyBoolSwitchEndian > _TyXmlWriteTransport;
 };
 template < class t_TyChar, class t_TyBoolSwitchEndian >
-struct map_input_to_output_transport< _l_transport_fixed< t_TyChar, t_TyBoolSwitchEndian > >
+struct map_input_to_output_transport< _l_transport_fixedmem< t_TyChar, t_TyBoolSwitchEndian > >
 {
   typedef xml_write_transport_memstream< t_TyChar, t_TyBoolSwitchEndian > _TyXmlWriteTransport;
 };
@@ -143,7 +145,7 @@ struct map_input_to_any_output_transport< _l_transport_mapped< t_TyLexInputChar,
   typedef xml_write_transport_mapped< t_TyChar, t_TyBoolSwitchEndian > _TyXmlWriteTransport;
 };
 template < class t_TyLexInputChar, class t_TyLexInputBoolSwitchEndian, class t_TyChar, class t_TyBoolSwitchEndian >
-struct map_input_to_any_output_transport< _l_transport_fixed< t_TyLexInputChar, t_TyLexInputBoolSwitchEndian >, t_TyChar, t_TyBoolSwitchEndian >
+struct map_input_to_any_output_transport< _l_transport_fixedmem< t_TyLexInputChar, t_TyLexInputBoolSwitchEndian >, t_TyChar, t_TyBoolSwitchEndian >
 {
   typedef xml_write_transport_memstream< t_TyChar, t_TyBoolSwitchEndian > _TyXmlWriteTransport;
 };

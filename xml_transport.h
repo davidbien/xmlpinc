@@ -252,6 +252,7 @@ class xml_write_transport_memstream
   typedef xml_write_transport_memstream _TyThis;
 public:
   typedef t_TyChar _TyChar;
+  typedef t_TyFSwitchEndian _TyFSwitchEndian;
   typedef MemStream< size_t, false > _TyMemStream;
   typedef MemFileContainer< size_t, false > _TyMemFileContainer;
   static const size_t s_knbyChunkSizeMemStream = 4096; // Needs to be divisible by sizeof( char32_t ).
@@ -265,24 +266,35 @@ public:
       _TyMemFileContainer mfc( s_knbyChunkSizeMemStream );
       mfc.OpenStream( m_msMemStream );
     }//EB
-    EFileCharacterEncoding efce = GetCharacterEncoding< t_tyChar, t_tyFSwitchEndian >();
-    Assert( efceFileCharacterEncodingCount != efce );
-    VerifyThrowSz( efceFileCharacterEncodingCount != efce, "Unknown char/switch endian encoding." );
-    string strBOM = StrGetBOMForEncoding( efce );
-    m_msMemStream.Write( strBOM.c_str(), strBOM.length() );
+    if ( _fWriteBOM )
+    {
+      EFileCharacterEncoding efce = GetCharacterEncoding< _TyChar, _TyFSwitchEndian >();
+      Assert( efceFileCharacterEncodingCount != efce );
+      VerifyThrowSz( efceFileCharacterEncodingCount != efce, "Unknown char/switch endian encoding." );
+      string strBOM = StrGetBOMForEncoding( efce );
+      m_msMemStream.Write( strBOM.c_str(), strBOM.length() );
+    }
   }
   xml_write_transport_memstream( _TyMemStream && _rrmsMemStream )
-    : m_msMemStream( std::move( _rrmsMemStream ) )
     requires( is_same_v< _TyFSwitchEndian, false_type > )
+    : m_msMemStream( std::move( _rrmsMemStream ) )
   {
   }
   xml_write_transport_memstream( _TyMemStream && _rrmsMemStream )
-    : m_msMemStream( std::move( _rrmsMemStream ) )
     requires( is_same_v< _TyFSwitchEndian, true_type > )
+    : m_msMemStream( std::move( _rrmsMemStream ) )
   {
     // For switch endian we need to switch the bytes and we didn't write the code to switch bytes within
     //  a single character that straddles a segment boundary in the SegArray.
-    VerifyThrowSz( !( m_msMemStream.GetCurPos() % sizeof( _TyChar ) ) );
+    VerifyThrowSz( !( m_msMemStream.GetCurPos() % sizeof( _TyChar ) ), "For switch endian xml_write_transport_memstream<> must start at a multiple of a character size." );
+  }
+  _TyMemStream & GetMemStream() 
+  {
+    return m_msMemStream;
+  }
+  const _TyMemStream & GetMemStream() const
+  {
+    return m_msMemStream;
   }
   // Write any character type to the transport - it will do the appropriate translation and it needn't even buffer anything...
   template < class t_TyCharWrite >
@@ -295,21 +307,27 @@ public:
   bool FWrite( const _TyChar * _pcBuf, size_t _nch ) noexcept
     requires( is_same_v< _TyFSwitchEndian, false_type > )
   {
-    m_msMemStream.WriteNoExcept( _pcBuf, _nch * sizeof ( _TyChar ) );
+    ssize_t sstResult = m_msMemStream.WriteNoExcept( _pcBuf, _nch * sizeof ( _TyChar ) );
+    return !( sstResult < 0 ) && size_t( sstResult ) == ( _nch * sizeof ( _TyChar ) );
   }
   // We want these calls to be noexcept.
   bool FWrite( const _TyChar * _pcBuf, size_t _nch ) noexcept
     requires( is_same_v< _TyFSwitchEndian, true_type > )
   {
     size_t nPosInit = m_msMemStream.GetCurPos();
-    m_msMemStream.WriteNoExcept( _pcBuf, _nch * sizeof ( _TyChar ) );
-    m_msMemStream.Apply( nPosInit, m_msMemStream.GetCurPos(), 
-      []( vtyMemStreamByteType * _pbyBegin, vtyMemStreamByteType * _pbyEnd )
-      {
-        Assert( !( _pbyEnd - _pbyBegin ) % sizeof ( _TyChar ) );
-        SwitchEndian( (_TyChar*)_pbyBegin, (_TyChar*)_pbyEnd );
-      }
-    );
+    ssize_t sstResult = m_msMemStream.WriteNoExcept( _pcBuf, _nch * sizeof ( _TyChar ) );
+    if ( !( sstResult < 0 ) && size_t( sstResult ) == ( _nch * sizeof ( _TyChar ) ) )
+    {
+      m_msMemStream.Apply( nPosInit, m_msMemStream.GetCurPos(), 
+        []( vtyMemStreamByteType * _pbyBegin, vtyMemStreamByteType * _pbyEnd )
+        {
+          Assert( !( ( _pbyEnd - _pbyBegin ) % sizeof ( _TyChar ) ) );
+          SwitchEndian( (_TyChar*)_pbyBegin, (_TyChar*)_pbyEnd );
+        }
+      );
+      return true;
+    }
+    return false;
   }
   static constexpr EFileCharacterEncoding GetEncoding()
   {

@@ -369,7 +369,7 @@ public:
   // Memfile support:
   void OpenMemFile( _TyXMLDeclProperties const & _rXmlDeclProperties = _TyXMLDeclProperties(), const _xml_output_format * _pxofFormat = nullptr, bool _fKeepEncoding = false )
   {
-    emplaceTransport();
+    emplaceTransport( m_fWriteBOM );
     _Init( _rXmlDeclProperties, _pxofFormat, _fKeepEncoding ); // This might write the XMLDecl tag to the file, but definitely will init the context stack.
   }
   // Initialize the xml_writer. Write the XMLDecl root "tag" if that is desired. Regardless create a XMLDecl pseudo
@@ -450,6 +450,16 @@ public:
   bool FHasTransport() const
   {
     return m_optTransportOut.has_value();
+  }
+  _TyXmlTransportOut & GetTransportOut()
+  {
+    Assert( FHasTransport() );
+    return *m_optTransportOut;
+  }
+  const _TyXmlTransportOut & GetTransportOut() const
+  {
+    Assert( FHasTransport() );
+    return *m_optTransportOut;
   }
   bool FInsideDocumentTag() const
   {
