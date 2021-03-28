@@ -436,6 +436,14 @@ public:
     AssertValid();
     return *m_itCurContext;
   }
+  _TyXmlToken GetTagCur()
+  {
+    return GetContextCur().GetTag();
+  }
+  const _TyXmlToken GetTagCur() const
+  {
+    return GetContextCur().GetTag();
+  }
 
   const _TyXMLDeclProperties & GetXMLDeclProperties() const
   {

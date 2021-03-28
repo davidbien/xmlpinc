@@ -490,29 +490,56 @@ public:
     // The read cursor is within *some* tag - which may be the initial XMLDecl "tag" or some subtag thereof.
     bool fStartedInPrologWrite = FInProlog();
     bool fStartedInPrologRead = _rxrc.FInProlog();
-    if ( fStartedInPrologWrite == fStartedInPrologRead )
-      _WriteReadCursorContent( _rxrc );
+  #if 0
     if ( !_nNextTags || !_rxrc.FMoveDown() )
     {
       VerifyThrowSz( !fStartedInPrologWrite, "Invalid XML document written - just content nodes - no tag was passed in the source read cursor _rxrc." );
       return 0; // We copied the content and that is all we were supposed to do, or could do.
     }
+  #endif //0
 
-    bool fNextTag;
+    // Record the top of the stack, we will stop when we reach this point _nNextTag times.
+    ssize_t nTagsRemaining = _nNextTags;
+    if ( nTagsRemaining < 0 )
+      nTagsRemaining = (numeric_limits< ssize_t >::max)();
+    size_t nCurDepth = ( fStartedInPrologWrite == fStartedInPrologRead ) ? 1 : 0; // We use this to control whether to write content at the begin of the first and the end of the last loops.
+    size_t nDepthStart = nCurDepth;
     do
     {
-      _TyThis xmlTag;
-      xmlTag.FromXmlStream( _rxrc );
-      fNextTag = _rxrc.FNextTag( &xmlTag.m_opttokTag );
-      _AcquireContent( std::move( xmlTag ) );
-      if ( !fNextTag )
+      if ( nCurDepth > 0 )
+        _WriteReadCursorContent( _rxrc ); // We may not write initial content.
+      if ( !nTagsRemaining )
+        break; // done.
+      if ( _rxrc.FMoveDown() )
       {
-        _AcquireContent( _rxrc.GetContextCur() );
-        fNextTag = _rxrc.FMoveDown();
+        // A tag is current on the read cursor - as always. We can move data out of it since it only needs its name and its namespace decls.
+        _TyXmlWriteTag xwt( StartTag( std::move( _rxrc.GetTag() ), true ) ); // push tag on output context stack.
+        xwt.Commit( true ); // Write the tag's data. We don't use xwt's lifetime to end the tag because we don't want to recurse here.
+        ++nCurDepth;
+        continue;
+      }
+      else
+      {
+        // Current tag ends here regardless - don't even call next tag unless 
+        if ( ( nDepthStart != nCurDepth ) || !!nTagsRemaining-- )
+        {
+          bool fNextTag = _rxrc.FNextTag();
+          _EndTag( &m_lContexts.back() );
+          if ( fNextTag )
+          {
+            // Then encountered a next tag without any intervening content.
+            _TyXmlWriteTag xwt( StartTag( std::move( _rxrc.GetTag() ), true ) ); // push tag on output context stack.
+            xwt.Commit( true ); // Write the tag's data. We don't use xwt's lifetime to end the tag because we don't want to recurse here.
+            continue; // depth remains the same.
+          }
+          else
+          {
+            --nCurDepth;
+          }
+        }
       }
     }
-    while ( fNextTag );
-    
+    while( nTagsRemaining >= 0 );
 
 
   }
@@ -702,24 +729,24 @@ public:
     }
   }
 
-void _EndTag( _TyWriteContext * _pwcxEnd )
-{
-  VerifyThrowSz( _pwcxEnd == &m_lContexts.back(), "Ending a tag that is not at the top of the context stack." );
-  // So if we currently have an unended tag then there must be no content and we needn't write a separate end tag token.
-  // NOPE: We want to be able to duplicate the input as much as possible while still allowing any options for the internal user
-  //  so in that regard we will check the token id and when we a s_knTokenSTag we know if was paired with a s_knTokenETag when read from a file.
-  bool fHadUnendedTag;
-  if ( fHadUnendedTag = m_fHaveUnendedTag )
-    _CheckWriteTagEnd( ( s_knTokenSTag == _pwcxEnd->GetToken().GetTokenId() ) );
-  if ( !fHadUnendedTag || ( s_knTokenSTag == _pwcxEnd->GetToken().GetTokenId() ) )
+  void _EndTag( _TyWriteContext * _pwcxEnd )
   {
-    // We have already validate the tag name so we can just write it:
-    _WriteTransportRaw( _TyMarkupTraits::s_kszEndTagBegin, StaticStringLen( _TyMarkupTraits::s_kszEndTagBegin ) );
-    _WriteName( _pwcxEnd->GetToken(), _pwcxEnd->GetToken()[vknTagNameIdx] );
-    _WriteTransportRaw( _TyMarkupTraits::s_kszTagEnd, StaticStringLen( _TyMarkupTraits::s_kszTagEnd ) );
+    VerifyThrowSz( _pwcxEnd == &m_lContexts.back(), "Ending a tag that is not at the top of the context stack." );
+    // So if we currently have an unended tag then there must be no content and we needn't write a separate end tag token.
+    // NOPE: We want to be able to duplicate the input as much as possible while still allowing any options for the internal user
+    //  so in that regard we will check the token id and when we a s_knTokenSTag we know if was paired with a s_knTokenETag when read from a file.
+    bool fHadUnendedTag;
+    if ( fHadUnendedTag = m_fHaveUnendedTag )
+      _CheckWriteTagEnd( ( s_knTokenSTag == _pwcxEnd->GetToken().GetTokenId() ) );
+    if ( !fHadUnendedTag || ( s_knTokenSTag == _pwcxEnd->GetToken().GetTokenId() ) )
+    {
+      // We have already validate the tag name so we can just write it:
+      _WriteTransportRaw( _TyMarkupTraits::s_kszEndTagBegin, StaticStringLen( _TyMarkupTraits::s_kszEndTagBegin ) );
+      _WriteName( _pwcxEnd->GetToken(), _pwcxEnd->GetToken()[vknTagNameIdx] );
+      _WriteTransportRaw( _TyMarkupTraits::s_kszTagEnd, StaticStringLen( _TyMarkupTraits::s_kszTagEnd ) );
+    }
+    m_lContexts.pop_back();
   }
-  m_lContexts.pop_back();
-}
   // Write a non-tag token to the output transport at the current position.
   // Validation is performed - e.g. only whitespace chardata is allowed before the first tag.
   // The token is passed the production to which it correspond's state machine to ensure that it matches.
