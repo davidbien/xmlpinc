@@ -473,6 +473,8 @@ public:
   {
     return m_fWroteFirstTag && ( 1 == m_lContexts.size() );
   }
+
+#if 0
   // Write from a read cursor.
   // Will write up to _nNextTags if the current position of the output allows for that.
   // 1) If the output context stack has a size of 1 (only XMLDecl node) then we can only write one tag.
@@ -558,6 +560,7 @@ public:
     );
     rctxt.ClearContent(); // Clear the content as a sanity check. The above doesn't modify the content tokens.
   }
+#endif //0
 #if 0
   // Read from this read cursor into this object.
   void FromXmlStream( _TyReadCursor & _rxrc )
@@ -620,7 +623,7 @@ public:
     // Since we are done we can obtain the root tag: The XMLDecl pseudo-tag.
     _TyBase::AcquireTag( std::move( _rxrc.XMLDeclAcquireDocumentContext( m_xdcxtDocumentContext ) ) );
   }
-#endif 0
+#endif //0
 
   // Start the tag. If _ppvNamespace is non-null:
   // 1) Check to see if the (prefix,uri) happens to be current. If it isn't:

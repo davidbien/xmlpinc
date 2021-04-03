@@ -249,7 +249,7 @@ public:
     {
       size_t nApplied = rdt.GetSegArrayDataRanges().NApplyContiguous( 0, rdt.NPositions(), lambdaProcessCharData );
       if ( nApplied < rdt.NPositions() )
-          rdt.GetSegArrayDataRanges().SetSizeSmaller( nApplied, false );
+          rdt.GetSegArrayDataRanges().SetSizeSmaller( nApplied );
     }
     
     if ( !m_fFilterWhitespaceCharData )
