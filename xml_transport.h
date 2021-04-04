@@ -61,17 +61,19 @@ public:
     {
       bool fFlush = _FFlushBuffer();
       if ( !fFlush )
-      if ( !fInUnwinding )
-        THROWNAMEDEXCEPTIONERRNO( GetLastErrNo(), "Failed to write to file handle [0x%lx].", (uint64_t)m_foFile.HFileGet() );
-      else
       {
-        try
+        if ( !fInUnwinding )
+          THROWNAMEDEXCEPTIONERRNO( GetLastErrNo(), "Failed to write to file handle [0x%lx].", (uint64_t)m_foFile.HFileGet() );
+        else
         {
-          LOGSYSLOGERRNO( eslmtError, GetLastErrNo(), "Failed to write to file handle [0x%lx].", (uint64_t)m_foFile.HFileGet() );
-        }
-        catch( ... )
-        {
-          // can't throw - we are in an unwinding.
+          try
+          {
+            LOGSYSLOGERRNO( eslmtError, GetLastErrNo(), "Failed to write to file handle [0x%lx].", (uint64_t)m_foFile.HFileGet() );
+          }
+          catch( ... )
+          {
+            // can't throw - we are in an unwinding.
+          }
         }
       }
     }

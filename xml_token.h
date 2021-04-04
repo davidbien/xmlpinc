@@ -779,7 +779,6 @@ public:
   {
     m_varXmlToken.swap( _r.m_varXmlToken );
   }
-
   vtyTokenIdent GetTokenId() const
   {
     return std::visit( _VisitHelpOverloadFCall {
@@ -789,7 +788,14 @@ public:
       }
     }, m_varXmlToken );
   }
-
+  _TyVariant & GetVariant()
+  {
+    return m_varXmlToken;
+  }
+  const _TyVariant & GetVariant() const
+  {
+    return m_varXmlToken;
+  }
 protected:
   _TyVariant m_varXmlToken;
 };

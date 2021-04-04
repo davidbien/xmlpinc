@@ -106,16 +106,6 @@ public:
     _ToXmlStream( _rxw );
   }
 protected:
-  template < class t_TyXmlTransportOut >
-  void _ToXmlStream( xml_writer< t_TyXmlTransportOut > & _rxw ) const
-  {
-    typedef xml_writer< t_TyXmlTransportOut > _TyXmlWriter;
-    typedef typename _TyXmlWriter::_TyXmlWriteTag _TyXmlWriteTag;
-    _TyXmlWriteTag xwtTag( _rxw.StartTag( *m_opttokTag ) );
-    // Just write the tag right away - the tag will be ended when the lifetime of xwtTag ends.    
-    xwtTag.Commit();
-    _WriteContent( _rxw ); // recurse, potentially.
-  }
   // Add all the current content from passed context.
   void _AcquireContent( _TyReadContext & _rctxt )
   {
@@ -134,6 +124,16 @@ protected:
   void _AcquireContent( _TyThis && _rrtag )
   {
     m_rgTokens.emplace_back( std::move( _rrtag ) );
+  }
+  template < class t_TyXmlTransportOut >
+  void _ToXmlStream( xml_writer< t_TyXmlTransportOut > & _rxw ) const
+  {
+    typedef xml_writer< t_TyXmlTransportOut > _TyXmlWriter;
+    typedef typename _TyXmlWriter::_TyXmlWriteTag _TyXmlWriteTag;
+    _TyXmlWriteTag xwtTag( _rxw.StartTag( *m_opttokTag ) );
+    // Just write the tag right away - the tag will be ended when the lifetime of xwtTag ends.    
+    xwtTag.Commit();
+    _WriteContent( _rxw ); // recurse, potentially.
   }
   template < class t_TyXmlTransportOut >
   void _WriteContent( xml_writer< t_TyXmlTransportOut > & _rxw ) const

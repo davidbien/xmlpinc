@@ -92,6 +92,48 @@ protected:
   {
     m_rgTokens.emplace_back( std::move( _rrtag ) );
   }
+  template < class t_TyXmlTransportOut >
+  void _ToXmlStream( xml_writer< t_TyXmlTransportOut > & _rxw ) const
+  {
+    typedef xml_writer< t_TyXmlTransportOut > _TyXmlWriter;
+    typedef typename _TyXmlWriter::_TyXmlWriteTag _TyXmlWriteTag;
+    // We must start the tag and recurse within the visit lambda:
+    std::visit( _VisitHelpOverloadFCall {
+      [this,&_rxw]( const auto & _tXmlToken ) -> void
+      {
+        _TyXmlWriteTag xwtTag( _rxw.StartTag( _tXmlToken ) );
+        // Just write the tag right away - the tag will be ended when the lifetime of xwtTag ends.    
+        xwtTag.Commit();
+        _WriteContent( _rxw ); // recurse, potentially.
+      }
+    }, m_opttokTag->GetVariant() );
+  }
+  template < class t_TyXmlTransportOut >
+  void _WriteContent( xml_writer< t_TyXmlTransportOut > & _rxw ) const
+  {
+    typedef xml_writer< t_TyXmlTransportOut > _TyXmlWriter;
+    typename _TyRgTokens::const_iterator citCur = m_rgTokens.begin();
+    typename _TyRgTokens::const_iterator citEnd = m_rgTokens.end();
+    for ( ; citEnd != citCur; ++citCur )
+    {
+      const _TyVariant & rvCur = *citCur;
+      if ( holds_alternative< _TyXmlTokenVar >( rvCur ) )
+      {
+        // Just write the token to the writer - but resolve type locally:
+        _TyXmlTokenVar const & rxtok = std::get< _TyXmlTokenVar >( rvCur );
+        std::visit( _VisitHelpOverloadFCall {
+          [&_rxw]( const auto & _tXmlToken ) -> void
+          {
+            _rxw.WriteToken( _tXmlToken );
+          }
+        }, rxtok.GetVariant() );
+      }
+      else
+      { // recurse.
+        std::get< _TyThis >( rvCur )._ToXmlStream( _rxw );
+      }
+    }
+  }
   typedef optional< _TyXmlTokenVar > _TyOptXmlTokenVar; // Need this because token is not default constructible.
   _TyOptXmlTokenVar m_opttokTag; // The token corresponding to the tag. This is either an XMLDecl token or a tag.
   _TyRgTokens m_rgTokens; // The content for this token.
@@ -106,6 +148,7 @@ class xml_document_var : protected xml_tag_var< t_TyTpTransports >
   typedef xml_tag_var< t_TyTpTransports > _TyBase;
 protected:
    using _TyBase::_AcquireContent;
+   using _TyBase::_WriteContent;
 public:
   typedef t_TyTpTransports _TyTpTransports;
   typedef MultiplexTuplePack_t< TGetXmlTraitsDefault, _TyTpTransports > _TyTpXmlTraits;
@@ -160,6 +203,16 @@ public:
     }
     // Done. Get the pseudo-tag XMLDecl from the root of the cursor.
     _TyBase::AcquireTag( _rxrc.XMLDeclAcquireDocumentContext( m_varDocumentContext ) );
+  }
+  // Write this XML document to the given xml_writer<>.
+  template < class t_TyXmlTransportOut >
+  void ToXmlStream( xml_writer< t_TyXmlTransportOut > & _rxw ) const
+  {
+    _rxw.SetIncludePrefixesInAttrNames( m_xdcxtDocumentContext.FIncludePrefixesInAttrNames() );
+    // Just write everything to the writer.
+    // The writer itself writes the XMLDecl tag based on the output encoding (which it knows about), etc.
+    // So we use this method as a specialization to skip what would have happened in the base.
+    _WriteContent( _rxw ); // This recurses.
   }
 protected:
   _TyXmlDocumentContextVar m_varDocumentContext;

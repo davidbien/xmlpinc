@@ -372,27 +372,6 @@ public:
     emplaceTransport( m_fWriteBOM );
     _Init( _rXmlDeclProperties, _pxofFormat, _fKeepEncoding ); // This might write the XMLDecl tag to the file, but definitely will init the context stack.
   }
-  // Initialize the xml_writer. Write the XMLDecl root "tag" if that is desired. Regardless create a XMLDecl pseudo
-  //  tag as the root of the context list.
-  void _Init( _TyXMLDeclProperties const & _rXmlDeclProperties, const _xml_output_format * _pxofFormat, bool _fKeepEncoding )
-  {
-    _TyPrFormatContext prFormatContext;
-    if ( _pxofFormat )
-      prFormatContext.first = *_pxofFormat;
-    // Always obtain the encoding from the passed XMLDeclProperties.
-    m_xdcxtDocumentContext.Init( _fKeepEncoding ? efceFileCharacterEncodingCount : _TyXmlTransportOut::GetEncoding(), m_fUseNamespaces, &_rXmlDeclProperties, &prFormatContext );
-    m_lContexts.clear();
-    m_fWroteFirstTag = false;
-    m_fHaveUnendedTag = false;
-    if ( m_fWriteXMLDecl )
-      _WriteXmlDecl();
-    m_lContexts.emplace_back( this, m_xdcxtDocumentContext.GetUserObj(), s_knTokenXMLDecl  ); // create the XMLDecl pseudo-tag.
-  }
-  template < template < class ... > class t_tempTyXmlTransportOut >
-  void OpenFileVar( const char * _pszFileName, bool _fStandalone = true )
-  {
-  }
-
 // options:
   void SetWriteBOM( bool _fWriteBOM )
   {
@@ -687,7 +666,6 @@ public:
     _TyWriteContext & rwcxNew = m_lContexts.emplace_back( this, std::move( tokThis ) );
     return _TyXmlWriteTag( rwcxNew );
   }
-  
   // Start a tag by moving its contents into this object.
   // We leave the tag name intact in the old object and we must leave any active namespace declarations there and just copy them.
   template < class t_TyXmlToken >
@@ -789,6 +767,22 @@ public:
     return m_optTransportOut.emplace( std::forward< t_TysArgs >(_args) ... );
   }
 protected:
+  // Initialize the xml_writer. Write the XMLDecl root "tag" if that is desired. Regardless create a XMLDecl pseudo
+  //  tag as the root of the context list.
+  void _Init( _TyXMLDeclProperties const & _rXmlDeclProperties, const _xml_output_format * _pxofFormat, bool _fKeepEncoding )
+  {
+    _TyPrFormatContext prFormatContext;
+    if ( _pxofFormat )
+      prFormatContext.first = *_pxofFormat;
+    // Always obtain the encoding from the passed XMLDeclProperties.
+    m_xdcxtDocumentContext.Init( _fKeepEncoding ? efceFileCharacterEncodingCount : _TyXmlTransportOut::GetEncoding(), m_fUseNamespaces, &_rXmlDeclProperties, &prFormatContext );
+    m_lContexts.clear();
+    m_fWroteFirstTag = false;
+    m_fHaveUnendedTag = false;
+    if ( m_fWriteXMLDecl )
+      _WriteXmlDecl();
+    m_lContexts.emplace_back( this, m_xdcxtDocumentContext.GetUserObj(), s_knTokenXMLDecl  ); // create the XMLDecl pseudo-tag.
+  }
   template < class t_TyChar >
   void _WriteTransportRaw( t_TyChar const * _pcBegin, t_TyChar const * _pcEnd )
   {
