@@ -12,7 +12,6 @@ __XMLP_BEGIN_NAMESPACE
 
 // xml_write_transport_file:
 // Write XML to a file.
-// REVIEW<dbien>: Purposefully not trying to optimize this yet. Will look into it later.
 template < class t_TyChar, class t_TyFSwitchEndian >
 class xml_write_transport_file
 {
@@ -22,14 +21,60 @@ public:
   typedef t_TyFSwitchEndian _TyFSwitchEndian;
   // We don't need to open a xml_write_transport_file read/write, as we do for a xml_write_transport_mapped.
   typedef false_type _TyFOpenFileReadWrite;
+  typedef unique_ptr< _TyChar[] > _TyBuffer;
 
-  xml_write_transport_file( FileObj & _rfoFile, bool _fWriteBOM )
-    : m_foFile( std::move( _rfoFile ) )
+  xml_write_transport_file() = delete;
+  xml_write_transport_file( FileObj & _rfoFile, bool _fWriteBOM, size_t _nchWriteBuffer = 4096 )
+    : m_foFile( std::move( _rfoFile ) ),
+      m_nchWriteBuffer( _nchWriteBuffer )
   {
+    m_upBuffer = make_unique_for_overwrite< _TyChar[] >( m_nchWriteBuffer );
+    m_pcBufCur = &m_upBuffer[0];
     VerifyThrow( m_foFile.FIsOpen() );
     if ( _fWriteBOM )
       WriteBOM< _TyChar, _TyFSwitchEndian >( m_foFile.HFileGet() );
     // Leave the file right where it is.
+  }
+  xml_write_transport_file( xml_write_transport_file const & ) = delete;
+  xml_write_transport_file & operator =( xml_write_transport_file const & ) = delete;
+  xml_write_transport_file( xml_write_transport_file && _rr )
+  {
+    swap( _rr );
+  }
+  xml_write_transport_file & operator =( xml_write_transport_file && _rr )
+  {
+    _TyThis acquire( std::move( _rr ) );
+    swap( acquire );
+    return *this;
+  }
+  void swap( _TyThis & _r )
+  {
+    m_foFile.swap( _r.m_foFile );
+    m_upBuffer.swap( _r.m_upBuffer );
+    std::swap( m_nchWriteBuffer, _r.m_nchWriteBuffer );
+    std::swap( m_pcBufCur, _r.m_pcBufCur );
+  }
+  ~xml_write_transport_file()
+  {
+    bool fInUnwinding = !!std::uncaught_exceptions();
+    if ( !!m_pcBufCur && ( m_pcBufCur != &m_upBuffer[0] ) )
+    {
+      bool fFlush = _FFlushBuffer();
+      if ( !fFlush )
+      if ( !fInUnwinding )
+        THROWNAMEDEXCEPTIONERRNO( GetLastErrNo(), "Failed to write to file handle [0x%lx].", (uint64_t)m_foFile.HFileGet() );
+      else
+      {
+        try
+        {
+          LOGSYSLOGERRNO( eslmtError, GetLastErrNo(), "Failed to write to file handle [0x%lx].", (uint64_t)m_foFile.HFileGet() );
+        }
+        catch( ... )
+        {
+          // can't throw - we are in an unwinding.
+        }
+      }
+    }
   }
   // Write any character type to the transport - it will do the appropriate translation and it needn't even buffer anything...
   template < class t_TyCharWrite >
@@ -38,31 +83,25 @@ public:
     // We send to the conversion template which will call back into this:
     VerifyThrow( FWriteUTFStream< _TyChar >( _pcBegin, _pcEnd - _pcBegin, *this ) );
   }
-  // We want these calls to be noexcept.
   bool FWrite( const _TyChar * _pcBuf, size_t _nch ) noexcept
-    requires( is_same_v< _TyFSwitchEndian, false_type > )
   {
-    int iResult = FileWrite( m_foFile.HFileGet(), _pcBuf, _nch * sizeof ( _TyChar ) );
-    return !iResult;
-  }
-  bool FWrite( const _TyChar * _pcBuf, size_t _nch ) noexcept
-    requires( is_same_v< _TyFSwitchEndian, true_type > )
-  {
-    // Copy piecewise to a buffer so we can switch endian:
-    // Opt to copy as much as possible at once as this is a system call.
-    // We call alloca here regardless because 1k shouldn't overflow the stack.
-    size_t nchPiece = (min)( _nch, ( vknbyMaxAllocaSize ? vknbyMaxAllocaSize : 1024 ) / sizeof( _TyChar ) );
-    _TyChar * rgcPiece = (_TyChar*)alloca( nchPiece * sizeof( _TyChar ) );
-    const _TyChar * const pcEnd = _pcBuf + _nch; 
-    for ( const _TyChar * pcCur = _pcBuf; ( pcEnd != pcCur ); )
+    // Write to the buffer until it is full and then empty it into the file:
+    const _TyChar * const pcEndBuf = _PcEndBuf();
+    const _TyChar * pcBufWriteCur = _pcBuf;
+    for ( size_t nchRemaining = _nch; nchRemaining; )
     {
-      size_t nchCopyCur = (min)( size_t( pcEnd - pcCur ), nchPiece );
-      memcpy( rgcPiece, pcCur, nchCopyCur * sizeof( _TyChar ) );
-      SwitchEndian( rgcPiece, nchCopyCur );
-      int iResult = FileWrite( m_foFile.HFileGet(), rgcPiece, nchCopyCur * sizeof ( _TyChar ) );
-      if ( iResult )
-        return false;
-      pcCur += nchCopyCur;
+      size_t nchLeftInBuf = pcEndBuf - m_pcBufCur;
+      size_t nchWrite = (min)( nchLeftInBuf, nchRemaining );
+      nchRemaining -= nchWrite;
+      memcpy( m_pcBufCur, pcBufWriteCur, nchWrite * sizeof( _TyChar ) );
+      pcBufWriteCur += nchWrite;
+      m_pcBufCur += nchWrite;
+      if ( m_pcBufCur == pcEndBuf )
+      {
+        if ( !_FFlushBuffer() )
+          return false;
+        m_pcBufCur = &m_upBuffer[0];
+      }
     }
     return true;
   }
@@ -71,7 +110,37 @@ public:
     return GetCharacterEncoding< _TyChar, _TyFSwitchEndian >();
   }
 protected:
+  // We want these calls to be noexcept. We write to the buffer in non-switch-endian
+  //  for debugging purposes. Then when the buffer is full we write to the file, switching
+  //  the endian of the buffer first.
+  bool _FFlushBuffer() noexcept
+    requires( is_same_v< _TyFSwitchEndian, false_type > )
+  {
+    return _FFlushBufferNoSwitchEndian();
+  }
+  bool _FFlushBufferNoSwitchEndian()
+  {
+    Assert( !!m_pcBufCur && ( m_pcBufCur != &m_upBuffer[0] ) );
+    size_t nbyWrite = ( m_pcBufCur - &m_upBuffer[0] ) * sizeof( _TyChar );
+    int iResult = FileWrite( m_foFile.HFileGet(), &m_upBuffer[0], nbyWrite );
+    return !iResult;
+  }
+  bool _FFlushBuffer() noexcept
+    requires( is_same_v< _TyFSwitchEndian, true_type > )
+  {
+    Assert( !!m_pcBufCur && ( m_pcBufCur != &m_upBuffer[0] ) );
+    SwitchEndian( &m_upBuffer[0], m_pcBufCur );
+    return _FFlushBufferNoSwitchEndian();
+  }
+  _TyChar * _PcEndBuf()
+  {
+    Assert( !!m_upBuffer );
+    return &m_upBuffer[m_nchWriteBuffer-1] + 1;
+  }
   FileObj m_foFile;
+  _TyBuffer m_upBuffer;
+  size_t m_nchWriteBuffer{0};
+  _TyChar * m_pcBufCur{nullptr};
 };
 
 // xml_write_transport_mapped:
