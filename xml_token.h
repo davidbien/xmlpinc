@@ -110,6 +110,10 @@ public:
     }
 #endif //ASSERTSENABLED
   }
+  bool FNullValue() const
+  {
+    return m_tokToken.GetValue().FIsNull();
+  }
   vtyTokenIdent GetTokenId() const
   {
     return m_tokToken.GetTokenId();
@@ -779,10 +783,30 @@ public:
   {
     m_varXmlToken.swap( _r.m_varXmlToken );
   }
+  void AssertValid( bool _fUseNamespaces = false ) const
+  {
+#if ASSERTSENABLED
+    std::visit( _VisitHelpOverloadFCall {
+      [_fUseNamespaces]( const auto & _tXmlToken ) -> void
+      {
+        _tXmlToken.AssertValid( _fUseNamespaces );
+      }
+    }, m_varXmlToken );
+#endif //ASSERTSENABLED
+  }
+  bool FNullValue() const
+  {
+    return std::visit( _VisitHelpOverloadFCall {
+      []( const auto & _tXmlToken ) -> bool
+      {
+        return _tXmlToken.FNullValue();
+      }
+    }, m_varXmlToken );
+  }
   vtyTokenIdent GetTokenId() const
   {
     return std::visit( _VisitHelpOverloadFCall {
-      []( auto _tXmlToken ) -> vtyTokenIdent
+      []( const auto & _tXmlToken ) -> vtyTokenIdent
       {
         return _tXmlToken.GetTokenId();
       }

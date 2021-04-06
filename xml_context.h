@@ -56,9 +56,14 @@ public:
   }
   void swap( _TyThis & _r )
   {
-    std::swap( m_fStandalone, _r.m_fStandalone );
     m_strEncoding.swap( _r.m_strEncoding );
+    std::swap( m_fStandalone, _r.m_fStandalone );
     std::swap( m_nVersionMinorNumber, _r.m_nVersionMinorNumber );
+    std::swap( m_fVersionDoubleQuote, _r.m_fVersionDoubleQuote );
+    std::swap( m_fEncodingDoubleQuote, _r.m_fEncodingDoubleQuote );
+    std::swap( m_fStandaloneDoubleQuote, _r.m_fStandaloneDoubleQuote );
+    std::swap( m_fHasEncoding, _r.m_fHasEncoding );
+    std::swap( m_fHasStandalone, _r.m_fHasStandalone );
   }
   void clear()
   {
@@ -293,6 +298,12 @@ public:
   {
     return m_XMLDeclProperties;
   }
+  template < class t_TyXMLDeclProperties >
+  void GetXMLDeclProperties( t_TyXMLDeclProperties & _rxdp ) const
+  {
+    t_TyXMLDeclProperties xdp( m_XMLDeclProperties );
+    _rxdp.swap( xdp );
+  }
   template < class t_TyStrViewOrString >
   typename _TyUriAndPrefixMap::value_type const & RStrAddPrefix( t_TyStrViewOrString && _rrs )
   {
@@ -481,7 +492,6 @@ public:
     using _TyRemoveRef = remove_reference_t< t_TyXmlDocumentContext >;
     return m_var.template emplace<_TyRemoveRef>( std::move( _rrxdc ) );
   }
-
   bool FIsNull() const
   {
     return FIsA< monostate >();
@@ -491,7 +501,35 @@ public:
   {
     return holds_alternative< t_TyT >();
   }
-
+  bool FIncludePrefixesInAttrNames() const
+  {
+    return std::visit( _VisitHelpOverloadFCall {
+      []( monostate ) -> bool
+      {
+        VerifyThrowSz( false, "monostate");
+        return false;
+      },
+      []( const auto & _tDocumentContext ) -> bool
+      {
+        return _tDocumentContext.FIncludePrefixesInAttrNames();
+      }
+    }, m_var );
+  }
+  // Return any type of XMLDeclProperties<> from whatever we got...
+  template < class t_TyXMLDeclProperties >
+  void GetXMLDeclProperties( t_TyXMLDeclProperties & _rxdp ) const
+  {
+    std::visit( _VisitHelpOverloadFCall {
+      []( monostate ) -> void
+      {
+        VerifyThrowSz( false, "monostate");
+      },
+      [&_rxdp]( const auto & _tDocumentContext ) -> void
+      {
+        _tDocumentContext.GetXMLDeclProperties( _rxdp );
+      }
+    }, m_var );
+  }
 protected:
   _TyVariant m_var;
 };

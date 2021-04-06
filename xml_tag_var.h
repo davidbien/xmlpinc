@@ -23,6 +23,7 @@ public:
   typedef xml_read_cursor_var< _TyTpTransports > _TyReadCursorVar;
   typedef std::variant< _TyThis, _TyXmlTokenVar > _TyVariant;
   typedef std::vector< _TyVariant > _TyRgTokens;
+  typedef _xml_document_context_transport_var< _TyTpTransports > _TyXmlDocumentContextVar;
 
   xml_tag_var() = default;
   xml_tag_var( xml_tag_var const & ) = default;
@@ -39,7 +40,27 @@ public:
     m_opttokTag.swap( _r.m_opttokTag );
     m_rgTokens.swap( _r.m_rgTokens );
   }
-
+  void AssertValid() const
+  {
+#if ASSERTSENABLED
+    if( !! m_opttokTag )
+      m_opttokTag->AssertValid();
+    typename _TyRgTokens::const_iterator citCur = m_rgTokens.begin();
+    typename _TyRgTokens::const_iterator citEnd = m_rgTokens.end();
+    for ( ; citEnd != citCur; ++citCur )
+    {
+      const _TyVariant & rvCur = *citCur;
+      if ( holds_alternative< _TyXmlTokenVar >( rvCur ) )
+      {
+        std::get< _TyXmlTokenVar >( rvCur ).AssertValid();
+      }
+      else
+      { // recurse.
+        std::get< _TyThis >( rvCur ).AssertValid();
+      }
+    }
+#endif //ASSERTSENABLED
+  }
   void AcquireTag( _TyXmlTokenVar && _rrtok )
   {
     m_opttokTag = std::move( _rrtok );
@@ -72,7 +93,14 @@ public:
       while ( fNextTag );
     }
   }
-
+  // Write this XML document to the given xml_writer<>.
+  // Need to pass the xml document context for the containing xml_document.
+  template < class t_TyXmlTransportOut >
+  void ToXmlStream( xml_writer< t_TyXmlTransportOut > & _rxw, _TyXmlDocumentContextVar const & _rxdcxtDocumentContext ) const
+  {
+    _rxw.SetIncludePrefixesInAttrNames( _rxdcxtDocumentContext.FIncludePrefixesInAttrNames() );
+    _ToXmlStream( _rxw );
+  }
 protected:
   // Add all the current content from passed context.
   void _AcquireContent( _TyReadCursorVar & _rxrc )
@@ -149,6 +177,7 @@ class xml_document_var : protected xml_tag_var< t_TyTpTransports >
 protected:
    using _TyBase::_AcquireContent;
    using _TyBase::_WriteContent;
+   using _TyBase::m_opttokTag;
 public:
   typedef t_TyTpTransports _TyTpTransports;
   typedef MultiplexTuplePack_t< TGetXmlTraitsDefault, _TyTpTransports > _TyTpXmlTraits;
@@ -171,6 +200,23 @@ public:
       return;
     _TyBase::swap( _r );
     m_varDocumentContext.swap( _r.m_varDocumentContext );
+  }
+  void AssertValid() const
+  {
+#if ASSERTSENABLED
+    _TyBase::AssertValid();
+#endif //ASSERTSENABLED
+  }
+  // Returns whether the XMLDecl token is a "pseudo-token" - i.e. it was created not read.
+  bool FPseudoXMLDecl() const
+  {
+    VerifyThrowSz( !!m_opttokTag, "Empty xml_document_var." );
+    return m_opttokTag->FNullValue();
+  }
+  template < class t_TyXMLDeclProperties >
+  void GetXMLDeclProperties( t_TyXMLDeclProperties & _rxdp ) const
+  {
+    m_varDocumentContext.GetXMLDeclProperties( _rxdp );
   }
   // Read from this read cursor into this object.
   void FromXmlStream( _TyReadCursorVar & _rxrc )
@@ -208,7 +254,7 @@ public:
   template < class t_TyXmlTransportOut >
   void ToXmlStream( xml_writer< t_TyXmlTransportOut > & _rxw ) const
   {
-    _rxw.SetIncludePrefixesInAttrNames( m_xdcxtDocumentContext.FIncludePrefixesInAttrNames() );
+    _rxw.SetIncludePrefixesInAttrNames( m_varDocumentContext.FIncludePrefixesInAttrNames() );
     // Just write everything to the writer.
     // The writer itself writes the XMLDecl tag based on the output encoding (which it knows about), etc.
     // So we use this method as a specialization to skip what would have happened in the base.
