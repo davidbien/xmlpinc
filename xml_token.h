@@ -72,7 +72,7 @@ public:
   // Move in the passed token - we'll move what we can and copy the rest.
   // We can move in the _l_value<> object and then we will have to modify positions on encoding change.
   template < class t_TyContainerNew, class t_TyLexToken >
-  xml_token( t_TyContainerNew & _rNewContainer, t_TyLexToken const && _rrtokCopy, typename t_TyContainerNew::_TyTokenCopyContext * _ptccCopyCtxt = nullptr )
+  xml_token( t_TyContainerNew & _rNewContainer, t_TyLexToken && _rrtokCopy, typename t_TyContainerNew::_TyTokenCopyContext * _ptccCopyCtxt = nullptr )
     : m_tokToken( _rNewContainer, std::move( _rrtokCopy ), _ptccCopyCtxt )
   {
   }

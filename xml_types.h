@@ -159,6 +159,20 @@ using TGetXmlTraitsDefault = xml_traits< t_TyTransport, false, false >;
 template < class t_TyChar >
 using TGetPrefixUri = std::pair< basic_string< t_TyChar >, basic_string< t_TyChar > >;
 
+// TFIsReadCursorVar: Test for read cursor for so can overload same function names with constraints.
+template < class t_TyReadCursor >
+struct TFIsReadCursorVar
+{
+  static constexpr bool value = false;
+};
+template < class t_TyTpTransports >
+struct TFIsReadCursorVar< xml_read_cursor_var< t_TyTpTransports > >
+{
+  static constexpr bool value = true;
+};
+template < class t_TyReadCursor >
+inline constexpr bool TFIsReadCursorVar_v = TFIsReadCursorVar< t_TyReadCursor >::value;
+
 // _xml_namespace_map_traits:
 // This just organizes the types for the namespace map in one place because we reference it in a couple of places and we don't want to templatize by the full type because it results in unreadable log messages, etc.
 template < class t_TyChar >

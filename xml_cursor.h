@@ -428,7 +428,6 @@ public:
     }
   #endif //ASSERTSENABLED
   }
-
   _TyXmlReadContext &
   GetContextCur()
   {
@@ -436,19 +435,29 @@ public:
     AssertValid();
     return *m_itCurContext;
   }
-  _TyXmlToken GetTagCur()
+  _TyXmlToken & GetTagCur()
   {
     return GetContextCur().GetTag();
   }
-  const _TyXmlToken GetTagCur() const
+  const _TyXmlToken & GetTagCur() const
   {
     return GetContextCur().GetTag();
   }
-
+  bool FPseudoXMLDecl() const
+  {
+    VerifyThrow( m_lContexts.size() );
+    return m_lContexts.front().GetTag().GetValue().FIsNull();
+  }
   const _TyXMLDeclProperties & GetXMLDeclProperties() const
   {
     Assert( m_pXp );
     return m_XMLDeclProperties;
+  }
+  template < class t_TyXMLDeclProperties >
+  void GetXMLDeclProperties( t_TyXMLDeclProperties & _rxdp )
+  {
+    t_TyXMLDeclProperties xdpCopy( m_XMLDeclProperties );
+    xdpCopy.swap( _rxdp );
   }
   _TyXmlToken & XMLDeclAcquireDocumentContext( _TyXmlDocumentContext & _rxdcDocumentContext )
   {
@@ -467,7 +476,6 @@ public:
     _rxdcDocumentContext.m_fIncludePrefixesInAttrNames = m_fIncludePrefixesInAttrNames;
     return m_lContexts.front().GetTag();
   }
-
 // Navigation:
   // Move down - i.e. to the next subtag.
   // If the context is already present - i.e. we are not at the end of the context list - then we just move the context pointer and return true.
@@ -1153,7 +1161,25 @@ public:
   {
     m_varCursor.swap( _r.m_varCursor );
   }
-
+  void AssertValid( bool _fIsTail = false ) const
+  {
+#if ASSERTSENABLED
+    std::visit( _VisitHelpOverloadFCall {
+      [_fIsTail]( auto & _tCursor )
+      {
+        _tCursor.AssertValid( _fIsTail );
+      }
+    }, m_varCursor );    
+#endif //ASSERTSENABLED
+  }
+  _TyVariant & GetVariant()
+  {
+    return m_varCursor;
+  }
+  const _TyVariant & GetVariant() const
+  {
+    return m_varCursor;
+  }
   bool FInsideDocumentTag() const
   {
     return std::visit( _VisitHelpOverloadFCall {
@@ -1251,6 +1277,26 @@ public:
       []( auto & _tCursor )
       {
         _tCursor.ClearContent();
+      }
+    }, m_varCursor );    
+  }
+  bool FPseudoXMLDecl()
+  {
+    return std::visit( _VisitHelpOverloadFCall {
+      []( auto & _tCursor ) -> bool
+      {
+        return _tCursor.FPseudoXMLDecl();
+      }
+    }, m_varCursor );    
+  }
+  // Return any type of XMLDeclProperties.
+  template < class t_TyXMLDeclProperties >
+  void GetXMLDeclProperties( t_TyXMLDeclProperties & _rxdp )
+  {
+    std::visit( _VisitHelpOverloadFCall {
+      [&_rxdp]( auto & _tCursor )
+      {
+        _tCursor.GetXMLDeclProperties( _rxdp );
       }
     }, m_varCursor );    
   }
