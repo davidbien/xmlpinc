@@ -477,6 +477,9 @@ public:
   size_t NWriteFromReadCursor( t_TyReadCursor & _rxrc, size_t _nNextTags = size_t(-1) )
     requires( !TFIsReadCursorVar_v< t_TyReadCursor > )
   {
+    // If the following statement throws then you are mixing "including prefixes" and this isn't supported (currrently).
+    SetIncludePrefixesInAttrNames( _rxrc.GetIncludePrefixesInAttrNames() );
+
     if ( _nNextTags > 0 )
       _nNextTags = FInProlog() ? 1 : ( FInEpilog() ? 0 : _nNextTags );
     
