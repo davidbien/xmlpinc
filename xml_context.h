@@ -401,6 +401,7 @@ public:
     _rxnvwOther.GetPrStrPrefixUri( prstrPrefixUri );
 
     // Record the containers for all declarations and references - this lets us fix things up pretty easily.    
+    Assert( enrtNamespaceReferenceTypeCount != _rxnvwOther.GetReferenceType() );
     _TyXmlNamespaceValueWrap xnvwThis = GetNamespaceValueWrap( _rxnvwOther.GetReferenceType(), std::move( prstrPrefixUri.first ), std::move( prstrPrefixUri.second ) );
     _TyXmlNamespaceValueWrap & rxnvwInValue = _rvalNSVW.emplaceVal< _TyXmlNamespaceValueWrap >( std::move( xnvwThis ) );
     if ( rxnvwInValue.FIsNamespaceDeclaration() )

@@ -171,7 +171,8 @@ public:
   }
   ENamespaceReferenceType GetReferenceType() const
   {
-    return ( m_stReferenceTypeMarker == size_t(-1) ) ? m_enrtReferenceType :  enrtNamespaceReferenceTypeCount;
+    // If this is a namespace declaration then the reference is enrtAttrNamespaceDeclReference.
+    return ( m_stReferenceTypeMarker == size_t(-1) ) ? m_enrtReferenceType :  enrtAttrNamespaceDeclReference;
   }
   void SetReferenceType( ENamespaceReferenceType _enrt )
   {

@@ -1045,10 +1045,11 @@ protected:
           continue; // This is an xmlns attribute that was processed above.
         }
         _TyXmlNamespaceValueWrap const & rnvw = rrgAttr[vknNamespaceIdx].GetVal< _TyXmlNamespaceValueWrap >();
-        if ( rnvw.FIsNamespaceDeclaration() )
+        ENamespaceReferenceType nrtCur;
+        if ( rnvw.FIsNamespaceDeclaration() || ( rnvw.FIsNamespaceReference( &nrtCur ) && ( enrtAttrNamespaceDeclReference == nrtCur ) ) )
           continue;
         _TyData & rdtName = rrgAttr[vknNameIdx].GetVal< _TyData >();
-        rdtName.DataRangeGetSingle().m_posBegin -= 1 + rnvw.PVtNamespaceMapValue()->first.length(); // push back to include the prefix.
+        rdtName.DataRangeGetSingle().m_posBegin -= 1 + rnvw.RStringPrefix().length(); // push back to include the prefix.
       }
     }
   }  
@@ -1119,7 +1120,7 @@ protected:
   // If this is true then we will process namespaces, otherwise we will still show the prefixes but not apply XML Namespace validation and logic.
   bool m_fUseXMLNamespaces{true};
   // This option allows the user to either see the prefixes that are present in the attr names or see just the names.
-  bool m_fIncludePrefixesInAttrNames{false};
+  bool m_fIncludePrefixesInAttrNames{true};
   // If m_fStrict then we will not be lenient in cases that may be ambiguous wrt to the XML Specifications.
   bool m_fStrict{false};
   // Don't return tokens for CharData composed entirely of whitespace.

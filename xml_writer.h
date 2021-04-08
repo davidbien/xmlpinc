@@ -507,22 +507,20 @@ public:
       }
       else
       {
-        // Current tag ends here regardless - don't even call next tag unless 
-        if ( ( nDepthStart != nCurDepth ) || ( ++nNextTagsWritten, !!nTagsRemaining-- ) )
+        bool fNextTag = _rxrc.FNextTag();
+        _EndTag( &m_lContexts.back() );
+        if ( fNextTag )
         {
-          bool fNextTag = _rxrc.FNextTag();
-          _EndTag( &m_lContexts.back() );
-          if ( fNextTag )
-          {
-            // Then encountered a next tag without any intervening content.
-            _TyXmlWriteTag xwt( StartTag( std::move( _rxrc.GetTagCur() ), true ) ); // push tag on output context stack.
-            xwt.Commit( true ); // Write the tag's data. We don't use xwt's lifetime to end the tag because we don't want to recurse here.
-            continue; // depth remains the same.
-          }
-          else
-          {
-            --nCurDepth;
-          }
+          // Then encountered a next tag without any intervening content.
+          _TyXmlWriteTag xwt( StartTag( std::move( _rxrc.GetTagCur() ), true ) ); // push tag on output context stack.
+          xwt.Commit( true ); // Write the tag's data. We don't use xwt's lifetime to end the tag because we don't want to recurse here.
+          continue; // depth remains the same.
+        }
+        else
+        if ( --nCurDepth == nDepthStart )
+        {
+          ++nNextTagsWritten;
+          --nTagsRemaining;
         }
       }
     }
