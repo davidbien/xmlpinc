@@ -618,7 +618,7 @@ public:
     //  doesn't care much about the tag's content. We'll copy it back into the tag after moving it.
     typename t_TyXmlToken::_TyLexValue rvNameCopy;
     if ( _fKeepTagName )
-      rvNameCopy = _rrtok[vknTagNameIdx][vknNameIdx].GetCopyNonUserObj();
+      rvNameCopy = _rrtok[vknTagNameIdx][vknNameIdx].GetCopy();
     typename _TyXmlDocumentContext::_TyTokenCopyContext ctxtTokenCopy;
     _TyXmlToken tokThis( m_xdcxtDocumentContext, std::move( _rrtok.GetLexToken() ), &ctxtTokenCopy );
     if ( m_fUseNamespaces )

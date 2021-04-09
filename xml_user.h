@@ -198,7 +198,7 @@ public:
         typedef TyGetTokenSTag< _TyLexTraits, false > _TyTokenSTag;
         _TyTokenSTag * ptst = static_cast< _TyTokenSTag * >( _paobCurToken );
         typedef TyGetTriggerSaveAttributes< _TyLexTraits, false > _TyTriggerSaveAttributes;
-        _TyTriggerSaveAttributes & rtgSaveAttributes = ptst->GetConstituentTriggerObj< _TyTriggerSaveAttributes >();
+        _TyTriggerSaveAttributes & rtgSaveAttributes = ptst->template GetConstituentTriggerObj< _TyTriggerSaveAttributes >();
         rtgSaveAttributes.Clear(); // Clear all accumulated attributes.
       }
       return false;
@@ -211,7 +211,7 @@ public:
     typedef TyGetTokenCharData< _TyLexTraits, false > _TyTokenCharData;
     typedef TyGetTriggerCharDataEnd< _TyLexTraits, false > _TyTriggerCharDataEnd;
     _TyTokenCharData * ptcd = static_cast< _TyTokenCharData * >( _paobCurToken );
-    _TyTriggerCharDataEnd & rtgCharDataEnd = ptcd->GetConstituentTriggerObj< _TyTriggerCharDataEnd >();
+    _TyTriggerCharDataEnd & rtgCharDataEnd = ptcd->template GetConstituentTriggerObj< _TyTriggerCharDataEnd >();
     // First of all, if we have more than one data_typed_range_el or the one we have it not Plain text
     //  then we don't filter.
     _TyData & rdt = rtgCharDataEnd.RDataGet();
