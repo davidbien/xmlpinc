@@ -9,6 +9,7 @@
 #include "xml_ns.h"
 #include "xml_types.h"
 #include "_l_token.h"
+#include "_l_match.h"
 
 __XMLP_BEGIN_NAMESPACE
 
@@ -158,7 +159,7 @@ public:
   {
     Assert( FIsTag() && !GetValue()[vknTagNameIdx][vknNamespaceIdx].FIsBool() );
     VerifyThrowSz( FIsTag(), "GetNamespaceReference() is only applicable to tags." );
-    return GetValue()[vknTagNameIdx][vknNamespaceIdx].GetVal< _TyXmlNamespaceValueWrap >().ShedReference( _enrtReferenceType );
+    return GetValue()[vknTagNameIdx][vknNamespaceIdx].template GetVal< _TyXmlNamespaceValueWrap >().ShedReference( _enrtReferenceType );
   }
   bool FIsComment() const
   {
@@ -337,15 +338,15 @@ public:
     if ( !_rctxtTokenCopy.m_rgDeclarations.size() )
       return; // nada para hacer.
     // The number of declarations is always equal to the count of declarations in the array:
-    vtySignedLvalueInt & rnTagNamespaceDecls = ( GetValue()[vknTagNameIdx][vknTagName_NNamespaceDeclsIdx].GetVal<vtySignedLvalueInt>() = _rctxtTokenCopy.m_rgDeclarations.size() );
+    vtySignedLvalueInt & rnTagNamespaceDecls = ( GetValue()[vknTagNameIdx][vknTagName_NNamespaceDeclsIdx].template GetVal<vtySignedLvalueInt>() = _rctxtTokenCopy.m_rgDeclarations.size() );
     // Declare a lambda to sort the value pointers by the prefix contained in the namespace declaration/reference:
     auto lambdaCompareNamespacePrefix = []( const _TyLexValue * _plvalNameLeft, const _TyLexValue * _plvalNameRight ) -> bool
     {
       const _TyLexValue & rlvalNSLeft = (*_plvalNameLeft)[vknNamespaceIdx];
       const _TyLexValue & rlvalNSRight = (*_plvalNameRight)[vknNamespaceIdx];
       // We should only see namespace value wraps in the namespace position:
-      Assert( rlvalNSLeft.FIsA< _TyXmlNamespaceValueWrap >() && rlvalNSRight.FIsA< _TyXmlNamespaceValueWrap >() );
-      return rlvalNSLeft.GetVal< _TyXmlNamespaceValueWrap >().RStringPrefix() < rlvalNSRight.GetVal< _TyXmlNamespaceValueWrap >().RStringPrefix();
+      Assert( rlvalNSLeft.template FIsA< _TyXmlNamespaceValueWrap >() && rlvalNSRight.template FIsA< _TyXmlNamespaceValueWrap >() );
+      return rlvalNSLeft.template GetVal< _TyXmlNamespaceValueWrap >().RStringPrefix() < rlvalNSRight.template GetVal< _TyXmlNamespaceValueWrap >().RStringPrefix();
     };
     std::sort( _rctxtTokenCopy.m_rgDeclarations.begin(), _rctxtTokenCopy.m_rgDeclarations.end(), lambdaCompareNamespacePrefix );
     std::sort( _rctxtTokenCopy.m_rgReferences.begin(), _rctxtTokenCopy.m_rgReferences.end(), lambdaCompareNamespacePrefix );
@@ -368,7 +369,7 @@ public:
           // Then a new namespace (prefix,URI) that hasn't been declared yet. Declare it. This has the effect of leaving a
           //  namespace reference in its place which happens to be exactly what we want. This adds one to rnTagNamespaceDecls internally, so we subtract one:
           --rnTagNamespaceDecls;
-          _DeclareNamespace( _rcxtDoc, std::move( (**pplvalCurDeclaration)[vknNamespaceIdx].GetVal< _TyXmlNamespaceValueWrap >() ), fIsAttr ? enrtAttrNameReference : enrtTagNameReference );
+          _DeclareNamespace( _rcxtDoc, std::move( (**pplvalCurDeclaration)[vknNamespaceIdx].template GetVal< _TyXmlNamespaceValueWrap >() ), fIsAttr ? enrtAttrNameReference : enrtTagNameReference );
         }
         ++pplvalCurDeclaration;
       }
@@ -399,8 +400,8 @@ public:
             if ( !fFoundDeclaration && _FIsAttribute( **pplvalCurReference, &fIsAttrNamespaceDecl ) && fIsAttrNamespaceDecl )
             {
               // We found the actual declaration in the reference - just swap the two:
-              _TyXmlNamespaceValueWrap & rxnvwFixup = (**pplvalCurDeclaration)[vknNamespaceIdx].GetVal< _TyXmlNamespaceValueWrap >();
-              rxnvwFixup.swap( (**pplvalCurReference)[vknNamespaceIdx].GetVal< _TyXmlNamespaceValueWrap >() );
+              _TyXmlNamespaceValueWrap & rxnvwFixup = (**pplvalCurDeclaration)[vknNamespaceIdx].template GetVal< _TyXmlNamespaceValueWrap >();
+              rxnvwFixup.swap( (**pplvalCurReference)[vknNamespaceIdx].template GetVal< _TyXmlNamespaceValueWrap >() );
               rxnvwFixup.SetReferenceType( fIsAttr ? enrtAttrNameReference : enrtTagNameReference );
             }
           }
@@ -534,7 +535,7 @@ protected:
         rvalNS.emplaceVal( pxnvwDefaulted->ShedReference( enrtAttrNameReference ) );
       }
       // Now make sure that this isn't a default namespace because there is no way to indicate that on an attribute name...
-      VerifyThrowSz( !rvalNS.GetVal< _TyXmlNamespaceValueWrap >().RStringPrefix().empty(), "Attempt to apply the default namespace to an attribute name. That don't feng shui." );
+      VerifyThrowSz( !rvalNS.template GetVal< _TyXmlNamespaceValueWrap >().RStringPrefix().empty(), "Attempt to apply the default namespace to an attribute name. That don't feng shui." );
     }
     else
     {
@@ -543,7 +544,7 @@ protected:
     // Now we need to set the name appropriately according to the current options.
     _SetName( true, _rcxtDoc, _rsvName, nPosColon, svPrefix, rvalAttrNew[vknNameIdx] );
     // Now just set in the value - we don't validate it until we write it out - since validating it and writing it go hand in hand.
-    rvalAttrNew[vknAttr_ValueIdx].emplaceArgs< _TyStdStr >( _rsvValue );
+    rvalAttrNew[vknAttr_ValueIdx].template emplaceArgs< _TyStdStr >( _rsvValue );
   }
   void _SetName( bool _fIncludePrefixInName, _TyStrView const & _rsvName, size_t _nPosColon, _TyStrView const & _rsvPrefix, _TyLexValue & _rvalName )
   {
@@ -551,24 +552,24 @@ protected:
     if ( _fIncludePrefixInName == !_nPosColon )
     {
       if ( _nPosColon )
-        _rvalName.emplaceArgs< _TyStdStr >( &_rsvName[0] + _nPosColon + 1, _rsvName.length() - _nPosColon - 1 );
+        _rvalName.template emplaceArgs< _TyStdStr >( &_rsvName[0] + _nPosColon + 1, _rsvName.length() - _nPosColon - 1 );
       else
       if ( !_rsvPrefix.empty() ) // no prefix for default namespace.
       {
-        _TyStdStr & rstrTagName = _rvalName.emplaceArgs< _TyStdStr >( _rsvPrefix );
-        rstrTagName += _TyChar( ': ');
+        _TyStdStr & rstrTagName = _rvalName.template emplaceArgs< _TyStdStr >( _rsvPrefix );
+        rstrTagName += _TyChar( ':');
         rstrTagName += _rsvName;
       }
       else
       {
         Assert( !_nPosColon );
-        _rvalName.emplaceArgs< _TyStdStr >( _rsvName );
+        _rvalName.template emplaceArgs< _TyStdStr >( _rsvName );
       }
     }
     else
     {
       // name is already in correct format:
-      _rvalName.emplaceArgs< _TyStdStr >( _rsvName );
+      _rvalName.template emplaceArgs< _TyStdStr >( _rsvName );
     }
   }
   // Declare a new attribute and fill it with the appropriate defaults.
@@ -588,16 +589,16 @@ protected:
     Assert( _rrxnvw.FIsNamespaceDeclaration() );
     _TyLexValue & rvalAttrNew = _DeclareNewAttr( _rcxtDoc );
     {//B - attr name
-      _TyStdStr & rstrAttrName = rvalAttrNew[vknNameIdx].emplaceArgs< _TyStdStr >( _TyMarkupTraits::s_kszXmlnsEtc, StaticStringLen( _TyMarkupTraits::s_kszXmlnsEtc ) );
+      _TyStdStr & rstrAttrName = rvalAttrNew[vknNameIdx].template emplaceArgs< _TyStdStr >( _TyMarkupTraits::s_kszXmlnsEtc, StaticStringLen( _TyMarkupTraits::s_kszXmlnsEtc ) );
       rstrAttrName += _rrxnvw.RStringPrefix();
     }//EB
     // attr value: URI: We can use a string view on the URI from the URI map.
-    rvalAttrNew[vknAttr_ValueIdx].emplaceArgs< _TyStrView >( _rrxnvw.RStringUri() );
+    rvalAttrNew[vknAttr_ValueIdx].template emplaceArgs< _TyStrView >( _rrxnvw.RStringUri() );
     _TyXmlNamespaceValueWrap & rxnvw = rvalAttrNew[vknNamespaceIdx].emplaceVal( std::move( _rrxnvw ) ); // Now move the wrapper into place so that when the value is destroyed we remove the namespace.
     Assert( _rrxnvw.FIsNull() );
     _rrxnvw = rxnvw.ShedReference( _enrtReferenceType ); // return a reference inside of the passed ref.
     // Add one to the count of attribute namespace declarations in this tag:
-    ++GetValue()[vknTagNameIdx][vknTagName_NNamespaceDeclsIdx].GetVal<vtySignedLvalueInt>();
+    ++GetValue()[vknTagNameIdx][vknTagName_NNamespaceDeclsIdx].template GetVal<vtySignedLvalueInt>();
   }
 
 #if ASSERTSENABLED
@@ -606,12 +607,12 @@ protected:
     const _TyLexValue & rvName = _rrgvName[vknNameIdx];
     Assert( ( rvName.FHasTypedData() && !rvName.FEmptyTypedData() ) || rvName.FIsString() );
     const _TyLexValue & rvNS = _rrgvName[vknNamespaceIdx];
-    Assert( rvNS.FIsBool() || rvNS.FIsA< _TyXmlNamespaceValueWrap >() );
+    Assert( rvNS.FIsBool() || rvNS.template FIsA< _TyXmlNamespaceValueWrap >() );
     if ( _ppxnvw )
       *_ppxnvw = nullptr;
-    if ( rvNS.FIsA< _TyXmlNamespaceValueWrap >() )
+    if ( rvNS.template FIsA< _TyXmlNamespaceValueWrap >() )
     {
-      const _TyXmlNamespaceValueWrap & rxnvw = rvNS.GetVal< _TyXmlNamespaceValueWrap >();
+      const _TyXmlNamespaceValueWrap & rxnvw = rvNS.template GetVal< _TyXmlNamespaceValueWrap >();
       if ( _ppxnvw )
         *_ppxnvw = &rxnvw;
       Assert( !rxnvw.FIsNamespaceDeclaration() || !_fIsTag );
@@ -660,7 +661,7 @@ protected:
         const _TyXmlNamespaceValueWrap * pxnvw;
         _AssertValidName( true, rvTag, nNamespaceDecls, &pxnvw );
         Assert( !pxnvw || pxnvw->FIsNamespaceReference() );
-        Assert( rvTag[vknTagName_NNamespaceDeclsIdx].FIsA<vtySignedLvalueInt>() );
+        Assert( rvTag[vknTagName_NNamespaceDeclsIdx].template FIsA<vtySignedLvalueInt>() );
       }
       _TyLexValue const & rrgvAttrs = rvRoot[vknAttributesIdx];
       Assert( rrgvAttrs.FIsArray() );
@@ -691,7 +692,7 @@ protected:
           }
         );
       }
-      Assert( !_fUseNamespaces || ( vknTagName_ArrayCount != rvTag.GetSize() ) || ( nNamespaceDecls == rvTag[vknTagName_NNamespaceDeclsIdx].GetVal<vtySignedLvalueInt>() ) );
+      Assert( !_fUseNamespaces || ( vknTagName_ArrayCount != rvTag.GetSize() ) || ( nNamespaceDecls == rvTag[vknTagName_NNamespaceDeclsIdx].template GetVal<vtySignedLvalueInt>() ) );
     }
   }
   void _AssertValidComment() const

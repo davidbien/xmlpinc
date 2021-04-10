@@ -378,7 +378,7 @@ public:
     VerifyThrowSz( ( m_fWriteBOM == _fWriteBOM ) || !FHasTransport(), "Mustn't change the use of namespaces after opening a transport." );
     m_fWriteBOM = _fWriteBOM;
   }
-  void FGetWriteBOM() const
+  bool FGetWriteBOM() const
   {
     return m_fWriteBOM;
   }
@@ -387,7 +387,7 @@ public:
     VerifyThrowSz( ( m_fWriteXMLDecl == _fWriteXMLDecl ) || !FHasTransport(), "Mustn't change the use of namespaces after opening a transport." );
     m_fWriteXMLDecl = _fWriteXMLDecl;
   }
-  void FGetWriteXMLDecl() const
+  bool FGetWriteXMLDecl() const
   {
     return m_fWriteXMLDecl;
   }
@@ -396,7 +396,7 @@ public:
     VerifyThrowSz( ( m_fUseNamespaces == _fUseNamespaces ) || !FHasTransport(), "Mustn't change the use of namespaces after opening a transport." );
     m_fUseNamespaces = _fUseNamespaces;
   }
-  void FGetUseNamespaces() const
+  bool FGetUseNamespaces() const
   {
     return m_fUseNamespaces;
   }
@@ -658,7 +658,7 @@ public:
     // NOPE: We want to be able to duplicate the input as much as possible while still allowing any options for the internal user
     //  so in that regard we will check the token id and when we a s_knTokenSTag we know if was paired with a s_knTokenETag when read from a file.
     bool fHadUnendedTag;
-    if ( fHadUnendedTag = m_fHaveUnendedTag )
+    if ( ( fHadUnendedTag = m_fHaveUnendedTag ) )
       _CheckWriteTagEnd( ( s_knTokenSTag == _pwcxEnd->GetToken().GetTokenId() ) );
     if ( !fHadUnendedTag || ( s_knTokenSTag == _pwcxEnd->GetToken().GetTokenId() ) )
     {
@@ -786,7 +786,7 @@ protected:
           _WriteName( _rtok, rvCur );
           _WriteTransportRaw( _TyMarkupTraits::s_kszEqualSign, StaticStringLen( _TyMarkupTraits::s_kszEqualSign ) );
           // The tag itself specifies whether it wants double or single quotes.
-          bool fUseDoubleQuote = rvCur[vknAttr_FDoubleQuoteIdx].GetVal< bool >();
+          bool fUseDoubleQuote = rvCur[vknAttr_FDoubleQuoteIdx].template GetVal< bool >();
           _WriteTransportRaw( fUseDoubleQuote ? _TyMarkupTraits::s_kszDoubleQuote : _TyMarkupTraits::s_kszSingleQuote, StaticStringLen( _TyMarkupTraits::s_kszSingleQuote ) );
           // Now write the value using the appropriate start token as the validator.
           if ( fUseDoubleQuote )
@@ -815,7 +815,7 @@ protected:
     const _TyLexValue & rvalNS = _rvalRgName[vknNamespaceIdx];
     if ( !rvalNS.FIsBool() && !m_xdcxtDocumentContext.FIncludePrefixesInAttrNames() )
     {
-      const _TyXmlNamespaceValueWrap & rxnvw = rvalNS.GetVal< _TyXmlNamespaceValueWrap >();
+      const _TyXmlNamespaceValueWrap & rxnvw = rvalNS.template GetVal< _TyXmlNamespaceValueWrap >();
       if ( !rxnvw.FIsAttributeNamespaceDeclaration() ) // attribute namespace declarations always include the prefix.
       {
         _TyStrView svPrefix = rxnvw.RStringPrefix();
@@ -1113,7 +1113,7 @@ protected:
                         case s_knTokenEntityRef:
                         {
                           // Must be a valid reference:
-                          _TyStrViewApply svRef( pcCur, pcMatchReference - 1 );
+                          _TyStrViewApply svRef( pcCur, ( pcMatchReference - 1 ) - pcCur );
                           _TyStrViewOutput svEntity = m_xdcxtDocumentContext.GetUserObj().SvLookupEntity( svRef );
                           bool fFoundEntityReference = !svEntity.empty();
                           VerifyThrowSz( fFoundEntityReference || ( edrAutoReferenceNoError == _edrDetectReferences ), "Entity reference to [%s] not found.", StrConvertString<char>( svRef ).c_str() );
@@ -1135,7 +1135,8 @@ protected:
                         {
                           // The production ensures we have a valid set of characters, we must validate overflow.
                           // Character references are always in UTF32.
-                          _TyStrViewApply svRef( pcCur + ( pspAccept->m_tidAccept == s_knTokenCharRefDec ? 1 : 2 ), pcMatchReference - 1 );
+                          const t_TyCharApplyString * pcBegin = pcCur + ( pspAccept->m_tidAccept == s_knTokenCharRefDec ? 1 : 2 );
+                          _TyStrViewApply svRef( pcBegin, ( pcMatchReference - 1 ) - pcBegin );
                           char32_t utf32;
                           int iResult = IReadPositiveNum( s_knTokenCharRefDec == pspAccept->m_tidAccept ? 10 : 16, &svRef[0], svRef.length(), utf32, _l_char_type_map<char32_t>::ms_kcMax, false );
                           if ( !!iResult && ( edrAutoReferenceNoError != _edrDetectReferences ) ) // error - should be overflow since the production validates content.

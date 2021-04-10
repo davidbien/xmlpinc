@@ -5,8 +5,13 @@
 // 06JAN2021
 // Types definitions and predeclares for XML parser.
 
+#ifdef _MSC_VER
 #include <unordered_set>
 #include <unordered_map>
+#else
+#include <set>
+#include <map>
+#endif 
 #include "upslist.h"
 #include "xml_ns.h"
 #include "_l_types.h"
@@ -181,13 +186,21 @@ struct _xml_namespace_map_traits
   typedef t_TyChar _TyChar;
   typedef basic_string< _TyChar > _TyStdStr;
   typedef basic_string_view< _TyChar > _TyStrView;
-  typedef StringTransparentHash< _TyChar > _TyStringTransparentHash; // Allow lookup by string_view without creating a string.
-  typedef unordered_set< _TyStdStr, _TyStringTransparentHash, std::equal_to<void> > _TyUriAndPrefixMap;
   typedef _xml_namespace_uri< _TyChar > _TyNamespaceUri;
   typedef UniquePtrSList< _TyNamespaceUri > _TyUpListNamespaceUris;
+#ifdef _MSC_VER
+  typedef StringTransparentHash< _TyChar > _TyStringTransparentHash; // Allow lookup by string_view without creating a string.
+  typedef unordered_set< _TyStdStr, _TyStringTransparentHash, std::equal_to<void> > _TyUriAndPrefixMap;
   // first is a pointer to a PrefixMap value for the prefix, second is the current list of namespace URIs for that prefix.
   typedef pair< const typename _TyUriAndPrefixMap::value_type *, _TyUpListNamespaceUris > _TyNamespaceMapped;
   typedef unordered_map< _TyStdStr, _TyNamespaceMapped, _TyStringTransparentHash, std::equal_to<void> > _TyNamespaceMap;
+#else // __linux__ or any other unknown system - which should support heterogeneous lookup for set and map:
+  // Clang's trunk is currently supporting heterogeneous lookup for set and map so we can flavor this a bit different later (today is 09APR2021).
+  typedef set< _TyStdStr, std::less<> > _TyUriAndPrefixMap;
+  // first is a pointer to a PrefixMap value for the prefix, second is the current list of namespace URIs for that prefix.
+  typedef pair< const typename _TyUriAndPrefixMap::value_type *, _TyUpListNamespaceUris > _TyNamespaceMapped;
+  typedef map< _TyStdStr, _TyNamespaceMapped, std::less<> > _TyNamespaceMap;
+#endif
 };
 
 // These are positions within the _l_value<> aggregate for tags:

@@ -74,13 +74,13 @@ void CheckDuplicateTokenAttrs( bool _fStrict, const t_TyLexToken & _rltok, bool 
       {
         _TyLexValue const & rlvalNS = (*_rlpt)[vknNamespaceIdx];
         _TyLexValue const & rrvalNS = (*_rrpt)[vknNamespaceIdx];
-        bool fIsNotBoolLeft = !rlvalNS.FIsA< bool >();
-        bool fIsNotBoolRight = !rrvalNS.FIsA< bool >();
+        bool fIsNotBoolLeft = !rlvalNS.template FIsA< bool >();
+        bool fIsNotBoolRight = !rrvalNS.template FIsA< bool >();
         iComp = (int)fIsNotBoolLeft <=> (int)fIsNotBoolRight;
         if ( ( 0 == iComp ) && fIsNotBoolLeft )
         {
-          const _TyXmlNamespaceValueWrap & rxnvwLeft = rlvalNS.GetVal< _TyXmlNamespaceValueWrap >();
-          const _TyXmlNamespaceValueWrap & rxnvwRight = rrvalNS.GetVal< _TyXmlNamespaceValueWrap >();
+          const _TyXmlNamespaceValueWrap & rxnvwLeft = rlvalNS.template GetVal< _TyXmlNamespaceValueWrap >();
+          const _TyXmlNamespaceValueWrap & rxnvwRight = rrvalNS.template GetVal< _TyXmlNamespaceValueWrap >();
           iComp = rxnvwLeft.ICompareForUniqueAttr( rxnvwRight );
         }
       }
@@ -101,7 +101,7 @@ void CheckDuplicateTokenAttrs( bool _fStrict, const t_TyLexToken & _rltok, bool 
     const _TyLexValue & rvnsCur = rvattrCur[vknNamespaceIdx];
     _TyStrView svAttrName;
     rvattrCur[vknNameIdx].KGetStringView( _rltok, svAttrName );
-    if ( rvnsCur.FIsA<bool>() )
+    if ( rvnsCur.template FIsA<bool>() )
     {
       // no-namespace attribute:
       fAnyDuplicateAttrNames = true;
@@ -109,13 +109,13 @@ void CheckDuplicateTokenAttrs( bool _fStrict, const t_TyLexToken & _rltok, bool 
     }
     else
     {
-      Assert( rvnsCur.FIsA<_TyXmlNamespaceValueWrap>() );
-      _TyXmlNamespaceValueWrap const & rxnvwCur = rvnsCur.GetVal< _TyXmlNamespaceValueWrap >();
+      Assert( rvnsCur.template FIsA<_TyXmlNamespaceValueWrap>() );
+      _TyXmlNamespaceValueWrap const & rxnvwCur = rvnsCur.template GetVal< _TyXmlNamespaceValueWrap >();
       if ( rxnvwCur.FIsNamespaceDeclaration() )
       {
         const _TyLexValue & rvattrNext = *ppDupeCur[1];
         const _TyLexValue & rvnsNext = rvattrNext[vknNamespaceIdx];
-        if ( _fStrict || ( 0 != rxnvwCur.ICompare( rvnsNext.GetVal< _TyXmlNamespaceValueWrap >() ) ) )
+        if ( _fStrict || ( 0 != rxnvwCur.ICompare( rvnsNext.template GetVal< _TyXmlNamespaceValueWrap >() ) ) )
         {
           fAnyDuplicateAttrNames = true;
           LOGSYSLOG( eslmtError, "Duplicate namespace prefix name declared[%s].", StrConvertString< char >( svAttrName ).c_str() );

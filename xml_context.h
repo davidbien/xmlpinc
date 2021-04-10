@@ -28,8 +28,8 @@ public:
   {
   }
   // Copy properties from a different encoding's version.
-  template < class t_TyChar >
-  XMLDeclProperties( XMLDeclProperties< t_TyChar > const & _rOther, EFileCharacterEncoding _efce = efceFileCharacterEncodingCount )
+  template < class t_TyCharOther >
+  XMLDeclProperties( XMLDeclProperties< t_TyCharOther > const & _rOther, EFileCharacterEncoding _efce = efceFileCharacterEncodingCount )
     : m_fStandalone( _rOther.m_fStandalone ),
       m_nVersionMinorNumber( _rOther.m_nVersionMinorNumber ),
       m_fVersionDoubleQuote( _rOther.m_fVersionDoubleQuote ),
@@ -84,12 +84,12 @@ public:
     if ( !rrgVals.FIsNull() )
     {
       Assert( rrgVals.FIsArray() );
-      m_fVersionDoubleQuote = rrgVals[vknXMLDecl_VersionMinorNumberDoubleQuoteIdx].GetVal<bool>();
-      bool fStandaloneYes = rrgVals[vknXMLDecl_StandaloneYesIdx].GetVal<bool>();
-      m_fHasStandalone = fStandaloneYes || rrgVals[vknXMLDecl_StandaloneNoIdx].GetVal<bool>();
+      m_fVersionDoubleQuote = rrgVals[vknXMLDecl_VersionMinorNumberDoubleQuoteIdx].template GetVal<bool>();
+      bool fStandaloneYes = rrgVals[vknXMLDecl_StandaloneYesIdx].template GetVal<bool>();
+      m_fHasStandalone = fStandaloneYes || rrgVals[vknXMLDecl_StandaloneNoIdx].template GetVal<bool>();
       m_fStandalone = m_fHasStandalone ? fStandaloneYes : true;
-      bool fEncodingDoubleQuote = rrgVals[vknXMLDecl_EncodingDoubleQuoteIdx].GetVal<bool>();
-      m_fHasEncoding = fEncodingDoubleQuote || rrgVals[vknXMLDecl_EncodingSingleQuoteIdx].GetVal<bool>();
+      bool fEncodingDoubleQuote = rrgVals[vknXMLDecl_EncodingDoubleQuoteIdx].template GetVal<bool>();
+      m_fHasEncoding = fEncodingDoubleQuote || rrgVals[vknXMLDecl_EncodingSingleQuoteIdx].template GetVal<bool>();
       if ( m_fHasEncoding )
       {
         m_fEncodingDoubleQuote = fEncodingDoubleQuote;
@@ -403,7 +403,7 @@ public:
     // Record the containers for all declarations and references - this lets us fix things up pretty easily.    
     Assert( enrtNamespaceReferenceTypeCount != _rxnvwOther.GetReferenceType() );
     _TyXmlNamespaceValueWrap xnvwThis = GetNamespaceValueWrap( _rxnvwOther.GetReferenceType(), std::move( prstrPrefixUri.first ), std::move( prstrPrefixUri.second ) );
-    _TyXmlNamespaceValueWrap & rxnvwInValue = _rvalNSVW.emplaceVal< _TyXmlNamespaceValueWrap >( std::move( xnvwThis ) );
+    _TyXmlNamespaceValueWrap & rxnvwInValue = _rvalNSVW.template emplaceVal< _TyXmlNamespaceValueWrap >( std::move( xnvwThis ) );
     if ( rxnvwInValue.FIsNamespaceDeclaration() )
       _ptccCopyCtxt->m_rgDeclarations.push_back( _ptccCopyCtxt->m_plvalContainerCur );
     else

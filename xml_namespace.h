@@ -355,7 +355,7 @@ public:
     if ( !m_pvtUri )
       return _rjv.SetNullValue();
     _rjv.SetArrayCapacity( !m_pvtNamespaceMap ? 2 : 3 ); // preallocate
-    _rjv[0ull].SetStringValue( *m_pvtPrefix );
+    _rjv[size_t(0)].SetStringValue( *m_pvtPrefix );
     _rjv[1].SetStringValue( *m_pvtUri );
     if ( m_pvtNamespaceMap )
     {

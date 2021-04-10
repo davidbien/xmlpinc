@@ -1,7 +1,7 @@
 #pragma once
 
-// _l_user.h
-// "User" objects for the lexical analyzer.
+// xml_user.h
+// "User" objects for the XML parser.
 // dbien
 // 17DEC2020
 
@@ -10,6 +10,7 @@
 // A good example is where a piece of text may represent a hexidecimal number, etc. The translator in the overridden
 //  user object would translate and also potentially check for overflow, etc.
 
+#include "_l_chrtr.h"
 #include "xml_ns.h"
 #include "xml_types.h"
 #include "xml_exc.h"
@@ -27,8 +28,12 @@ public:
   static constexpr bool s_kfSupportDTD = true;
   typedef basic_string< _TyChar > _TyStdStr;
   typedef basic_string_view< _TyChar > _TyStrView;
+#ifdef _MSC_VER
   typedef StringTransparentHash< _TyChar > _TyStringTransparentHash; // Allow lookup by string_view without creating a string.
   typedef unordered_map< _TyStdStr, _TyStdStr, _TyStringTransparentHash, std::equal_to<void> > _TyEntityMap;
+#else
+  typedef map< _TyStdStr, _TyStdStr, std::less<> > _TyEntityMap;
+#endif
 
   _TyEntityMap m_mapParameterEntities{};
 
@@ -67,8 +72,12 @@ public:
   static constexpr bool s_kfSupportDTD = false;
   typedef basic_string< _TyChar > _TyStdStr;
   typedef basic_string_view< _TyChar > _TyStrView;
+#ifdef _MSC_VER
   typedef StringTransparentHash< _TyChar > _TyStringTransparentHash; // Allow lookup by string_view without creating a string.
   typedef unordered_map< _TyStdStr, _TyStdStr, _TyStringTransparentHash, std::equal_to<void> > _TyEntityMap;
+#else
+  typedef map< _TyStdStr, _TyStdStr, std::less<> > _TyEntityMap;
+#endif
 
   void swap( _TyThis & _r )
   {
@@ -80,7 +89,10 @@ public:
   const _TyStdStr& _RLookupParameterEntity(_l_data_typed_range const& _rdr, t_TyTransportCtxt const& _rcxt) const
   {
     // no-op - just here so that things compile.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wnull-dereference"
     return *(_TyStdStr*)0;
+#pragma GCC diagnostic pop
   }
 };
 

@@ -82,7 +82,7 @@ public:
   typedef typename _TyXmlTraits::_TyStdStr _TyStdStr;
   typedef typename _TyXmlTraits::_TyStrView _TyStrView;
   typedef xml_read_cursor< _TyXmlTraits > _TyReadCursor;
-  static constexpr bool t_kfIsVariantTransport = TFIsTransportVar_v< _TyTransport >;
+  static constexpr bool s_kfIsVariantTransport = TFIsTransportVar_v< _TyTransport >;
 
   ~xml_parser() = default;
   xml_parser() = default;
@@ -102,7 +102,7 @@ public:
 
   // This will attempt to open the file. If it is in the wrong format it will throw an xml_parse_exception.
   _TyReadCursor OpenFile( const char * _pszFileName )
-    requires( !t_kfIsVariantTransport )
+    requires( !s_kfIsVariantTransport )
   {
     VerifyThrow( !!_pszFileName );
     m_strFileName = _pszFileName;
@@ -125,7 +125,7 @@ public:
   //  want to integrate it into the xml_parser_var to make it's binary footprint smaller).
   template < template < class ... > class t_tempTyTransport >
   _TyReadCursor OpenFileVar( const char * _pszFileName )
-    requires( t_kfIsVariantTransport )
+    requires( s_kfIsVariantTransport )
   {
     // Produce a hard compiler error if the transport variant doesn't contain at least one possibility of this t_tempTyTransport.
     typedef typename _TyTransport::_TyVariant _TyTransportVariant;
@@ -172,12 +172,15 @@ public:
         _OpenParserCheckTransportVar< t_tempTyTransport< char32_t, integral_constant< bool, vkfIsBigEndian > > >( fo );
       }
       break;
+      default:
+        VerifyThrowSz( false, "Unknown character encoding [%d].", efceEncoding );
+      break;
     }
     return GetReadCursor();
   }
   // This will "open" a memory block. If it is in the wrong format it will throw an xml_parse_exception.
   _TyReadCursor OpenMemory( const void * _pv, size_t _nbyLenBytes )
-    requires( !t_kfIsVariantTransport )
+    requires( !s_kfIsVariantTransport )
   {
     size_t nbyLenBOM;
     EFileCharacterEncoding efceEncoding = _XmlParserGetEncoding( _pv, _nbyLenBytes, nbyLenBOM );
@@ -199,7 +202,7 @@ public:
   // Since currently there is only one type of fixed memory transport.
   template < template < class ... > class t_tempTyTransport = _l_transport_fixedmem >
   _TyReadCursor OpenMemoryVar( const void * _pv, size_t _nbyLenBytes )
-    requires( t_kfIsVariantTransport )
+    requires( s_kfIsVariantTransport )
   {
     typedef typename _TyTransport::_TyVariant _TyTransportVariant;
     static_assert( has_type_v< t_tempTyTransport< _TyChar, false_type >, _TyTransportVariant >
@@ -246,19 +249,22 @@ public:
         _OpenParserCheckTransportVar< t_tempTyTransport< char32_t, integral_constant< bool, vkfIsBigEndian > > >( pvContentStart, nbyLenContent );
       }
       break;
+      default:
+        VerifyThrowSz( false, "Unknown character encoding [%d].", efceEncoding );
+      break;
     }
     return GetReadCursor();
   }
   template < class... t_TysArgs >
   void emplaceTransport( t_TysArgs&&... _args )
-    requires( !t_kfIsVariantTransport )
+    requires( !s_kfIsVariantTransport )
   {
     m_lexXml.emplaceTransport( std::forward< t_TysArgs >( _args )... );
   }
   // Open a given transport object. This constructor is for variant transport
   template < class t_TyTransport, class ... t_TysArgs >
   void emplaceVarTransport( t_TysArgs&& ... _args )
-    requires( t_kfIsVariantTransport )
+    requires( s_kfIsVariantTransport )
   {
     m_lexXml.template emplaceVarTransport< t_TyTransport >( std::forward< t_TysArgs >( _args )... );
   }
@@ -441,7 +447,7 @@ public:
   typedef MultiplexMonostateTuplePack_t< xml_parser, _TyTpXmlTraits, variant > _TyParserVariant;
   // For the cursor we don't need a monostate because we will deliver the fully created type from a local method.
   typedef xml_read_cursor_var< _TyTpTransports > _TyReadCursorVar;
-  static constexpr bool t_kfIsVariantTransport = TFIsTransportVar_v< tuple_element<0,_TyTpTransports>::type >;
+  static constexpr bool s_kfIsVariantTransport = TFIsTransportVar_v< typename tuple_element<0,_TyTpTransports>::type >;
 
   ~xml_parser_var() = default;
   xml_parser_var() = default;
@@ -465,7 +471,7 @@ public:
   }
   // This will open the file with transport t_tempTyTransport<>
   _TyReadCursorVar OpenFile( const char * _pszFileName )
-    requires( !t_kfIsVariantTransport )
+    requires( !s_kfIsVariantTransport )
   {
     return _OpenFile( _pszFileName );
   }
@@ -473,13 +479,13 @@ public:
   // If it isn't we want to fail at compile time - not at runtime.
   template < template < class ... > class t__tempTyTransport >
   _TyReadCursorVar OpenFileVar( const char * _pszFileName )
-    requires( t_kfIsVariantTransport )
+    requires( s_kfIsVariantTransport )
   {
     return _OpenFileVar< t__tempTyTransport >( _pszFileName );
   }
   // This will "open" a memory block. If it is in the wrong format it will throw an xml_parse_exception.
   _TyReadCursorVar OpenMemory( const void * _pv, size_t _nbyLenBytes )
-    requires( !t_kfIsVariantTransport )
+    requires( !s_kfIsVariantTransport )
   {
     return _OpenMemory( _pv, _nbyLenBytes );
   }
@@ -487,7 +493,7 @@ public:
   // Default to the only current fixed memory transport template.
   template < template < class ... > class t__tempTyTransport = _l_transport_fixedmem >
   _TyReadCursorVar OpenMemoryVar( const void * _pv, size_t _nbyLenBytes )
-    requires( t_kfIsVariantTransport )
+    requires( s_kfIsVariantTransport )
   {
     return _OpenMemoryVar< t__tempTyTransport >( _pv, _nbyLenBytes );
   }
@@ -510,7 +516,7 @@ public:
 protected:
   // This will open the file with transport t__tempTyTransport.
   _TyReadCursorVar _OpenFile( const char * _pszFileName )
-    requires( !t_kfIsVariantTransport )
+    requires( !s_kfIsVariantTransport )
   {
     VerifyThrow( !!_pszFileName );
     m_strFileName = _pszFileName;
@@ -544,12 +550,15 @@ protected:
         _OpenCheckParserType< t_tempTyTransport< char32_t, integral_constant< bool, vkfIsBigEndian > > >( fo, efceEncoding );
       }
       break;
+      default:
+        VerifyThrowSz( false, "Unknown character encoding [%d].", efceEncoding );
+      break;
     }
     return GetReadCursor();
   }
   template < class t_TyTransport >
   void _OpenCheckParserType( FileObj & _rfo, EFileCharacterEncoding _efceEncoding )
-    requires( !t_kfIsVariantTransport )
+    requires( !s_kfIsVariantTransport )
   {
     typedef t_TyTransport _TyTransport;
     typedef TGetXmlTraitsDefault< _TyTransport > _TyXmlTraits;
@@ -562,7 +571,7 @@ protected:
   {
     typedef t_TyParser _TyParser;
     // We have a type, now, that is present in the variant...
-    _TyParser & rp = m_varParser.emplace< t_TyParser >();
+    _TyParser & rp = m_varParser.template emplace< t_TyParser >();
     rp.emplaceTransport( _rfo );
   }
   template <>
@@ -574,7 +583,7 @@ protected:
         m_strFileName.c_str(), PszCharacterEncodingShort( _efceEncoding ) );
   }
   _TyReadCursorVar _OpenMemory( const void * _pv, size_t _nbyLenBytes )
-    requires( !t_kfIsVariantTransport )
+    requires( !s_kfIsVariantTransport )
   {
     size_t nbyLenBOM;
     EFileCharacterEncoding efceEncoding = _XmlParserGetEncoding( _pv, _nbyLenBytes, nbyLenBOM );
@@ -608,12 +617,15 @@ protected:
         _OpenCheckParserType< t_tempTyTransport< char32_t, integral_constant< bool, vkfIsBigEndian > > >( pvContentStart, nbyLenContent, efceEncoding );
       }
       break;
+      default:
+        VerifyThrowSz( false, "Unknown character encoding [%d].", efceEncoding );
+      break;
     }
     return GetReadCursor();
   }
   template < class t_TyTransport >
   void _OpenCheckParserType( const void * _pv, size_t _nbyLenBytes, EFileCharacterEncoding _efceEncoding )
-    requires( !t_kfIsVariantTransport )
+    requires( !s_kfIsVariantTransport )
   {
     typedef t_TyTransport _TyTransport;
     typedef typename _TyTransport::_TyChar _TyChar;
@@ -629,7 +641,7 @@ protected:
     typedef t_TyParser _TyParser;
     typedef typename _TyParser::_TyChar _TyChar;
     // We have a type, now, that is present in the variant...
-    _TyParser & rp = m_varParser.emplace< t_TyParser >();
+    _TyParser & rp = m_varParser.template emplace< t_TyParser >();
     rp.emplaceTransport( (const _TyChar *)_pv, _nbyLenBytes / sizeof(_TyChar) );
   }
   template <>
@@ -643,7 +655,7 @@ protected:
   // This will open the file with transport t__tempTyTransport if possible.
   template < template < class ... > class t__tempTyTransport >
   _TyReadCursorVar _OpenFileVar( const char * _pszFileName )
-    requires( t_kfIsVariantTransport )
+    requires( s_kfIsVariantTransport )
   {
     // First we want to fail the compile entirely if the template in question is not present whatsoever for any potential encoding.
     // To that end we just enumerate all the possibilities:
@@ -685,6 +697,9 @@ protected:
         _OpenParserCheckTransportVar< t__tempTyTransport< char32_t, integral_constant< bool, vkfIsBigEndian > > >( fo, efceEncoding );
       }
       break;
+      default:
+        VerifyThrowSz( false, "Unknown character encoding [%d].", efceEncoding );
+      break;
     }
     return GetReadCursor();
   }
@@ -705,8 +720,8 @@ protected:
     typedef TGetXmlTraitsDefault< _TyVarTransport > _TyXmlTraits;
     typedef xml_parser< _TyXmlTraits > _TyXmlParser;
     // We have a type, now, that is present in the variant...
-    _TyXmlParser & rp = m_varParser.emplace< _TyXmlParser >();
-    rp.emplaceVarTransport< _TyTransport >( _rfo );
+    _TyXmlParser & rp = m_varParser.template emplace< _TyXmlParser >();
+    rp.template emplaceVarTransport< _TyTransport >( _rfo );
   }
   template < class t_TyTransport, class t_TyVarTransport >
   void _OpenParserTransportVar( FileObj & _rfo, EFileCharacterEncoding _efceEncoding )
@@ -720,7 +735,7 @@ protected:
   // This will open the file with transport t__tempTyTransport if possible.
   template < template < class ... > class t__tempTyTransport >
   _TyReadCursorVar _OpenMemoryVar( const void * _pv, size_t _nbyLenBytes )
-    requires( t_kfIsVariantTransport )
+    requires( s_kfIsVariantTransport )
   {
     // First we want to fail the compile entirely if the template in question is not present whatsoever for any potential encoding.
     // To that end we just enumerate all the possibilities:
@@ -763,6 +778,9 @@ protected:
         _OpenParserCheckTransportVar< t__tempTyTransport< char32_t, integral_constant< bool, vkfIsBigEndian > > >( pvContentStart, nbyLenContent, efceEncoding );
       }
       break;
+      default:
+        VerifyThrowSz( false, "Unknown character encoding [%d].", efceEncoding );
+      break;
     }
     return GetReadCursor();
   }
@@ -786,8 +804,8 @@ protected:
     typedef TGetXmlTraitsDefault< _TyVarTransport > _TyXmlTraits;
     typedef xml_parser< _TyXmlTraits > _TyXmlParser;
     // We have a type, now, that is present in the variant...
-    _TyXmlParser & rp = m_varParser.emplace< _TyXmlParser >();
-    rp.emplaceVarTransport< _TyTransport >( (const _TyChar *)_pv, _nbyLenBytes / sizeof(_TyChar) );
+    _TyXmlParser & rp = m_varParser.template emplace< _TyXmlParser >();
+    rp.template emplaceVarTransport< _TyTransport >( (const _TyChar *)_pv, _nbyLenBytes / sizeof(_TyChar) );
   }
   template < class t_TyTransport, class t_TyVarTransport >
   void _OpenParserTransportVar( const void * _pv, size_t _nbyLenBytes, EFileCharacterEncoding _efceEncoding )

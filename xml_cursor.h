@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <array>
 #include "alloca_list.h"
+#include "alloca_array.h"
 #include "xml_ns.h"
 #include "xml_types.h"
 #include "xml_traits.h"
@@ -690,7 +691,7 @@ protected:
         // Then we are going to create a "fake" XMLDecl token because the invariant is that the first
         //  token of the top context is an XMLDecl token. Our fake token will be completely empty.
         _TyUserContext ucxtEmpty( m_pXp->GetUserObj() );
-        pltokFirst = make_unique< _TyLexToken >( std::move( ucxtEmpty ), &m_pXp->GetLexicalAnalyzer().GetActionObj< s_knTokenXMLDecl >() );
+        pltokFirst = make_unique< _TyLexToken >( std::move( ucxtEmpty ), &m_pXp->GetLexicalAnalyzer().template GetActionObj< s_knTokenXMLDecl >() );
       }
       _ProcessToken( pltokFirst ); // This pushes XMLDecl onto the head of the stack as the first token in that context.
     }//EB
@@ -771,7 +772,7 @@ protected:
       {
         // Then we must check if we have any namespace declarations in this tag and if so undeclare them.
         _TyLexValue const & rrgvName = (**_popttokRtnSpentTag)[vknTagNameIdx];
-        vtySignedLvalueInt nNamespaceDecls = rrgvName[vknTagName_NNamespaceDeclsIdx].GetVal< vtySignedLvalueInt >();
+        vtySignedLvalueInt nNamespaceDecls = rrgvName[vknTagName_NNamespaceDeclsIdx].template GetVal< vtySignedLvalueInt >();
         if ( nNamespaceDecls )
         {
           Assert( nNamespaceDecls >= 0 );
@@ -784,9 +785,9 @@ protected:
               for ( ; ( _pattrEnd != pattrCur ) && !!nNamespaceDecls; ++pattrCur )
               {
                 _TyLexValue & rvNamespace = (*pattrCur)[vknNamespaceIdx];
-                if ( rvNamespace.FIsA<_TyXmlNamespaceValueWrap>() )
+                if ( rvNamespace.template FIsA<_TyXmlNamespaceValueWrap>() )
                 {
-                  _TyXmlNamespaceValueWrap & rxnvw = rvNamespace.GetVal< _TyXmlNamespaceValueWrap >();
+                  _TyXmlNamespaceValueWrap & rxnvw = rvNamespace.template GetVal< _TyXmlNamespaceValueWrap >();
                   if ( rxnvw.FIsNamespaceDeclaration() )
                   {
                     --nNamespaceDecls;
@@ -877,7 +878,7 @@ protected:
   void _ProcessProcessingInstruction( _TyLexToken & _rltok )
   {
     // We may have some "meat" after the PITarget - or not.
-    vtyDataPosition posMeatBegin = _rltok[vknProcessingInstruction_MeatIdx].GetVal< vtyDataPosition >();
+    vtyDataPosition posMeatBegin = _rltok[vknProcessingInstruction_MeatIdx].template GetVal< vtyDataPosition >();
     if ( vkdpNullDataPosition == posMeatBegin )
     {
       // Then insert a null _TyData:
@@ -908,7 +909,7 @@ protected:
       // We should only see plain whitespace CharData before the first tag:
       _TyLexValue & rVal = _rltok.GetValue();
       Assert( rVal.FHasTypedData() );
-      const _TyData & rdt = rVal.GetVal< _TyData >();
+      const _TyData & rdt = rVal.template GetVal< _TyData >();
       bool fError = !rdt.FContainsSingleDataRange() || ( rdt.DataRangeGetSingle().type() != s_kdtPlainText );
       if ( !fError )
       {
@@ -925,10 +926,10 @@ protected:
     // Tag names must match literally between start and end tags.
     // As well we want the end user to see a uniform representation of tag names.
     // So if a namespace specifier is present then we will reset the end position of the this namespace specifier to include the ':' and the namespace name.
-    _TyData const & krdtName = _rrgvalName[vknNamespaceIdx].GetVal< _TyData >();
+    _TyData const & krdtName = _rrgvalName[vknNamespaceIdx].template GetVal< _TyData >();
     if ( !krdtName.FIsNull() )
     {
-      _TyData & rdtPrefix = _rrgvalName[vknNameIdx].GetVal< _TyData >();
+      _TyData & rdtPrefix = _rrgvalName[vknNameIdx].template GetVal< _TyData >();
       rdtPrefix.DataRangeGetSingle().m_posEnd = krdtName.DataRangeGetSingle().m_posEnd;
     }
     // Leave the name as is - further processing will occur depending on flavor.
@@ -964,7 +965,7 @@ protected:
         // We have a namespace declaration!
         _TyStrView svPrefix;
         rrgAttr[vknNamespaceIdx].KGetStringView( _rltok, svPrefix );
-        const _TyUriAndPrefixMap::value_type & rvtPrefix = m_pXp->RStrAddPrefix( svPrefix );
+        const typename _TyUriAndPrefixMap::value_type & rvtPrefix = m_pXp->RStrAddPrefix( svPrefix );
         // Check for uniqueness of prefix:
         VerifyThrowSz( !lPrefixesUsed.FFind( &rvtPrefix ), "Namespaces Validity: Cannot use same namespace prefix more than once within the same tag." );
         ALLOCA_LIST_PUSH( lPrefixesUsed, &rvtPrefix );
@@ -981,10 +982,10 @@ protected:
     {//B
       _TyLexValue & rrgTagName = _rltok[vknNameIdx];
       rrgTagName[vknTagName_NNamespaceDeclsIdx].emplaceVal( nNamespaceDecls ); // record the count of namespace decls so we can know when we are done processing the end-tag.
-      _TyData const & krdtName = rrgTagName[vknNamespaceIdx].GetVal< _TyData >();
+      _TyData const & krdtName = rrgTagName[vknNamespaceIdx].template GetVal< _TyData >();
       if ( !krdtName.FIsNull() )
       {
-        _TyData & rdtPrefix = rrgTagName[vknNameIdx].GetVal< _TyData >();
+        _TyData & rdtPrefix = rrgTagName[vknNameIdx].template GetVal< _TyData >();
         _TyStrView svPrefix;
         rrgTagName[vknNameIdx].KGetStringView( _rltok, svPrefix );
         // Update the tag name so that it includes the prefix as is necessary for XML end tag matching.
@@ -1011,7 +1012,7 @@ protected:
     for ( size_t nAttr = 0; nAttr < knAttrs; ++nAttr )
     {
       _TyLexValue & rrgAttr = rrgAttrs[nAttr];
-      if ( rrgAttr[vknNamespaceIdx].FIsA< _TyXmlNamespaceValueWrap >() )
+      if ( rrgAttr[vknNamespaceIdx].template FIsA< _TyXmlNamespaceValueWrap >() )
         continue; // This is an xmlns attribute that was processed above.
       if ( rrgAttr[vknNamespaceIdx].FEmptyTypedData() )
       {
@@ -1021,8 +1022,8 @@ protected:
       }
       _TyStrView svPrefix;
       rrgAttr[vknNameIdx].KGetStringView( _rltok, svPrefix );
-      _TyData const & krdtName = rrgAttr[vknNamespaceIdx].GetVal< _TyData >();
-      _TyData & rdtPrefix = rrgAttr[vknNameIdx].GetVal< _TyData >();
+      _TyData const & krdtName = rrgAttr[vknNamespaceIdx].template GetVal< _TyData >();
+      _TyData & rdtPrefix = rrgAttr[vknNameIdx].template GetVal< _TyData >();
       if ( m_fIncludePrefixesInAttrNames && !m_fCheckDuplicateAttrs )
         rdtPrefix.DataRangeGetSingle().m_posEnd = krdtName.DataRangeGetSingle().m_posEnd;
       else
@@ -1039,16 +1040,16 @@ protected:
       for ( size_t nAttr = 0; nAttr < knAttrs; ++nAttr )
       {
         _TyLexValue & rrgAttr = rrgAttrs[nAttr];
-        if ( !rrgAttr[vknNamespaceIdx].FIsA< _TyXmlNamespaceValueWrap >() )
+        if ( !rrgAttr[vknNamespaceIdx].template FIsA< _TyXmlNamespaceValueWrap >() )
         {
-          Assert( rrgAttr[vknNamespaceIdx].FIsA< bool >() && !rrgAttr[vknNamespaceIdx].GetVal< bool >() ); // Not in any namespace at all.
+          Assert( rrgAttr[vknNamespaceIdx].template FIsA< bool >() && !rrgAttr[vknNamespaceIdx].template GetVal< bool >() ); // Not in any namespace at all.
           continue; // This is an xmlns attribute that was processed above.
         }
-        _TyXmlNamespaceValueWrap const & rnvw = rrgAttr[vknNamespaceIdx].GetVal< _TyXmlNamespaceValueWrap >();
+        _TyXmlNamespaceValueWrap const & rnvw = rrgAttr[vknNamespaceIdx].template GetVal< _TyXmlNamespaceValueWrap >();
         ENamespaceReferenceType nrtCur;
         if ( rnvw.FIsNamespaceDeclaration() || ( rnvw.FIsNamespaceReference( &nrtCur ) && ( enrtAttrNamespaceDeclReference == nrtCur ) ) )
           continue;
-        _TyData & rdtName = rrgAttr[vknNameIdx].GetVal< _TyData >();
+        _TyData & rdtName = rrgAttr[vknNameIdx].template GetVal< _TyData >();
         rdtName.DataRangeGetSingle().m_posBegin -= 1 + rnvw.RStringPrefix().length(); // push back to include the prefix.
       }
     }

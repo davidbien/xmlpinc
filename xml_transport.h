@@ -28,7 +28,11 @@ public:
     : m_foFile( std::move( _rfoFile ) ),
       m_nchWriteBuffer( _nchWriteBuffer )
   {
+#ifdef _MSC_VER
     m_upBuffer = make_unique_for_overwrite< _TyChar[] >( m_nchWriteBuffer );
+#else
+    m_upBuffer = _TyBuffer( new _TyChar[ m_nchWriteBuffer ] );
+#endif
     m_pcBufCur = &m_upBuffer[0];
     VerifyThrow( m_foFile.FIsOpen() );
     if ( _fWriteBOM )
