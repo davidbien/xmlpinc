@@ -10,6 +10,7 @@
 // A good example is where a piece of text may represent a hexidecimal number, etc. The translator in the overridden
 //  user object would translate and also potentially check for overflow, etc.
 
+#include "_util.h"
 #include "_l_chrtr.h"
 #include "xml_ns.h"
 #include "xml_types.h"
@@ -89,10 +90,14 @@ public:
   const _TyStdStr& _RLookupParameterEntity(_l_data_typed_range const& _rdr, t_TyTransportCtxt const& _rcxt) const
   {
     // no-op - just here so that things compile.
+#ifdef __GNUC__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wnull-dereference"
+#endif //__GNUC__
     return *(_TyStdStr*)0;
+#ifdef __GNUC__
 #pragma GCC diagnostic pop
+#endif //__GNUC__
   }
 };
 
