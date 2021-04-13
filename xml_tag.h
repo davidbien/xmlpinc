@@ -43,9 +43,10 @@ public:
     m_opttokTag.swap( _r.m_opttokTag );
     m_rgTokens.swap( _r.m_rgTokens );
   }
-  void AssertValid() const
+  void AssertValid( const _TyThis * _ptagParent = nullptr ) const
   {
 #if ASSERTSENABLED
+    Assert( _ptagParent == m_ptagParent );
     if( !! m_opttokTag )
       m_opttokTag->AssertValid();
     typename _TyRgTokens::const_iterator citCur = m_rgTokens.begin();
@@ -54,13 +55,9 @@ public:
     {
       const _TyVariant & rvCur = *citCur;
       if ( holds_alternative< _TyXmlToken >( rvCur ) )
-      {
         std::get< _TyXmlToken >( rvCur ).AssertValid();
-      }
       else
-      { // recurse.
-        std::get< _TyThis >( rvCur ).AssertValid();
-      }
+        std::get< _TyThis >( rvCur ).AssertValid( this );
     }
 #endif //ASSERTSENABLED
   }
@@ -158,6 +155,7 @@ protected:
   typedef optional< _TyXmlToken > _TyOptXmlToken; // Need this because token is not default constructible.
   _TyOptXmlToken m_opttokTag; // The token corresponding to the tag. This is either an XMLDecl token or just a normal tag.
   _TyRgTokens m_rgTokens; // The content for this token.
+  _TyThis * m_ptagParent{nullptr}; // Pointer to our parent xml_tag, which may be an xml_document.
 };
 
 // xml_document:
@@ -216,6 +214,7 @@ public:
   {
     return m_xdcxtDocumentContext.GetXMLDeclProperties();
   }
+
   // Read from this read cursor into this object.
   void FromXmlStream( _TyReadCursor & _rxrc )
   {
