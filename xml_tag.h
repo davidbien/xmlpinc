@@ -46,7 +46,7 @@ public:
   void AssertValid( const _TyThis * _ptagParent = nullptr ) const
   {
 #if ASSERTSENABLED
-    Assert( _ptagParent == m_ptagParent );
+    // Assert( _ptagParent == m_ptagParent ); NYI
     if( !! m_opttokTag )
       m_opttokTag->AssertValid();
     typename _TyRgTokens::const_iterator citCur = m_rgTokens.begin();
