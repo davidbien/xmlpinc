@@ -7,6 +7,8 @@
 // Each xml_tag or xml_tag_var will reference the nearest namespace lookup node above it on the document tree. When a namespace declaration is
 //  added to a xml_tag that previously had none then a new xml_namespace_node is added to the tree.
 
+#include "shared_obj.h"
+
 __XMLP_BEGIN_NAMESPACE
 
 // xml_namespace_map_node:
@@ -23,18 +25,17 @@ public:
   typedef t_TyAllocator _TyAllocator;
   typedef basic_string< _TyChar > _TyStdStr;
 	using _TyAllocatorTraitsMapValue = typename _TyAllocTraitsAsPassed::template rebind_traits< typename map< _TyStdStr, const _TyStdStr *, std::less<> >::value_type >;
-  // We map to the permanent URI in the socument context (somewhere).
+  // We map to the permanent URI in the document context (somewhere).
   typedef map< _TyStdStr, const _TyStdStr *, std::less<>, typename _TyAllocatorTraitsMapValue::allocator_type > _TyMapNamespaces;
-
   
 protected:
   _TyMapNamespaces m_mapNamespaces;
-  _TyThis * m_pParent{nullptr}; // A non-reference pointer to our parent, it has a reference pointer to us.
-  typedef _gco< _TyThis, _TyAllocator > _TyGcoThis;
-  typedef _gcp< _TyThis, _TyGcoThis > _TyGcpThis;
-	using _TyAllocatorTraitsGcoThis = typename _TyAllocTraitsAsPassed::template rebind_traits< _TyGcpThis >;
-  typedef std::vector< _TyGcpThis, _TyAllocatorTraitsGcoThis::allocator_type > _TyRgGcpChildren;
-  _TyRgGcpChildren m_rggcpChildren;
+  typedef SharedStrongPtr< _TyThis, _TyAllocator, uint32_t, false > _TyStrongPtr;
+  typedef SharedWeakPtr< _TyThis, _TyAllocator, uint32_t, false > _TyWeakPtr;
+  _TyWeakPtr m_wpParent; // We have a weak pointer to our parent.
+	using _TyAllocatorTraitsGcoThis = typename _TyAllocTraitsAsPassed::template rebind_traits< _TyStrongPtr >;
+  typedef std::vector< _TyStrongPtr, _TyAllocatorTraitsGcoThis::allocator_type > _TyRgSpChildren;
+  _TyRgSpChildren m_rgspChildren;
 };
 
 __XMLP_END_NAMESPACE

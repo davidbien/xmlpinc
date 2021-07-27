@@ -2,7 +2,7 @@
 
 // xml_tag_var.h
 // Simple XML object model based on the XML parser - variant version.
-// Can't just wrap xml_tag objects because we have to store variant objects inside the xml_tag collection.
+// Can't just wrap xml_tag objects because we have to store variant token objects inside the xml_tag collection.
 // dbien
 // 03FEB2021
 
