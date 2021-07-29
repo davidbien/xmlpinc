@@ -61,7 +61,7 @@ public:
   void AssertValid( const _TyThis * _ptagParent = nullptr ) const
   {
 #if ASSERTSENABLED
-    Assert( ( !m_wpParent.expired() == !_ptagParent ) );
+    Assert( ( m_wpParent.expired() == !_ptagParent ) );
     if ( _ptagParent )
     {
       _TyStrongThis spParent( m_wpParent );
