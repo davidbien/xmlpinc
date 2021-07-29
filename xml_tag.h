@@ -9,6 +9,7 @@
 // Then, as with all tags, there may be some content nodes, then the main document tag, and then subtags.
 // Trouble must be taken to ensure that only a single document tag is ever within the XMLDecl "tag" since
 //  all other tags have freeform contents in that regard.
+#include "_shwkptr.h"
 #include "xml_types.h"
 
 __XMLP_BEGIN_NAMESPACE
@@ -35,6 +36,7 @@ public:
   typedef std::vector< _TyVariant > _TyRgTokens;
   typedef _xml_document_context_transport< _TyXmlTraits > _TyXmlDocumentContext;
 
+  virtual ~xml_tag() = default;
   xml_tag() = default;
   xml_tag( const _TyStrongThis * _pspParent )
   {
@@ -56,10 +58,15 @@ public:
     m_rgTokens.swap( _r.m_rgTokens );
     m_wpParent.swap( _r.m_wpParent );
   }
-  void AssertValid( const _TyStrongThis & _rspThis, const _TyStrongThis * _pspParent = nullptr ) const
+  void AssertValid( const _TyThis * _ptagParent = nullptr ) const
   {
 #if ASSERTSENABLED
-    Assert( ( !m_wpParent == !_pspParent ) && ( !_pspParent || ( m_wpParent == *_pspParent ) ) );
+    Assert( ( !m_wpParent.expired() == !_ptagParent ) );
+    if ( _ptagParent )
+    {
+      _TyStrongThis spParent( m_wpParent );
+      Assert( spParent->get() == _ptagParent );
+    }
     if( !! m_opttokTag )
       m_opttokTag->AssertValid();
     typename _TyRgTokens::const_iterator citCur = m_rgTokens.begin();
@@ -70,7 +77,7 @@ public:
       if ( holds_alternative< _TyXmlToken >( rvCur ) )
         std::get< _TyXmlToken >( rvCur ).AssertValid();
       else
-        (*std::get< _TyStrongThis >( rvCur ))->AssertValid( std::get< _TyStrongThis >( rvCur ), &_rspThis );
+        (*std::get< _TyStrongThis >( rvCur ))->AssertValid( this );
     }
 #endif //ASSERTSENABLED
   }
@@ -97,9 +104,9 @@ public:
         _TyStrongThis spXmlTag;
         {//B
           _TyUPtrThis ptrXmlTag = make_unique< _TyThis >( &_rspThis );
-          spXmlTag.emplace( std::in_place_t::in_place_t(), std::move( ptrXmlTag ) );
+          spXmlTag.emplace( std::in_place_t(), std::move( ptrXmlTag ) );
         }//EB
-        (*spXmlTag)->FromXmlStream( _rxrc, &spXmlTag );
+        (*spXmlTag)->FromXmlStream( _rxrc, spXmlTag );
         fNextTag = _rxrc.FNextTag( &(*spXmlTag)->m_opttokTag );
         _AcquireContent( std::move( spXmlTag ) );
         if ( !fNextTag )
@@ -176,7 +183,7 @@ protected:
 // xml_document:
 // This contains the root xml_tag as well as the namespace URI and Prefix maps and the user object.
 template < class t_TyXmlTraits >
-class xml_document : protected xml_tag< t_TyXmlTraits >
+class xml_document : public xml_tag< t_TyXmlTraits >
 {
   typedef xml_document _TyThis;
   typedef xml_tag< t_TyXmlTraits > _TyBase;
@@ -207,6 +214,13 @@ public:
     swap( acquire );
     return *this;
   }
+  // PrCreateXmlDocument: Returns a created XML document.
+  static pair< _TyThis *, _TyStrongThis > PrCreateXmlDocument()
+  {
+    unique_ptr< _TyThis > upXmlDoc = make_unique< _TyThis >();
+    _TyThis * pXmlDoc = upXmlDoc.get();
+    return pair< _TyThis *, _TyStrongThis >( pXmlDoc, _TyStrongThis( std::in_place_t(), std::move( upXmlDoc ) ) );
+  }
   void swap( _TyThis & _r )
   {
     _TyBase::swap( _r );
@@ -218,6 +232,7 @@ public:
     _TyBase::AssertValid();
 #endif //ASSERTSENABLED
   }
+  // Add a virtual to return the XMLDocument
   // Returns whether the XMLDecl token is a "pseudo-token" - i.e. it was created not read.
   bool FPseudoXMLDecl() const
   {
@@ -253,10 +268,10 @@ public:
       _TyStrongThis spXmlDocument;
       {//B
         _TyUPtrThis ptrXmlTag = make_unique< _TyBase >( &_rspThis );
-        spXmlDocument.emplace( std::in_place_t::in_place_t(), std::move( ptrXmlTag ) );
+        spXmlDocument.emplace( std::in_place_t(), std::move( ptrXmlTag ) );
       }//EB
-      (*spXmlDocument)->FromXmlStream( _rxrc );
-      bool fNextTag = _rxrc.FNextTag( &xmlTagDocument.m_opttokTag );
+      (*spXmlDocument)->FromXmlStream( _rxrc, spXmlDocument );
+      bool fNextTag = _rxrc.FNextTag( &(*spXmlDocument)->m_opttokTag );
       Assert( !fNextTag || !fStartedInProlog ); // If we started in the middle of an XML then we might see that there is a next tag.
       _AcquireContent( std::move( spXmlDocument ) );
     }//EB
