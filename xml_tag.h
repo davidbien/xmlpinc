@@ -27,7 +27,9 @@ public:
   typedef xml_read_cursor< _TyXmlTraits > _TyReadCursor;
   // We may contain tokens which are not shared objects, or tags which are shared for the purpose of
   //  using weak pointer to point to the parent xml_tag. It should allow subtrees to be stored safely
-  //  outside of management by the xml_document container.
+  //  outside of management by the xml_document container. Because we store a pointer to our parent
+  //  xml_tag we can't share the same xml_tag in multiple place in an XML document - as might be considered
+  //  to be nice.
   // We store pointers to xml_tag object since we may be pointing to an xml_document object (as a parent weak pointer).
   typedef unique_ptr< _TyThis > _TyUPtrThis;
   typedef SharedStrongPtr< _TyUPtrThis, allocator< _TyUPtrThis >, uint32_t, false > _TyStrongThis;
@@ -61,10 +63,10 @@ public:
   void AssertValid( const _TyThis * _ptagParent = nullptr ) const
   {
 #if ASSERTSENABLED
-    Assert( ( m_wpParent.expired() == !_ptagParent ) );
+    Assert( m_wpParent.expired() == !_ptagParent );
     if ( _ptagParent )
     {
-      _TyStrongThis spParent( m_wpParent );
+      _TyStrongThis spParent( _SharedWeakPtr_weak_leave_empty(), m_wpParent );
       Assert( spParent->get() == _ptagParent );
     }
     if( !! m_opttokTag )

@@ -21,11 +21,26 @@ public:
   // The content of a tag is a series of tokens and tags.
   typedef xml_token_var< _TyTpTransports > _TyXmlTokenVar;
   typedef xml_read_cursor_var< _TyTpTransports > _TyReadCursorVar;
-  typedef std::variant< _TyThis, _TyXmlTokenVar > _TyVariant;
+  // We may contain tokens which are not shared objects, or tags which are shared for the purpose of
+  //  using weak pointer to point to the parent xml_tag. It should allow subtrees to be stored safely
+  //  outside of management by the xml_document container. Because we store a pointer to our parent
+  //  xml_tag we can't share the same xml_tag in multiple place in an XML document - as might be considered
+  //  to be nice.
+  // We store pointers to xml_tag object since we may be pointing to an xml_document_var object (as a parent weak pointer).
+  typedef unique_ptr< _TyThis > _TyUPtrThis;
+  typedef SharedStrongPtr< _TyUPtrThis, allocator< _TyUPtrThis >, uint32_t, false > _TyStrongThis;
+  typedef SharedWeakPtr< _TyUPtrThis, allocator< _TyUPtrThis >, uint32_t, false > _TyWeakThis;
+  typedef std::variant< _TyStrongThis, _TyXmlTokenVar > _TyVariant;
   typedef std::vector< _TyVariant > _TyRgTokens;
   typedef _xml_document_context_transport_var< _TyTpTransports > _TyXmlDocumentContextVar;
 
+  virtual ~xml_tag_var() = default;
   xml_tag_var() = default;
+  xml_tag_var( const _TyStrongThis * _pspParent )
+  {
+    if ( !!_pspParent )
+      m_wpParent = *_pspParent;
+  }
   xml_tag_var( xml_tag_var const & ) = default;
   xml_tag_var & operator=( xml_tag_var const & ) = default;
   xml_tag_var( xml_tag_var && ) = default;
@@ -39,10 +54,17 @@ public:
   {
     m_opttokTag.swap( _r.m_opttokTag );
     m_rgTokens.swap( _r.m_rgTokens );
+    m_wpParent.swap( _r.m_wpParent );
   }
-  void AssertValid() const
+  void AssertValid( const _TyThis * _ptagParent = nullptr ) const
   {
 #if ASSERTSENABLED
+    Assert( m_wpParent.expired() == !_ptagParent );
+    if ( _ptagParent )
+    {
+      _TyStrongThis spParent( _SharedWeakPtr_weak_leave_empty(), m_wpParent );
+      Assert( spParent->get() == _ptagParent );
+    }
     if( !! m_opttokTag )
       m_opttokTag->AssertValid();
     typename _TyRgTokens::const_iterator citCur = m_rgTokens.begin();
@@ -51,13 +73,9 @@ public:
     {
       const _TyVariant & rvCur = *citCur;
       if ( holds_alternative< _TyXmlTokenVar >( rvCur ) )
-      {
         std::get< _TyXmlTokenVar >( rvCur ).AssertValid();
-      }
       else
-      { // recurse.
-        std::get< _TyThis >( rvCur ).AssertValid();
-      }
+        (*std::get< _TyStrongThis >( rvCur ))->AssertValid( this );// recurse.
     }
 #endif //ASSERTSENABLED
   }
@@ -66,7 +84,7 @@ public:
     m_opttokTag = std::move( _rrtok );
   }
   // Read from this read cursor into this object.
-  void FromXmlStream( _TyReadCursorVar & _rxrc )
+  void FromXmlStream( _TyReadCursorVar & _rxrc, _TyStrongThis const & _rspThis )
   {
     Assert( _rxrc.FInsideDocumentTag() );
     VerifyThrowSz( _rxrc.FInsideDocumentTag(), "Read cursor is in an invalid state." );
@@ -80,10 +98,10 @@ public:
       bool fNextTag;
       do
       {
-        _TyThis xmlTag;
-        xmlTag.FromXmlStream( _rxrc );
-        fNextTag = _rxrc.FNextTag( &xmlTag.m_opttokTag );
-        _AcquireContent( std::move( xmlTag ) );
+        _TyStrongThis spXmlTag( std::in_place_t(), make_unique< _TyThis >( &_rspThis ) );
+        (*spXmlTag)->FromXmlStream( _rxrc, spXmlTag );
+        fNextTag = _rxrc.FNextTag( &(*spXmlTag)->m_opttokTag );
+        _AcquireContent( std::move( spXmlTag ) );
         if ( !fNextTag )
         {
           _AcquireContent( _rxrc );
@@ -116,9 +134,9 @@ protected:
     _rxrc.ClearContent(); // The above created a bunch of empty content nodes, and they would go away naturally without ill effect, but clear them to indicate they contain nothing at all.
   }
   // Add _rrtag tag as content of this tag at the current end for m_rgTokens;
-  void _AcquireContent( _TyThis && _rrtag )
+  void _AcquireContent( _TyStrongThis && _rrspTag )
   {
-    m_rgTokens.emplace_back( std::move( _rrtag ) );
+    m_rgTokens.emplace_back( std::move( _rrspTag ) );
   }
   template < class t_TyXmlTransportOut >
   void _ToXmlStream( xml_writer< t_TyXmlTransportOut > & _rxw ) const
@@ -158,19 +176,20 @@ protected:
       }
       else
       { // recurse.
-        std::get< _TyThis >( rvCur )._ToXmlStream( _rxw );
+        (*std::get< _TyStrongThis >( rvCur ))->_ToXmlStream( _rxw );
       }
     }
   }
   typedef optional< _TyXmlTokenVar > _TyOptXmlTokenVar; // Need this because token is not default constructible.
   _TyOptXmlTokenVar m_opttokTag; // The token corresponding to the tag. This is either an XMLDecl token or a tag.
   _TyRgTokens m_rgTokens; // The content for this token.
+  _TyWeakThis m_wpParent;
 };
 
 // xml_document_var:
 // This contains the root xml_tag_var as well as the namespace URI and Prefix maps and the user object.
 template < class t_TyTpTransports >
-class xml_document_var : protected xml_tag_var< t_TyTpTransports >
+class xml_document_var : public xml_tag_var< t_TyTpTransports >
 {
   typedef xml_document_var _TyThis;
   typedef xml_tag_var< t_TyTpTransports > _TyBase;
@@ -179,6 +198,9 @@ protected:
    using _TyBase::_WriteContent;
    using _TyBase::m_opttokTag;
 public:
+  using typename _TyBase::_TyUPtrThis;
+  using typename _TyBase::_TyWeakThis;
+  using typename _TyBase::_TyStrongThis;
   typedef t_TyTpTransports _TyTpTransports;
   typedef MultiplexTuplePack_t< TGetXmlTraitsDefault, _TyTpTransports > _TyTpXmlTraits;
   typedef xml_read_cursor_var< _TyTpTransports > _TyReadCursorVar;
@@ -193,6 +215,13 @@ public:
     _TyThis acquire( std::move( _rr ) );
     swap( acquire );
     return *this;
+  }
+  // PrCreateXmlDocument: Returns a created XML document.
+  static pair< _TyThis *, _TyStrongThis > PrCreateXmlDocument()
+  {
+    unique_ptr< _TyThis > upXmlDoc = make_unique< _TyThis >();
+    _TyThis * pXmlDoc = upXmlDoc.get();
+    return pair< _TyThis *, _TyStrongThis >( pXmlDoc, _TyStrongThis( std::in_place_t(), std::move( upXmlDoc ) ) );
   }
   void swap( _TyThis & _r )
   {
@@ -219,7 +248,7 @@ public:
     m_varDocumentContext.GetXMLDeclProperties( _rxdp );
   }
   // Read from this read cursor into this object.
-  void FromXmlStream( _TyReadCursorVar & _rxrc )
+  void FromXmlStream( _TyReadCursorVar & _rxrc, _TyStrongThis const & _rspThis )
   {
     Assert( _rxrc.FInProlog() || _rxrc.FInsideDocumentTag() );
     VerifyThrowSz( _rxrc.FInProlog() || _rxrc.FInsideDocumentTag(), "Read cursor is in an invalid state." );
@@ -234,11 +263,15 @@ public:
     // We will move down into the next tag and that is the only tag we will capture into the xml_document_var... necessarily.
     VerifyThrowSz( _rxrc.FMoveDown(), "No tag to copy.");
     {//B
-      _TyBase xmlTagDocument; // The main actual document tag is a subtag of the XMLDecl tag.
-      xmlTagDocument.FromXmlStream( _rxrc );
-      bool fNextTag = _rxrc.FNextTag( &xmlTagDocument.m_opttokTag );
+      _TyStrongThis spXmlDocument;
+      {//B
+        _TyUPtrThis ptrXmlTag = make_unique< _TyBase >( &_rspThis );
+        spXmlDocument.emplace( std::in_place_t(), std::move( ptrXmlTag ) );
+      }//EB
+      (*spXmlDocument)->FromXmlStream( _rxrc, spXmlDocument );
+      bool fNextTag = _rxrc.FNextTag( &(*spXmlDocument)->m_opttokTag );
       Assert( !fNextTag || !fStartedInProlog ); // If we started in the middle of an XML then we might see that there is a next tag.
-      _AcquireContent( std::move( xmlTagDocument ) );
+      _AcquireContent( std::move( spXmlDocument ) );
     }//EB
     
     // Similarly we will only acquire the ending content if we started in the prolog - otherwise it could be bogus CharData at the end of the file.
