@@ -14,6 +14,28 @@
 
 __XMLP_BEGIN_NAMESPACE
 
+// Context for reading from an XML Stream. This keeps track of the current mapping of namespaces
+//  to allow appropriate creation of namespace declarations when none are present for a given
+//  (prefix,URI). Also stores any options associated with the conversion of the stream into the document
+//  object model.
+template < class t_TyXmlTraits >
+class _xml_tag_import_context
+{
+  typedef _xml_tag_import_context _TyThis;
+public:
+  typedef t_TyXmlTraits _TyXmlTraits;
+  typedef typename _TyXmlTraits::_TyChar _TyChar;
+
+  // We map to the permanent URI in the document context (somewhere).
+  typedef map< _TyStdStr, const _TyStdStr *, std::less<>, typename _TyAllocatorTraitsMapValue::allocator_type > _TyMapNamespaces;
+
+  // We store the current namespace node for our 
+  typedef typename xml_namespace_tree_node< _TyChar >::_TyStongThis _TyStrongNamespaceTreeNode;
+  _TyStrongNamespaceTreeNode m_spCurNamespaceNode;
+
+  bool m_fFilterRedundantNamespaceDecls; // This will remove redundant namespace declarations while importing into the DOM.
+};
+
 template < class t_TyXmlTraits >
 class xml_tag
 {
@@ -21,6 +43,7 @@ class xml_tag
   friend xml_document< t_TyXmlTraits >;
 public:
   typedef t_TyXmlTraits _TyXmlTraits;
+  typedef typename _TyXmlTraits::_TyChar _TyChar;
   // The content of a tag is a series of tokens and tags.
   typedef typename _TyXmlTraits::_TyXmlToken _TyXmlToken;
   typedef _xml_read_context< _TyXmlTraits > _TyReadContext;
@@ -37,6 +60,10 @@ public:
   typedef std::variant< _TyStrongThis, _TyXmlToken > _TyVariant;
   typedef std::vector< _TyVariant > _TyRgTokens;
   typedef _xml_document_context_transport< _TyXmlTraits > _TyXmlDocumentContext;
+
+  // If we contain namespaces then we will have an associated namespace tree.
+  typedef xml_namespace_tree_node< _TyChar > _TyXmlNamespaceTreeNode;
+  typedef typename _TyXmlNamespaceTreeNode::_TyStrongThis _TyStrongNamespaceTreeNode;
 
   virtual ~xml_tag() = default;
   xml_tag() = default;
@@ -83,6 +110,10 @@ public:
     }
 #endif //ASSERTSENABLED
   }
+  virtual bool FEmpty() const
+  {
+    return !m_opttokTag.has_value() && !m_rgTokens.size() && !m_wpParent;
+  }
   void AcquireTag( _TyXmlToken && _rrtok )
   {
     m_opttokTag = std::move( _rrtok );
@@ -97,7 +128,6 @@ public:
     // We can't acquire the token until the call the FNextTag().
     _AcquireContent( _rxrc.GetContextCur() );
 
-    // We will move down into the next tag and that is the only tag we will capture into the xml_document... necessarily.
     if ( _rxrc.FMoveDown() )
     {
       bool fNextTag;
@@ -120,8 +150,6 @@ public:
       while ( fNextTag );
     }
   }
-  // Write this XML document to the given xml_writer<>.
-  // Need to pass the xml document context for the containing xml_document.
   template < class t_TyXmlTransportOut >
   void ToXmlStream( xml_writer< t_TyXmlTransportOut > & _rxw, _TyXmlDocumentContext const & _rxdcxtDocumentContext ) const
   {
@@ -180,6 +208,7 @@ protected:
   _TyOptXmlToken m_opttokTag; // The token corresponding to the tag. This is either an XMLDecl token or just a normal tag.
   _TyRgTokens m_rgTokens; // The content for this token.
   _TyWeakThis m_wpParent;
+  _TyStrongNamespaceTreeNode m_spNamespaceTreeNode; // The nearest namespace declaration above us.
 };
 
 // xml_document:
@@ -197,6 +226,8 @@ public:
   using typename _TyBase::_TyUPtrThis;
   using typename _TyBase::_TyWeakThis;
   using typename _TyBase::_TyStrongThis;
+  using typename _TyBase::_TyXmlNamespaceTreeNode;
+  using typename _TyBase::_TyStrongNamespaceTreeNode;
   typedef t_TyXmlTraits _TyXmlTraits;
   typedef typename _TyXmlTraits::_TyChar _TyChar;
   typedef typename _TyXmlTraits::_TyTransport _TyTransport;
@@ -234,6 +265,10 @@ public:
     _TyBase::AssertValid();
 #endif //ASSERTSENABLED
   }
+  bool FEmpty() const override
+  {
+    return _TyBase::FEmpty() && m_xdcxtDocumentContext.FEmpty();
+  }
   // Add a virtual to return the XMLDocument
   // Returns whether the XMLDecl token is a "pseudo-token" - i.e. it was created not read.
   bool FPseudoXMLDecl() const
@@ -249,16 +284,27 @@ public:
   {
     return m_xdcxtDocumentContext.GetXMLDeclProperties();
   }
-
   // Read from this read cursor into this object.
-  // _rspThis contains the weak pointer for this object. This is required to correctly populate the parent pointers.
+  // _rspThis contains the strong pointer for this object. This is required to correctly populate the parent pointers.
   void FromXmlStream( _TyReadCursor & _rxrc, _TyStrongThis const & _rspThis )
   {
+    // We can only read into an empty document. We can read into tags that aren't empty but the top node.
+    //  in an XML document is the single XMLDecl node.
+    VerifyThrowSz( FEmpty(), "Can't read into an non-empty document." );  
     Assert( _rxrc.FInProlog() || _rxrc.FInsideDocumentTag() );
     VerifyThrowSz( _rxrc.FInProlog() || _rxrc.FInsideDocumentTag(), "Read cursor is in an invalid state." );
     // Read each element in order. When done transfer the user object, UriMap and PrefixMap over to this object.
     // We can attach at any point during the iteration and we will glean the XMLDecl top node from the read cursor.
-    
+
+    // If the cursor is parsing XML namespaces then we will create the root node in the namespace tree.
+    // The root of DOM is the XMLDecl node which cannot have namespace declarations on it so the root node will
+    //  always be empty. There will only be any children (and there can only be one child of the root) if and
+    //  when there are namespace declarations.
+    if ( _rxrc.FUseNamespaces() )
+    {
+
+    }
+
     bool fStartedInProlog = _rxrc.FInProlog();
     // We only read the top-level content tokens if we are currently at the XMLDecl tag.
     if ( fStartedInProlog )

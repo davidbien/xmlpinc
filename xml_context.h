@@ -76,6 +76,12 @@ public:
     m_fHasEncoding = false;
     m_fHasStandalone = false;
   }
+  bool FEmpty() const
+  {
+    // Return if this structure matches the defaults as set in clear().
+    return !m_strEncoding && m_fStandalone && !m_nVersionMinorNumber && m_fVersionDoubleQuote 
+      && m_fEncodingDoubleQuote && m_fStandaloneDoubleQuote && !m_fHasEncoding && !m_fHasStandalone;
+  }
   template < class t_TyLexToken >
   void FromXMLDeclToken( t_TyLexToken const & _rltok )
   {
@@ -267,6 +273,12 @@ public:
     m_xnvwDefaultAttributeNamespace.swap( _r.m_xnvwDefaultAttributeNamespace );
     std::swap( m_fIncludePrefixesInAttrNames, _r.m_fIncludePrefixesInAttrNames );
   }
+  bool FEmpty() const noexcept
+  {
+    return !m_upUserObj && m_mapUris.empty() && m_mapPrefixes.empty() && m_XMLDeclProperties.FEmpty()
+      && !m_optMapNamespaces.has_value() && !m_optprFormatContext.has_value() && m_xnvwDefaultAttributeNamespace.FIsNull()
+      && m_fIncludePrefixesInAttrNames;
+  }
   bool FAttributeValuesDoubleQuote() const
   {
     Assert( !!m_optprFormatContext );
@@ -449,6 +461,10 @@ public:
       return;
     _TyBase::swap( _r );
     m_opttpImpl.swap( _r.m_opttpImpl );
+  }
+  bool FEmpty() const noexcept
+  {
+    return _TyBase::FEmpty() && !m_opttpImpl.has_value();
   }
 
   using _TyBase::m_upUserObj;

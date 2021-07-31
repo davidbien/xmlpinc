@@ -353,6 +353,10 @@ public:
         m_pXp->SetFilterWhitespaceCharData( m_fFilterWhitespaceCharData );
     }
   }
+  bool FUseXMLNamespaces() const
+  {
+    return m_fUseXMLNamespaces;
+  }
   bool FFilterWhitespaceCharData() const
   {
     return m_fFilterWhitespaceCharData;
