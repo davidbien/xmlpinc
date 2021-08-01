@@ -49,7 +49,21 @@ public:
     Assert( cit->second );
     return cit->second;
   }
-  
+
+  xml_namespace_tree_node( const void * _pvOwner, _TyStrongThis * _pspParent )
+    : m_pvOwner( _pvOwner )
+  {
+    if ( _pspParent )
+      m_wpParent = *_pspParent;
+  }
+  void CopyNamespaces( _TyMapNamespaces const & _rmapCopy )
+  {
+    m_mapNamespaces = _rmapCopy;
+  }
+  void AddChildNamespaceNode( _TyStrongThis const & _rspChild )
+  {
+    m_rgspChildren.push_back( _rspChild );
+  }
   
 protected:
   _TyMapNamespaces m_mapNamespaces;
@@ -59,7 +73,7 @@ protected:
   _TyRgSpChildren m_rgspChildren;
   // This is the tag that owns this xml_namespace_tree_node - i.e. this node represents the namespace declarations at that tag.
   // This is to distinguish that fact from sub-tags who may share a reference to some parent's namespace declarations.
-  void * m_pvOwner( nullptr ); 
+  const void * m_pvOwner( nullptr ); 
 };
 
 __XMLP_END_NAMESPACE
