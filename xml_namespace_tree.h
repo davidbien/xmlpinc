@@ -15,7 +15,7 @@ __XMLP_BEGIN_NAMESPACE
 // A single node of the lookup tree. Multiple namespaces might be declared in this node.
 // All we need is a simple map from prefix->URI - no stack of such mappings since we have a tree of nodes of mappings.
 
-template < class t_TyChar, class t_TyAllocator = allocator< t_TyChar > >
+template < class t_TyChar, class t_TyAllocator >
 class xml_namespace_tree_node
 {
   typedef xml_namespace_tree_node _TyThis;
@@ -35,13 +35,13 @@ public:
   template < class t_TyStrViewOrString >
   _TyStdStr const * PStrGetUri( t_TyStrViewOrString const & _rsvPrefix ) const
   {
-    _TyMapNamespaces::const_iterator cit = m_mapNamespaces.find( _rsvPrefix );
+    typename _TyMapNamespaces::const_iterator cit = m_mapNamespaces.find( _rsvPrefix );
     if ( m_mapNamespaces.end() == cit )
     {
-      if ( m_wpParent )
+      if ( m_upwpParent && *m_upwpParent )
       {
         // Then we should have an active parent - i.e. it should be present and so we will throw if we can't get a strong pointer:
-        _TyStrongThis spParent( m_wpParent );
+        _TyStrongThis spParent( *m_upwpParent );
         return spParent->PStrGetUri( _rsvPrefix ); // keep looking.
       }
       return nullptr;
@@ -54,7 +54,7 @@ public:
     : m_pvOwner( _pvOwner )
   {
     if ( _pspParent )
-      m_wpParent = *_pspParent;
+      m_upwpParent = make_unique< _TyWeakThis >( *_pspParent );
   }
   void CopyNamespaces( _TyMapNamespaces const & _rmapCopy )
   {
@@ -67,13 +67,14 @@ public:
   
 protected:
   _TyMapNamespaces m_mapNamespaces;
-  _TyWeakThis m_wpParent; // We have a weak pointer to our parent xml_namespace_tree_node.
+  typedef unique_ptr< _TyWeakThis > _TyUPtrWeakThis;
+  _TyUPtrWeakThis m_upwpParent; // We have a weak pointer to our parent xml_namespace_tree_node.
 	using _TyAllocatorTraitsGcoThis = typename _TyAllocTraitsAsPassed::template rebind_traits< _TyStrongThis >;
-  typedef std::vector< _TyStrongThis, _TyAllocatorTraitsGcoThis::allocator_type > _TyRgSpChildren;
+  typedef std::vector< _TyStrongThis, typename _TyAllocatorTraitsGcoThis::allocator_type > _TyRgSpChildren;
   _TyRgSpChildren m_rgspChildren;
   // This is the tag that owns this xml_namespace_tree_node - i.e. this node represents the namespace declarations at that tag.
   // This is to distinguish that fact from sub-tags who may share a reference to some parent's namespace declarations.
-  const void * m_pvOwner( nullptr ); 
+  const void * m_pvOwner{ nullptr }; 
 };
 
 __XMLP_END_NAMESPACE

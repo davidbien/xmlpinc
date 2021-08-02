@@ -67,6 +67,10 @@ class xml_namespace_value_wrap;
 template < class t_TyChar >
 class xml_namespace_map;
 
+// xml_namespace_tree.h
+template < class t_TyChar, class t_TyAllocator = allocator< t_TyChar > >
+class xml_namespace_tree_node;
+
 // xml_cursor.h:
 template < class t_TyXmlTraits >
 class _xml_read_context;
@@ -86,6 +90,12 @@ template < class t_TyXmlTraits >
 class xml_tag;
 template < class t_TyXmlTraits >
 class xml_document;
+template < class t_TyXmlTraits >
+class _xml_tag_import_options;
+template < class t_TyXmlTraits >
+class _xml_tag_import_context;
+template < class t_TyXmlTraits >
+class _xml_local_import_context;
 // xml_tag_var.h:
 template < class t_TyTpTransports >
 class xml_tag_var;

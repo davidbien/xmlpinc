@@ -79,7 +79,7 @@ public:
   bool FEmpty() const
   {
     // Return if this structure matches the defaults as set in clear().
-    return !m_strEncoding && m_fStandalone && !m_nVersionMinorNumber && m_fVersionDoubleQuote 
+    return !m_strEncoding.length() && m_fStandalone && !m_nVersionMinorNumber && m_fVersionDoubleQuote 
       && m_fEncodingDoubleQuote && m_fStandaloneDoubleQuote && !m_fHasEncoding && !m_fHasStandalone;
   }
   template < class t_TyLexToken >
@@ -466,6 +466,15 @@ public:
   {
     return _TyBase::FEmpty() && !m_opttpImpl.has_value();
   }
+  
+  _TyBase const & GetBaseContext() const
+  {
+    return *this;
+  }
+  _TyBase & GetBaseContext()
+  {
+    return *this;
+  }
 
   using _TyBase::m_upUserObj;
   using _TyBase::m_mapUris;
@@ -474,6 +483,7 @@ public:
   using _TyBase::GetXMLDeclProperties;
   using _TyBase::m_fIncludePrefixesInAttrNames;
   using _TyBase::FIncludePrefixesInAttrNames;
+  using _TyBase::SetIncludePrefixesInAttrNames;
   // For some transports where the backing is mapped memory it is convenient to store the transport here because it
   //  allows the parser object to go away entirely.
   typedef optional< _TyTransport > _TyOptTransport;

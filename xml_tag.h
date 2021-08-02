@@ -11,6 +11,7 @@
 //  all other tags have freeform contents in that regard.
 #include "_shwkptr.h"
 #include "xml_types.h"
+#include "xml_namespace_tree.h"
 
 __XMLP_BEGIN_NAMESPACE
 
@@ -39,11 +40,12 @@ class _xml_tag_import_context
 public:
   typedef t_TyXmlTraits _TyXmlTraits;
   typedef typename _TyXmlTraits::_TyChar _TyChar;
+  typedef typename _TyXmlTraits::_TyStdStr _TyStdStr;
   typedef _xml_tag_import_options< _TyXmlTraits > _TyXmlTagImportOptions;
   typedef _xml_document_context_transport< _TyXmlTraits > _TyXmlDocumentContext;
 
   // We map to the permanent URI in the document context (somewhere).
-  typedef map< _TyStdStr, const _TyStdStr *, std::less<>, typename _TyAllocatorTraitsMapValue::allocator_type > _TyMapNamespaces;
+  typedef typename xml_namespace_tree_node< _TyChar >::_TyMapNamespaces _TyMapNamespaces;
 
   _xml_tag_import_context( _xml_tag_import_context const & ) = delete;
   _xml_tag_import_context( _TyXmlDocumentContext & _rxdcDocumentContext )
@@ -57,17 +59,17 @@ public:
   }
 
   template < class t_TyStrViewOrString >
-  const _TyMapNamespaces::value_type * PVtFindPrefix( t_TyStrViewOrString const & _rsvPrefix ) const
+  const typename _TyMapNamespaces::value_type * PVtFindPrefix( t_TyStrViewOrString const & _rsvPrefix ) const
   {
-    _TyMapNamespaces::const_iterator cit = m_mapNamespacesDirect.find( _rsvPrefix );
+    typename _TyMapNamespaces::const_iterator cit = m_mapNamespacesDirect.find( _rsvPrefix );
     if ( m_mapNamespacesDirect.end() == cit )
       return nullptr;
     return &*cit;
   }
   template < class t_TyStrViewOrString >
-  _TyMapNamespaces::value_type * PVtFindPrefix( t_TyStrViewOrString const & _rsvPrefix )
+  typename _TyMapNamespaces::value_type * PVtFindPrefix( t_TyStrViewOrString const & _rsvPrefix )
   {
-    _TyMapNamespaces::iterator it = m_mapNamespacesDirect.find( _rsvPrefix );
+    typename _TyMapNamespaces::iterator it = m_mapNamespacesDirect.find( _rsvPrefix );
     if ( m_mapNamespacesDirect.end() == it )
       return nullptr;
     return &*it;
@@ -80,7 +82,7 @@ public:
   _TyMapNamespaces m_mapNamespacesDirect;
 
   // We store the current namespace node for our 
-  typedef typename xml_namespace_tree_node< _TyChar >::_TyStongThis _TyStrongNamespaceTreeNode;
+  typedef typename xml_namespace_tree_node< _TyChar >::_TyStrongThis _TyStrongNamespaceTreeNode;
   _TyStrongNamespaceTreeNode m_spCurNamespaceNode;
 
   _TyXmlTagImportOptions m_xtioImportOptions;
@@ -97,13 +99,14 @@ class _xml_local_import_context
   typedef _xml_local_import_context _TyThis;
 public:
   typedef t_TyXmlTraits _TyXmlTraits;
+  typedef typename _TyXmlTraits::_TyChar _TyChar;
   typedef typename _TyXmlTraits::_TyStdStr _TyStdStr;
   typedef std::pair< const _TyStdStr *, const _TyStdStr * > _TyPrPStr;
   typedef vector< _TyPrPStr > _TyRgPrPStr;
 
   typedef _xml_tag_import_context< _TyXmlTraits > _TyXmlTagImportContext;
   typedef typename _TyXmlTagImportContext::_TyMapNamespaces _TyMapNamespaces;
-  typedef typename xml_namespace_tree_node< _TyChar >::_TyStongThis _TyStrongNamespaceTreeNode;
+  typedef typename xml_namespace_tree_node< _TyChar >::_TyStrongThis _TyStrongNamespaceTreeNode;
 
   _xml_local_import_context( _TyXmlTagImportContext & _rctx )
     : m_rctx( _rctx )
@@ -111,8 +114,8 @@ public:
   }
   ~_xml_local_import_context()
   {
-    _TyRgPrPStr::const_iterator citRestore = m_rgprpstrOldMappings.begin();
-    _TyRgPrPStr::const_iterator citRestoreEnd = m_rgprpstrOldMappings.end();
+    typename _TyRgPrPStr::const_iterator citRestore = m_rgprpstrOldMappings.begin();
+    typename _TyRgPrPStr::const_iterator citRestoreEnd = m_rgprpstrOldMappings.end();
     for ( ; citRestoreEnd != citRestore; ++citRestore )
     {
       if ( !citRestore->second )
@@ -123,7 +126,7 @@ public:
       else
       {
           typedef typename _TyXmlTagImportContext::_TyMapNamespaces _TyMapNamespaces;
-          _TyMapNamespaces::iterator itFound = m_rctx.m_mapNamespacesDirect.find( *citRestore->first );
+          typename _TyMapNamespaces::iterator itFound = m_rctx.m_mapNamespacesDirect.find( *citRestore->first );
           Assert( m_rctx.m_mapNamespacesDirect.end() != itFound );
           if ( m_rctx.m_mapNamespacesDirect.end() != itFound )
             itFound->second = citRestore->second; // restore it to previous value.
@@ -137,7 +140,7 @@ public:
   {
     // Lookup the current mapping. If the mapping is different then update the internal structures appropriately and return true.
     // Otherwise return false and don't update anything at all - the mapping is the same.
-    _TyMapNamespaces::value_type * pvt = m_rctx.PVtFindPrefix( _rstrPrefix );
+    typename _TyMapNamespaces::value_type * pvt = m_rctx.PVtFindPrefix( _rstrPrefix );
     if ( pvt && pvt->second && ( *pvt->second == _rstrUri ) )
     {
       Assert( pvt->second == &_rstrUri ); // this should be the case and we want to make it the case cuz then we can compare pointers.
@@ -145,7 +148,7 @@ public:
     }
     // New (prefix,uri) pair.
     // Record it so that the old value can be restored:
-    m_rgprpstrOldMappings.push_back( _TyPrPStr( _rstrPrefix, pvt ? pvt->second : nullptr ) );
+    m_rgprpstrOldMappings.push_back( _TyPrPStr( &_rstrPrefix, pvt ? pvt->second : nullptr ) );
     if ( !pvt )
     {
       // Must insert:
@@ -191,6 +194,7 @@ public:
   typedef typename _TyXmlTraits::_TyXmlToken _TyXmlToken;
   typedef _xml_read_context< _TyXmlTraits > _TyReadContext;
   typedef xml_read_cursor< _TyXmlTraits > _TyReadCursor;
+  typedef xml_namespace_value_wrap< _TyChar > _TyXmlNamespaceValueWrap;
   // We may contain tokens which are not shared objects, or tags which are shared for the purpose of
   //  using weak pointer to point to the parent xml_tag. It should allow subtrees to be stored safely
   //  outside of management by the xml_document container. Because we store a pointer to our parent
@@ -288,7 +292,7 @@ public:
       Assert( ( tokTagCur.GetTokenId() == s_knTokenSTag ) || ( tokTagCur.GetTokenId() == s_knTokenEmptyElemTag ) );
       typename _TyLexValue::_TySegArrayValues & rsaAttrs = tokTagCur[vknAttributesIdx].GetValueArray();
       (void)rsaAttrs.NApplyContiguous( 0, rsaAttrs.NElements(), 
-        []( _TyLexValue * _pattrBegin, _TyLexValue * _pattrEnd ) -> size_t
+        [&xlic]( _TyLexValue * _pattrBegin, _TyLexValue * _pattrEnd ) -> size_t
         {
           _TyLexValue * pattrCur = _pattrBegin;
           for ( ; _pattrEnd != pattrCur; ++pattrCur )
@@ -325,7 +329,7 @@ public:
           _TyUPtrThis ptrXmlTag = make_unique< _TyThis >( &_rspThis );
           spXmlTag.emplace( std::in_place_t(), std::move( ptrXmlTag ) );
         }//EB
-        (*spXmlTag)->FromXmlStream( _rxrc, spXmlTag );
+        (*spXmlTag)->FromXmlStream( _rxrc, spXmlTag, _rxtix );
         fNextTag = _rxrc.FNextTag( &(*spXmlTag)->m_opttokTag, false ); // we have already processed the namespaces.
         _AcquireContent( std::move( spXmlTag ) );
         if ( !fNextTag )
@@ -347,6 +351,7 @@ public:
     if ( _rxtix.m_spCurNamespaceNode )
     {
       _TyXmlToken & tokTagCur = _rxrc.GetTagCur();
+      typedef typename _TyXmlToken::_TyLexValue _TyLexValue;
       typename _TyLexValue::_TySegArrayValues & rsaAttrs = tokTagCur[vknAttributesIdx].GetValueArray();
       // If we are to prune redundant namespace declarations then get a bitmask for 
       typedef _simple_bitvec< size_t > _TyBV;
@@ -355,7 +360,7 @@ public:
         bvDeletions = _TyBV( rsaAttrs.NElements() );
       size_t nAttr = 0;
       (void)rsaAttrs.NApplyContiguous( 0, rsaAttrs.NElements(), 
-        [&nAttr]( _TyLexValue * _pattrBegin, _TyLexValue * _pattrEnd ) -> size_t
+        [&nAttr,&xlic,&_rxtix,&bvDeletions]( _TyLexValue * _pattrBegin, _TyLexValue * _pattrEnd ) -> size_t
         {
           _TyLexValue * pattrCur = _pattrBegin;
           for ( ; _pattrEnd != pattrCur; ++pattrCur )
@@ -395,8 +400,8 @@ public:
             ++citAddNamespace )
       {
         // We must create the XmlNamespaceValueWrap using the xml_read_cursor so that we share the (prefix,uri) string values from their hash tables.
-        _TyXmlNamespaceValueWrap xnvwAttrDecl = _rxrc.GetNamespaceValueWrap( enrtAttrNamespaceDeclReference, citAddNamespace->first, *citAddNamespace->second );
-        tokTagCur.DeclareNamespace( _rxtix.m_rxdcDocumentContext, std::move( xnvwAttrDecl ) );
+        _TyXmlNamespaceValueWrap xnvwAttrDecl( _rxrc.GetNamespaceValueWrap( enrtAttrNamespaceDeclReference, citAddNamespace->first, *citAddNamespace->second ) );
+        tokTagCur.DeclareNamespace( _rxtix.m_rxdcDocumentContext.GetBaseContext(), std::move( xnvwAttrDecl ) );
       }
     }
   }
@@ -559,10 +564,10 @@ public:
     // The root of DOM is the XMLDecl node which cannot have namespace declarations on it so the root node will
     //  always be empty. There will only be any children (and there can only be one child of the root) if and
     //  when there are namespace declarations.
-    if ( _rxrc.FUseNamespaces() )
+    if ( _rxrc.FUseXMLNamespaces() )
     {
       // The namespace tree node takes an "owner" void* to allow detection of ownership by a tag.
-      xticCurContext.m_spCurNamespaceNode.emplace( std::in_place_t(), this );
+      xticCurContext.m_spCurNamespaceNode.emplace( std::in_place_t(), this, nullptr );
     }
 
     bool fStartedInProlog = _rxrc.FInProlog();
