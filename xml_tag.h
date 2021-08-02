@@ -40,9 +40,16 @@ public:
   typedef t_TyXmlTraits _TyXmlTraits;
   typedef typename _TyXmlTraits::_TyChar _TyChar;
   typedef _xml_tag_import_options< _TyXmlTraits > _TyXmlTagImportOptions;
+  typedef _xml_document_context_transport< _TyXmlTraits > _TyXmlDocumentContext;
 
   // We map to the permanent URI in the document context (somewhere).
   typedef map< _TyStdStr, const _TyStdStr *, std::less<>, typename _TyAllocatorTraitsMapValue::allocator_type > _TyMapNamespaces;
+
+  _xml_tag_import_context( _xml_tag_import_context const & ) = delete;
+  _xml_tag_import_context( _TyXmlDocumentContext & _rxdcDocumentContext )
+    : m_rxdcDocumentContext( _rxdcDocumentContext )
+  {
+  }
 
   void SetImportOptions( _TyXmlTagImportOptions const & _rxtio )
   {
@@ -65,6 +72,9 @@ public:
       return nullptr;
     return &*it;
   }
+
+  // A reference to the containing document context.
+  _TyXmlDocumentContext & m_rxdcDocumentContext;
 
   // This contains the current *direct* lookup from prefix->URI that models the state of the entire namespace tree at this point. 
   _TyMapNamespaces m_mapNamespacesDirect;
@@ -266,6 +276,7 @@ public:
 
     _TyXmlLocalImportContext xlic( _rxtix );
 
+    Assert( !m_spNamespaceTreeNode );
     if ( _rxtix.m_spCurNamespaceNode )
     {
       typedef typename _TyXmlToken::_TyLexValue _TyLexValue;
@@ -292,11 +303,13 @@ public:
           return ( _pattrEnd - _pattrBegin );
         }
       );
-
       // Now check if we need any local namespaces declared or need to be declared. If so we create a node in the namespace tree,
       //  and copy this set of namespace to it. We keep the local copy so that when we are done with our subtags we can lookup
       //  namespace decls and determine if any decls need to be added - and which are redundant and might be removed.
       xlic.CreateNamespaceTreeNode( this );
+      
+      // Set the node for the current tag to the current namespace node - which may be the same as the parent or unique to this.
+      m_spNamespaceTreeNode = _rxtix.m_spCurNamespaceNode;
     }
    
    // Aquire any leading content:
@@ -313,7 +326,7 @@ public:
           spXmlTag.emplace( std::in_place_t(), std::move( ptrXmlTag ) );
         }//EB
         (*spXmlTag)->FromXmlStream( _rxrc, spXmlTag );
-        fNextTag = _rxrc.FNextTag( &(*spXmlTag)->m_opttokTag );
+        fNextTag = _rxrc.FNextTag( &(*spXmlTag)->m_opttokTag, false ); // we have already processed the namespaces.
         _AcquireContent( std::move( spXmlTag ) );
         if ( !fNextTag )
         {
@@ -331,9 +344,60 @@ public:
     // It's ok - we are allowed to modify the token at this point because we have already processed all subtags of this tag
     //  and this means the xml_read_cursor's namespace context is current, so when we remove namespace declarations it won't 
     //  matter - in fact they are about to be closed by the parent inside of FNextTag().
-    if ( xlic.m_mapNamespacesCurrentTag.size() )
+    if ( _rxtix.m_spCurNamespaceNode )
     {
-      // We have to move through the attributes again matching the 
+      _TyXmlToken & tokTagCur = _rxrc.GetTagCur();
+      typename _TyLexValue::_TySegArrayValues & rsaAttrs = tokTagCur[vknAttributesIdx].GetValueArray();
+      // If we are to prune redundant namespace declarations then get a bitmask for 
+      typedef _simple_bitvec< size_t > _TyBV;
+      _TyBV bvDeletions;
+      if ( _rxtix.m_xtioImportOptions.m_fFilterRedundantNamespaceDecls )
+        bvDeletions = _TyBV( rsaAttrs.NElements() );
+      size_t nAttr = 0;
+      (void)rsaAttrs.NApplyContiguous( 0, rsaAttrs.NElements(), 
+        [&nAttr]( _TyLexValue * _pattrBegin, _TyLexValue * _pattrEnd ) -> size_t
+        {
+          _TyLexValue * pattrCur = _pattrBegin;
+          for ( ; _pattrEnd != pattrCur; ++pattrCur )
+          {
+            _TyLexValue & rvNamespace = (*pattrCur)[vknNamespaceIdx];
+            if ( rvNamespace.template FIsA<_TyXmlNamespaceValueWrap>() )
+            {
+              _TyXmlNamespaceValueWrap & rxnvw = rvNamespace.template GetVal< _TyXmlNamespaceValueWrap >();
+              if ( rxnvw.FIsAttributeNamespaceDeclaration() )
+              {
+                rxnvw.ResetNamespaceDecls(); // The xml_read_cursor also does this but we do it now to save time and then we pass "false" to FNextTag() to stop the read cursor from also doing it.
+                typename _TyXmlLocalImportContext::_TyMapNamespaces::const_iterator citFound = xlic.m_mapNamespacesCurrentTag.find( rxnvw.RStringPrefix() );
+                if ( xlic.m_mapNamespacesCurrentTag.end() == citFound )
+                {
+                  // redundant namespace declaration - the (prefix,uri) was already populated.
+                  if ( _rxtix.m_xtioImportOptions.m_fFilterRedundantNamespaceDecls )
+                    bvDeletions.setbit( nAttr );
+                }
+                else
+                {
+                  // Then we found an existing declaration for a required namespace.
+                  Assert( citFound->second == &rxnvw.RStringUri() );
+                  xlic.m_mapNamespacesCurrentTag.erase( citFound ); // erase it so we know the set of declarations that need to be added.
+                }
+              }
+            }
+          }
+          ++nAttr; // Since we have a segmented array we can't look up our element number and must maintain it.
+          return ( _pattrEnd - _pattrBegin );
+        }
+      );
+      // Remove any namespace decls to be deleted:
+      rsaAttrs.RemoveBvElements( bvDeletions );
+      // The (prefix,uri) remaining in the xlic.m_mapNamespacesCurrentTag need have namespace declarations added to this tag.
+      for ( typename _TyXmlLocalImportContext::_TyMapNamespaces::const_iterator citAddNamespace = xlic.m_mapNamespacesCurrentTag.begin();
+            citAddNamespace != xlic.m_mapNamespacesCurrentTag.end();
+            ++citAddNamespace )
+      {
+        // We must create the XmlNamespaceValueWrap using the xml_read_cursor so that we share the (prefix,uri) string values from their hash tables.
+        _TyXmlNamespaceValueWrap xnvwAttrDecl = _rxrc.GetNamespaceValueWrap( enrtAttrNamespaceDeclReference, citAddNamespace->first, *citAddNamespace->second );
+        tokTagCur.DeclareNamespace( _rxtix.m_rxdcDocumentContext, std::move( xnvwAttrDecl ) );
+      }
     }
   }
   template < class t_TyXmlTransportOut >
@@ -476,6 +540,9 @@ public:
   // _rspThis contains the strong pointer for this object. This is required to correctly populate the parent pointers.
   void FromXmlStream( _TyReadCursor & _rxrc, _TyStrongThis const & _rspThis, _TyXmlTagImportOptions * _pxtio = nullptr )
   {
+    // Sync up any options before we start:
+    m_xdcxtDocumentContext.SetIncludePrefixesInAttrNames( _rxrc.GetIncludePrefixesInAttrNames() );
+  
     // We can only read into an empty document. We can read into tags that aren't empty but the top node.
     //  in an XML document is the single XMLDecl node.
     VerifyThrowSz( FEmpty(), "Can't read into an non-empty document." );  
@@ -484,7 +551,7 @@ public:
     // Read each element in order. When done transfer the user object, UriMap and PrefixMap over to this object.
     // We can attach at any point during the iteration and we will glean the XMLDecl top node from the read cursor.
 
-    _TyXmlTagImportContext xticCurContext;
+    _TyXmlTagImportContext xticCurContext( m_xdcxtDocumentContext );
     if ( _pxtio )
       xticCurContext.SetImportOptions( *_pxtio );
 
@@ -512,7 +579,7 @@ public:
         spXmlDocument.emplace( std::in_place_t(), std::move( ptrXmlTag ) );
       }//EB
       (*spXmlDocument)->FromXmlStream( _rxrc, spXmlDocument, xticCurContext );
-      bool fNextTag = _rxrc.FNextTag( &(*spXmlDocument)->m_opttokTag );
+      bool fNextTag = _rxrc.FNextTag( &(*spXmlDocument)->m_opttokTag, false );
       Assert( !fNextTag || !fStartedInProlog ); // If we started in the middle of an XML then we might see that there is a next tag.
       _AcquireContent( std::move( spXmlDocument ) );
     }//EB

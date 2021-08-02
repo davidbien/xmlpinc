@@ -61,6 +61,7 @@ enum ENamespaceReferenceType
     // This namespace reference is on a attribute name.
   enrtAttrNamespaceDeclReference,
     // This namespace reference is on a attribute namespace declaration that is a redundant declaration.
+    // Or while within the XML DOM this may not be a redundant declaraion.
   enrtNamespaceReferenceTypeCount // This always at the end.
 };
 

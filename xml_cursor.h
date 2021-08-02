@@ -481,6 +481,15 @@ public:
     _rxdcDocumentContext.m_fIncludePrefixesInAttrNames = m_fIncludePrefixesInAttrNames;
     return m_lContexts.front().GetTag();
   }
+  // This uses the cursor's prefix and uri hash's (the parser's) to create a namespace value wrap of the
+  //  given type with the given (prefix,uri).
+  template < class t_TyStrViewOrString >
+  _TyXmlNamespaceValueWrap GetNamespaceValueWrap( ENamespaceReferenceType _enrtReferenceType, t_TyStrViewOrString const & _rsvPrefix, t_TyStrViewOrString const & _rsvUri )
+  {
+    const typename _TyUriAndPrefixMap::value_type & rvtPrefix = m_pXp->RStrAddPrefix( _rsvPrefix );
+    const typename _TyUriAndPrefixMap::value_type & rvtUri = m_pXp->RStrAddUri( _rsvUri );
+    return _TyXmlNamespaceValueWrap( &rvtPrefix, &rvtUri, _enrtReferenceType );
+  }
 // Navigation:
   // Move down - i.e. to the next subtag.
   // If the context is already present - i.e. we are not at the end of the context list - then we just move the context pointer and return true.
@@ -550,7 +559,7 @@ public:
   //  a) If we are not at the front of the list then this will read all data up until the end of the tag of the current level.
   // 1) 
   typedef optional< _TyXmlToken > _TyOptXmlToken; // no default constructor for _TyXmlToken.
-  bool FNextTag( _TyOptXmlToken * _popttokRtnSpentTag = nullptr )
+  bool FNextTag( _TyOptXmlToken * _popttokRtnSpentTag = nullptr, bool _fReleaseNamespaces = true )
   {
     AssertValid( true );
     if ( !m_pltokLookahead )
@@ -561,7 +570,7 @@ public:
       Assert( _FAtTailContext() ); // must be.
       // Regardless we will be ending the current token. Do it.
       --m_itCurContext; // Must be able to do this because we know that at least XMLDecl is above us.
-      _PopContext( _popttokRtnSpentTag );
+      _PopContext( _popttokRtnSpentTag, _fReleaseNamespaces );
       return _FProcessNextTag();
     }
     if ( s_knTokenSTag == tidCur )
@@ -577,7 +586,7 @@ public:
       // Process the end tag and then consume it.
       _ProcessLookahead("Premature EOF.");
       --m_itCurContext;
-      _PopContext( _popttokRtnSpentTag );
+      _PopContext( _popttokRtnSpentTag, _fReleaseNamespaces );
       Assert( _FAtTailContext() );
       return _FProcessNextTag();
     }
@@ -767,12 +776,12 @@ protected:
     _TyXmlToken & _rxtok = m_lContexts.back().AddToken( std::move( _rltok ) );
     _rxtok.AssertValid( m_fUseXMLNamespaces );
   }
-  void _PopContext( _TyOptXmlToken * _popttokRtnSpentTag )
+  void _PopContext( _TyOptXmlToken * _popttokRtnSpentTag, bool _fReleaseNamespaces )
   {
     if ( _popttokRtnSpentTag )
     {
       *_popttokRtnSpentTag = std::move( m_lContexts.back().GetTag() );
-      if ( m_fUseXMLNamespaces )
+      if ( m_fUseXMLNamespaces && _fReleaseNamespaces )
       {
         // Then we must check if we have any namespace declarations in this tag and if so undeclare them.
         _TyLexValue const & rrgvName = (**_popttokRtnSpentTag)[vknTagNameIdx];

@@ -7,7 +7,7 @@
 // Each xml_tag or xml_tag_var will reference the nearest namespace lookup node above it on the document tree. When a namespace declaration is
 //  added to a xml_tag that previously had none then a new xml_namespace_node is added to the tree.
 
-#include "shared_obj.h"
+#include "_shwkptr.h"
 
 __XMLP_BEGIN_NAMESPACE
 

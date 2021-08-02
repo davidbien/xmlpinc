@@ -224,6 +224,22 @@ public:
     _TyStrView svTagName = StrViewConvertString( _pcTagName, _stLenTag, cbufName );
     _SetTagName( _rcxtDoc, svTagName, nullptr, nullptr, &_rnsvw );
   }
+  // Add the namespace to the set of attributes.
+  void DeclareNamespace( _TyXmlDocumentContext & _rcxtDoc, _TyXmlNamespaceValueWrap && _rrxnvw )
+  {
+    Assert( _rrxnvw.FIsAttributeNamespaceDeclaration() && _rrxnvw.FIsNamespaceReference() ); // yep.
+    _TyLexValue & rvalAttrNew = _DeclareNewAttr( _rcxtDoc );
+    {//B - attr name
+      _TyStdStr & rstrAttrName = rvalAttrNew[vknNameIdx].template emplaceArgs< _TyStdStr >( _TyMarkupTraits::s_kszXmlnsEtc, StaticStringLen( _TyMarkupTraits::s_kszXmlnsEtc ) );
+      rstrAttrName += _rrxnvw.RStringPrefix();
+    }//EB
+    // attr value: URI: We can use a string view on the URI from the URI map.
+    rvalAttrNew[vknAttr_ValueIdx].template emplaceArgs< _TyStrView >( _rrxnvw.RStringUri() );
+    _TyXmlNamespaceValueWrap & rxnvw = rvalAttrNew[vknNamespaceIdx].emplaceVal( std::move( _rrxnvw ) ); // Now move the wrapper into place so that when the value is destroyed we remove the namespace.
+    Assert( _rrxnvw.FIsNull() );
+    ++GetValue()[vknTagNameIdx][vknTagName_NNamespaceDeclsIdx].template GetVal<vtySignedLvalueInt>();
+  }
+
 #if 0 // These are incomplete but will be completed
   // Add the namespace _rpuNamespace to this tag.
   // If the URI is the current URI for the given prefix then we don't add a namespace decl attribute.
