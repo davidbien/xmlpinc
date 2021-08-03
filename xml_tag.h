@@ -255,10 +255,10 @@ public:
       _TyStrongThis spParent( _SharedWeakPtr_weak_leave_empty(), m_wpParent );
       Assert( spParent->get() == _ptagParent );
     }
-    if( !! m_opttokTag )
+    if( m_opttokTag )
     {
       m_opttokTag->AssertValid( !!m_spNamespaceTreeNode );
-      if ( m_spNamespaceTreeNode )
+      if ( m_opttokTag->FIsTag() && m_spNamespaceTreeNode )
       {
         bool fOurNamespaceTreeNode = m_spNamespaceTreeNode->FIsOwner( this );
         // Must check that any namespace declarations correspond to the namespace tree,
@@ -416,6 +416,9 @@ public:
       _TyBV bvDeletions;
       if ( _rxtix.m_xtioImportOptions.m_fFilterRedundantNamespaceDecls )
         bvDeletions = _TyBV( rsaAttrs.NElements() );
+      // Clear the count of namespace declarations - we are resetting them below:
+      tokTagCur[vknTagNameIdx][vknTagName_NNamespaceDeclsIdx].template GetVal< vtySignedLvalueInt >() = 0;
+
       size_t nAttr = 0;
       (void)rsaAttrs.NApplyContiguous( 0, rsaAttrs.NElements(), 
         [&nAttr,&xlic,&_rxtix,&bvDeletions]( _TyLexValue * _pattrBegin, _TyLexValue * _pattrEnd ) -> size_t
@@ -657,6 +660,7 @@ public:
     }
     // Since we are done we can obtain the root tag: The XMLDecl pseudo-tag.
     _TyBase::AcquireTag( std::move( _rxrc.XMLDeclAcquireDocumentContext( m_xdcxtDocumentContext ) ) );
+    AssertValid();
   }
   // Write this XML document to the given xml_writer<>.
   template < class t_TyXmlTransportOut >

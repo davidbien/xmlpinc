@@ -784,8 +784,10 @@ protected:
       if ( m_fUseXMLNamespaces && _fReleaseNamespaces )
       {
         // Then we must check if we have any namespace declarations in this tag and if so undeclare them.
-        _TyLexValue const & rrgvName = (**_popttokRtnSpentTag)[vknTagNameIdx];
-        vtySignedLvalueInt nNamespaceDecls = rrgvName[vknTagName_NNamespaceDeclsIdx].template GetVal< vtySignedLvalueInt >();
+        _TyLexValue & rrgvName = (**_popttokRtnSpentTag)[vknTagNameIdx];
+        vtySignedLvalueInt & rnNamespaceDecls = rrgvName[vknTagName_NNamespaceDeclsIdx].template GetVal< vtySignedLvalueInt >();
+        vtySignedLvalueInt nNamespaceDecls = rnNamespaceDecls;
+        rnNamespaceDecls = 0; // Clear the count of namespace decls.
         if ( nNamespaceDecls )
         {
           Assert( nNamespaceDecls >= 0 );
@@ -811,6 +813,7 @@ protected:
               return nNamespaceDecls ? ( _pattrEnd - _pattrBegin ) : 0; // only continue iterating if we still have namespace decls left.
             }
           );
+          Assert( !nNamespaceDecls ); // should have found them all.
         }
       }
     }
