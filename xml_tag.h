@@ -136,30 +136,34 @@ public:
       m_rctx.m_spCurNamespaceNode = m_spRestoreNamespaceNode;
   }
 
-  void RegisterPrefixUri( const _TyStdStr & _rstrPrefix, const _TyStdStr & _rstrUri )
+  void RegisterPrefixUri( const _TyStdStr & _rstrPrefix, const _TyStdStr & _rstrUri, bool _fIsNamespaceDecl )
   {
-    // Lookup the current mapping. If the mapping is different then update the internal structures appropriately and return true.
-    // Otherwise return false and don't update anything at all - the mapping is the same.
+    // The namespace tree must correspond to the set of namespace declarations in the corresponding tags.
+    // If we map to the same (prefix,uri) in this tag as already existed then we can prune the namespace declaration.
+    // If we are not pruning then we must add even redundant namespace declarations to the namespace tree since they are
+    //  present in the XML and the namespace tree mirrors the XML structure wrt namespace declarations.
     typename _TyMapNamespaces::value_type * pvt = m_rctx.PVtFindPrefix( _rstrPrefix );
-    if ( pvt && pvt->second && ( *pvt->second == _rstrUri ) )
+    bool fSameMapping = ( pvt && pvt->second && ( pvt->second == &_rstrUri ) );
+    if ( fSameMapping && ( !_fIsNamespaceDecl || m_rctx.m_xtioImportOptions.m_fFilterRedundantNamespaceDecls ) )
+      return;
+
+    if ( !fSameMapping )
     {
-      Assert( pvt->second == &_rstrUri ); // this should be the case and we want to make it the case cuz then we can compare pointers.
-      return; // already map to the same URI for this prefix.
+      // New (prefix,uri) pair.
+      // Record it so that the old value can be restored:
+      m_rgprpstrOldMappings.push_back( _TyPrPStr( &_rstrPrefix, pvt ? pvt->second : nullptr ) );
+      if ( !pvt )
+      {
+        // Must insert:
+        m_rctx.m_mapNamespacesDirect.insert( typename _TyMapNamespaces::value_type( _rstrPrefix, &_rstrUri ) );
+      }
+      else
+        pvt->second = &_rstrUri; // update existing entry.
     }
-    // New (prefix,uri) pair.
-    // Record it so that the old value can be restored:
-    m_rgprpstrOldMappings.push_back( _TyPrPStr( &_rstrPrefix, pvt ? pvt->second : nullptr ) );
-    if ( !pvt )
-    {
-      // Must insert:
-      m_rctx.m_mapNamespacesDirect.insert( typename _TyMapNamespaces::value_type( _rstrPrefix, &_rstrUri ) );
-    }
-    else
-      pvt->second = &_rstrUri; // update existing entry.
     
     // Update the set of locally declared (prefix,uri) - these will be swapped in to the namespace tree before we move down.
     pair< typename _TyMapNamespaces::iterator, bool > pib = m_mapNamespacesCurrentTag.insert( typename _TyMapNamespaces::value_type( _rstrPrefix, &_rstrUri ) );
-    Assert( pib.second ); // No need for a throw here since if the cursor is working correctly then we would have already failed there.
+    Assert( pib.second || fSameMapping ); // No need for a throw here since if the cursor is working correctly then we would have already failed there.
   }
   // If we have mappings for this current tag then create a new namespace tree node, etc.
   void CreateNamespaceTreeNode( const void * _pvOwner )
@@ -190,8 +194,10 @@ class xml_tag
 public:
   typedef t_TyXmlTraits _TyXmlTraits;
   typedef typename _TyXmlTraits::_TyChar _TyChar;
+  typedef typename _TyXmlTraits::_TyStdStr _TyStdStr;
   // The content of a tag is a series of tokens and tags.
   typedef typename _TyXmlTraits::_TyXmlToken _TyXmlToken;
+  typedef typename _TyXmlToken::_TyLexValue _TyLexValue;
   typedef _xml_read_context< _TyXmlTraits > _TyReadContext;
   typedef xml_read_cursor< _TyXmlTraits > _TyReadCursor;
   typedef xml_namespace_value_wrap< _TyChar > _TyXmlNamespaceValueWrap;
@@ -250,7 +256,56 @@ public:
       Assert( spParent->get() == _ptagParent );
     }
     if( !! m_opttokTag )
-      m_opttokTag->AssertValid();
+    {
+      m_opttokTag->AssertValid( !!m_spNamespaceTreeNode );
+      if ( m_spNamespaceTreeNode )
+      {
+        bool fOurNamespaceTreeNode = m_spNamespaceTreeNode->FIsOwner( this );
+        // Must check that any namespace declarations correspond to the namespace tree,
+        //  must also check that the namespaces of the tag each attribute attribute matches
+        //  the namespace tree structure.
+        {//B - check the tag's namespace if any.
+          const _TyLexValue & rvTagNamespace = (*m_opttokTag)[vknTagNameIdx][vknNamespaceIdx];
+          if ( rvTagNamespace.template FIsA<_TyXmlNamespaceValueWrap>() )
+          {
+            const _TyXmlNamespaceValueWrap & rxnvw = rvTagNamespace.template GetVal< _TyXmlNamespaceValueWrap >();
+            _TyStdStr const * pstrUri = m_spNamespaceTreeNode->PStrGetUri( rxnvw.RStringPrefix(), true ); // lookup globally.
+            Assert( pstrUri == &rxnvw.RStringUri() ); // should be the case.
+          }
+        }//EB
+        const typename _TyLexValue::_TySegArrayValues & rsaAttrs = (*m_opttokTag)[vknAttributesIdx].GetValueArray();
+        (void)rsaAttrs.NApplyContiguous( 0, rsaAttrs.NElements(), 
+          [&fOurNamespaceTreeNode,this]( const _TyLexValue * _pattrBegin, const _TyLexValue * _pattrEnd ) -> size_t
+          {
+            const _TyLexValue * pattrCur = _pattrBegin;
+            for ( ; _pattrEnd != pattrCur; ++pattrCur )
+            {
+              const _TyLexValue & rvNamespace = (*pattrCur)[vknNamespaceIdx];
+              if ( rvNamespace.template FIsA<_TyXmlNamespaceValueWrap>() )
+              {
+                const _TyXmlNamespaceValueWrap & rxnvw = rvNamespace.template GetVal< _TyXmlNamespaceValueWrap >();
+                if ( rxnvw.FIsAttributeNamespaceDeclaration() )
+                {
+                  Assert( fOurNamespaceTreeNode ); // We should have our own namespace tree node - not a reference to our parent's.
+                  if ( fOurNamespaceTreeNode )
+                  {
+                    _TyStdStr const * pstrUri = m_spNamespaceTreeNode->PStrGetUri( rxnvw.RStringPrefix(), false ); // only lookup locally.
+                    Assert( pstrUri == &rxnvw.RStringUri() ); // should be the case.
+                  }
+                }
+                else
+                {
+                  // Check that any namespace reference here matches looking it up via the namespace node:
+                  _TyStdStr const * pstrUri = m_spNamespaceTreeNode->PStrGetUri( rxnvw.RStringPrefix(), true ); // lookup globally.
+                  Assert( pstrUri == &rxnvw.RStringUri() ); // should be the case.
+                }
+              }
+            }
+            return ( _pattrEnd - _pattrBegin );
+          }
+        );
+      }
+    }
     typename _TyRgTokens::const_iterator citCur = m_rgTokens.begin();
     typename _TyRgTokens::const_iterator citEnd = m_rgTokens.end();
     for ( ; citEnd != citCur; ++citCur )
@@ -283,25 +338,32 @@ public:
     Assert( !m_spNamespaceTreeNode );
     if ( _rxtix.m_spCurNamespaceNode )
     {
-      typedef typename _TyXmlToken::_TyLexValue _TyLexValue;
       // Then we are processing namespaces and must do so on the current tag before continuing with subtags.
       // The tag remains in the xml_read_cursor necessarily since it must be there to accomodate the read cursor's
       //  namespace system. However we must create and populate all eventual namespace declaraions at this tag now
       //  as we will need these to evaluate the same below in the tree as we move down.
       _TyXmlToken & tokTagCur = _rxrc.GetTagCur();
       Assert( ( tokTagCur.GetTokenId() == s_knTokenSTag ) || ( tokTagCur.GetTokenId() == s_knTokenEmptyElemTag ) );
-      typename _TyLexValue::_TySegArrayValues & rsaAttrs = tokTagCur[vknAttributesIdx].GetValueArray();
-      (void)rsaAttrs.NApplyContiguous( 0, rsaAttrs.NElements(), 
-        [&xlic]( _TyLexValue * _pattrBegin, _TyLexValue * _pattrEnd ) -> size_t
+      {//B - We have to check for any namespace on the tag itself:
+        const _TyLexValue & rvTagNamespace = tokTagCur[vknTagNameIdx][vknNamespaceIdx];
+        if ( rvTagNamespace.template FIsA<_TyXmlNamespaceValueWrap>() )
         {
-          _TyLexValue * pattrCur = _pattrBegin;
+          const _TyXmlNamespaceValueWrap & rxnvw = rvTagNamespace.template GetVal< _TyXmlNamespaceValueWrap >();
+          xlic.RegisterPrefixUri( rxnvw.RStringPrefix(), rxnvw.RStringUri(), false );
+        }
+      }//EB
+      const typename _TyLexValue::_TySegArrayValues & rsaAttrs = tokTagCur[vknAttributesIdx].GetValueArray();
+      (void)rsaAttrs.NApplyContiguous( 0, rsaAttrs.NElements(), 
+        [&xlic]( const _TyLexValue * _pattrBegin, const _TyLexValue * _pattrEnd ) -> size_t
+        {
+          const _TyLexValue * pattrCur = _pattrBegin;
           for ( ; _pattrEnd != pattrCur; ++pattrCur )
           {
-            _TyLexValue & rvNamespace = (*pattrCur)[vknNamespaceIdx];
+            const _TyLexValue & rvNamespace = (*pattrCur)[vknNamespaceIdx];
             if ( rvNamespace.template FIsA<_TyXmlNamespaceValueWrap>() )
             {
-              _TyXmlNamespaceValueWrap & rxnvw = rvNamespace.template GetVal< _TyXmlNamespaceValueWrap >();
-              xlic.RegisterPrefixUri( rxnvw.RStringPrefix(), rxnvw.RStringUri() );
+              const _TyXmlNamespaceValueWrap & rxnvw = rvNamespace.template GetVal< _TyXmlNamespaceValueWrap >();
+              xlic.RegisterPrefixUri( rxnvw.RStringPrefix(), rxnvw.RStringUri(), rxnvw.FIsAttributeNamespaceDeclaration() );
             }
           }
           return ( _pattrEnd - _pattrBegin );
@@ -324,11 +386,7 @@ public:
       bool fNextTag;
       do
       {
-        _TyStrongThis spXmlTag;
-        {//B
-          _TyUPtrThis ptrXmlTag = make_unique< _TyThis >( &_rspThis );
-          spXmlTag.emplace( std::in_place_t(), std::move( ptrXmlTag ) );
-        }//EB
+        _TyStrongThis spXmlTag( std::in_place_t(), make_unique< _TyThis >( &_rspThis ) );
         (*spXmlTag)->FromXmlStream( _rxrc, spXmlTag, _rxtix );
         fNextTag = _rxrc.FNextTag( &(*spXmlTag)->m_opttokTag, false ); // we have already processed the namespaces.
         _AcquireContent( std::move( spXmlTag ) );
@@ -353,7 +411,7 @@ public:
       _TyXmlToken & tokTagCur = _rxrc.GetTagCur();
       typedef typename _TyXmlToken::_TyLexValue _TyLexValue;
       typename _TyLexValue::_TySegArrayValues & rsaAttrs = tokTagCur[vknAttributesIdx].GetValueArray();
-      // If we are to prune redundant namespace declarations then get a bitmask for 
+      // If we are to prune redundant namespace declarations then get a bitmask of deletions:
       typedef _simple_bitvec< size_t > _TyBV;
       _TyBV bvDeletions;
       if ( _rxtix.m_xtioImportOptions.m_fFilterRedundantNamespaceDecls )
@@ -400,8 +458,8 @@ public:
             ++citAddNamespace )
       {
         // We must create the XmlNamespaceValueWrap using the xml_read_cursor so that we share the (prefix,uri) string values from their hash tables.
-        _TyXmlNamespaceValueWrap xnvwAttrDecl( _rxrc.GetNamespaceValueWrap( enrtAttrNamespaceDeclReference, citAddNamespace->first, *citAddNamespace->second ) );
-        tokTagCur.DeclareNamespace( _rxtix.m_rxdcDocumentContext.GetBaseContext(), std::move( xnvwAttrDecl ) );
+        tokTagCur.DeclareNamespace( _rxtix.m_rxdcDocumentContext.GetBaseContext(), 
+          _rxrc.GetNamespaceValueWrap( enrtAttrNamespaceDeclReference, citAddNamespace->first, *citAddNamespace->second ) );
       }
     }
   }
@@ -477,6 +535,7 @@ protected:
   using _TyBase::_AcquireContent;
   using _TyBase::_WriteContent;
   using _TyBase::m_opttokTag;
+  using _TyBase::m_spNamespaceTreeNode;
 public:
   using typename _TyBase::_TyUPtrThis;
   using typename _TyBase::_TyWeakThis;
@@ -568,6 +627,7 @@ public:
     {
       // The namespace tree node takes an "owner" void* to allow detection of ownership by a tag.
       xticCurContext.m_spCurNamespaceNode.emplace( std::in_place_t(), this, nullptr );
+      m_spNamespaceTreeNode = xticCurContext.m_spCurNamespaceNode;
     }
 
     bool fStartedInProlog = _rxrc.FInProlog();

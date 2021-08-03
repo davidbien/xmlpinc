@@ -466,7 +466,6 @@ public:
   {
     return _TyBase::FEmpty() && !m_opttpImpl.has_value();
   }
-  
   _TyBase const & GetBaseContext() const
   {
     return *this;
@@ -475,7 +474,6 @@ public:
   {
     return *this;
   }
-
   using _TyBase::m_upUserObj;
   using _TyBase::m_mapUris;
   using _TyBase::m_mapPrefixes;

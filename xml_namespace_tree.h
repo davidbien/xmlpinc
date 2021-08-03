@@ -30,31 +30,56 @@ public:
   typedef SharedStrongPtr< _TyThis, _TyAllocator, uint32_t, false > _TyStrongThis;
   typedef SharedWeakPtr< _TyThis, _TyAllocator, uint32_t, false > _TyWeakThis;
 
-  // This will move up the tree and search for the nearest parent that contains the (prefix,URI).
-  // It will return nullptr if no such definition.
-  template < class t_TyStrViewOrString >
-  _TyStdStr const * PStrGetUri( t_TyStrViewOrString const & _rsvPrefix ) const
+  ~xml_namespace_tree_node() = default;
+  xml_namespace_tree_node( xml_namespace_tree_node const & ) = delete;
+  xml_namespace_tree_node( xml_namespace_tree_node && _rr ) noexcept
   {
-    typename _TyMapNamespaces::const_iterator cit = m_mapNamespaces.find( _rsvPrefix );
-    if ( m_mapNamespaces.end() == cit )
-    {
-      if ( m_upwpParent && *m_upwpParent )
-      {
-        // Then we should have an active parent - i.e. it should be present and so we will throw if we can't get a strong pointer:
-        _TyStrongThis spParent( *m_upwpParent );
-        return spParent->PStrGetUri( _rsvPrefix ); // keep looking.
-      }
-      return nullptr;
-    }
-    Assert( cit->second );
-    return cit->second;
+    swap( _rr ); // swap with null-initialized object.
   }
-
   xml_namespace_tree_node( const void * _pvOwner, _TyStrongThis * _pspParent )
     : m_pvOwner( _pvOwner )
   {
     if ( _pspParent )
       m_upwpParent = make_unique< _TyWeakThis >( *_pspParent );
+  }
+  void swap( _TyThis & _r ) noexcept
+  {
+    m_mapNamespaces.swap( _r.m_mapNamespaces );
+    m_upwpParent.swap( _r.m_upwpParent );
+    m_rgspChildren.swap( _r.m_rgspChildren );
+    std::swap( m_pvOwner, _r.m_pvOwner );
+  }
+  _TyThis & operator = ( _TyThis const & ) = delete;
+  _TyThis & operator = ( _TyThis && _rr ) noexcept
+  {
+    _TyThis acquire( std::move( _rr ) );
+    swap( acquire );
+    return *this;
+  }
+  // Test if the passed pv indicates the owner of this node of the namespace tree.
+  bool FIsOwner( const void * _pv ) const noexcept
+  {
+    return _pv == m_pvOwner;
+  }
+
+  // This will move up the tree and search for the nearest parent that contains the (prefix,URI).
+  // It will return nullptr if no such definition.
+  template < class t_TyStrViewOrString >
+  _TyStdStr const * PStrGetUri( t_TyStrViewOrString const & _rsvPrefix, bool _fCheckParent ) const
+  {
+    typename _TyMapNamespaces::const_iterator cit = m_mapNamespaces.find( _rsvPrefix );
+    if ( m_mapNamespaces.end() == cit )
+    {
+      if ( _fCheckParent && m_upwpParent && !m_upwpParent->expired() )
+      {
+        // Then we should have an active parent - i.e. it should be present and so we will throw if we can't get a strong pointer:
+        _TyStrongThis spParent( *m_upwpParent );
+        return spParent->PStrGetUri( _rsvPrefix, true ); // keep looking.
+      }
+      return nullptr;
+    }
+    Assert( cit->second );
+    return cit->second;
   }
   void CopyNamespaces( _TyMapNamespaces const & _rmapCopy )
   {
@@ -64,7 +89,6 @@ public:
   {
     m_rgspChildren.push_back( _rspChild );
   }
-  
 protected:
   _TyMapNamespaces m_mapNamespaces;
   typedef unique_ptr< _TyWeakThis > _TyUPtrWeakThis;
