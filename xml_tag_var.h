@@ -1,5 +1,10 @@
 #pragma once
 
+//          Copyright David Lawrence Bien 1997 - 2021.
+// Distributed under the Boost Software License, Version 1.0.
+//    (See accompanying file LICENSE_1_0.txt or copy at
+//          https://www.boost.org/LICENSE_1_0.txt).
+
 // xml_tag_var.h
 // Simple XML object model based on the XML parser - variant version.
 // Can't just wrap xml_tag objects because we have to store variant token objects inside the xml_tag collection.
