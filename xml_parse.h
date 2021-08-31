@@ -13,9 +13,9 @@
 #include "xml_ns.h"
 #include "xml_types.h"
 #include "xml_traits.h"
-#include "_xmlplex_utf32.h"
-#include "_xmlplex_utf16.h"
-#include "_xmlplex_utf8.h"
+#include <_xmlplex_utf32.h>
+#include <_xmlplex_utf16.h>
+#include <_xmlplex_utf8.h>
 
 __XMLP_BEGIN_NAMESPACE
 __XMLPLEX_USING_NAMESPACE
