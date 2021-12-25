@@ -453,6 +453,18 @@ public:
   {
     return GetContextCur().GetTag();
   }
+  // Access the tag name on this curson. If we are in the XMLDecl then this will throw.
+  _TyStrView const & SvTagCur() const
+  {
+    VerifyThrow( !FInProlog() && !FInEpilog() );
+    // If we aren't in the prolog then we should be at a tag.
+    const _TyXmlToken & rxtTag = GetTagCur();
+    Assert( rxtTag.FIsTag() );
+    const _TyLexToken & rltokTag = rxtTag.GetLexToken();
+    _TyStrView svTagStart;
+    rltokTag.KGetStringView( svTagStart, rltokTag.GetValue()[vknTagNameIdx][vknNameIdx] );
+    return svTagStart;
+  }
   bool FPseudoXMLDecl() const
   {
     VerifyThrow( m_lContexts.size() );

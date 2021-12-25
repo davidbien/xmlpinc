@@ -458,7 +458,7 @@ public:
     return m_fWroteFirstTag && ( 1 == m_lContexts.size() );
   }
 
-  // Write froma xml_read_cursor_var<>. Easy, just grab the underlying read cursor and use that.
+  // Write from a xml_read_cursor_var<>. Easy, just grab the underlying read cursor and use that.
   template < class t_TyReadCursor >
   size_t NWriteFromReadCursor( t_TyReadCursor & _rxrc, size_t _nNextTags = size_t(-1) )
     requires( TFIsReadCursorVar_v< t_TyReadCursor > )
@@ -515,6 +515,117 @@ public:
       }
       else
       {
+        bool fNextTag = _rxrc.FNextTag();
+        _EndTag( &m_lContexts.back() );
+        if ( fNextTag )
+        {
+          // Then encountered a next tag without any intervening content.
+          _TyXmlWriteTag xwt( StartTag( std::move( _rxrc.GetTagCur() ), true ) ); // push tag on output context stack.
+          xwt.Commit( true ); // Write the tag's data. We don't use xwt's lifetime to end the tag because we don't want to recurse here.
+          continue; // depth remains the same.
+        }
+        else
+        if ( --nCurDepth == nDepthStart )
+        {
+          ++nNextTagsWritten;
+          --nTagsRemaining;
+        }
+      }
+    }
+    while( nTagsRemaining >= 0 );
+    return nNextTagsWritten;
+  }
+  // Write from a xml_read_cursor_var<>. Easy, just grab the underlying read cursor and use that.
+  // This one allows special tags and attributes to unit test various additional features of the cursor.
+  template < class t_TyReadCursor >
+  size_t NWriteFromReadCursorUnitTest( t_TyReadCursor & _rxrc, size_t _nNextTags = size_t(-1), bool & _rfSkippedSomething )
+    requires( TFIsReadCursorVar_v< t_TyReadCursor > )
+  {
+    return std::visit( _VisitHelpOverloadFCall {
+      [this,_nNextTags]( auto & _tCursor ) -> size_t
+      {
+        return NWriteFromReadCursorUnitTest( _tCursor, _nNextTags, _rfSkippedSomething );
+      }
+    }, _rxrc.GetVariant() );
+  }
+  // Write from a read cursor.
+  // This one allows special tags and attributes to unit test various additional features of the cursor.
+  // Will write up to _nNextTags if the current position of the output allows for that.
+  // 1) If the output context stack has a size of 1 (only XMLDecl node) then we can only write one tag.
+  // 2) If the output context stack has a size greater than 1 then we can write <n> tags at the same level.
+  // 3) If _nNextTags is zero, or we are in the epilog, then we will write all non-tags until the first tag.
+  //    We will stop at any non-blank CharData as well. This allows splicing comments and blank CharData at
+  //    the end of an XML document.
+  // Returns the number of NextTags written.
+  template < class t_TyReadCursor >
+  size_t NWriteFromReadCursorUnitTest( t_TyReadCursor & _rxrc, size_t _nNextTags = size_t(-1), bool & _rfSkippedSomething )
+    requires( !TFIsReadCursorVar_v< t_TyReadCursor > )
+  {
+    // If the following statement throws then you are mixing "including prefixes" and this isn't supported (currrently).
+    SetIncludePrefixesInAttrNames( _rxrc.GetIncludePrefixesInAttrNames() );
+
+    _rfSkippedSomething = false; // Set this to true if we end up skipping something.
+
+    if ( _nNextTags > 0 )
+      _nNextTags = FInProlog() ? 1 : ( FInEpilog() ? 0 : _nNextTags );
+    
+    // The read cursor is within *some* tag - which may be the initial XMLDecl "tag" or some subtag thereof.
+    bool fStartedInPrologWrite = FInProlog();
+    bool fStartedInPrologRead = _rxrc.FInProlog();
+
+    // Record the top of the stack, we will stop when we reach this point _nNextTag times.
+    ssize_t nTagsRemaining = _nNextTags;
+    if ( nTagsRemaining < 0 )
+      nTagsRemaining = (numeric_limits< ssize_t >::max)();
+    size_t nNextTagsWritten = 0;
+    size_t nCurDepth = ( fStartedInPrologWrite == fStartedInPrologRead ) ? 1 : 0; // We use this to control whether to write content at the begin of the first and the end of the last loops.
+    size_t nDepthStart = nCurDepth;
+    bool fSkipCurrentTag = false; // We will need to remember this the next time through.
+    do
+    {
+      if ( !fSkipCurrentTag && ( nCurDepth > 0 ) )
+        _WriteReadCursorContent( _rxrc ); // We may not write initial content.
+      if ( !nTagsRemaining )
+        break; // done.
+      if ( !fSkipCurrentTag && _rxrc.FMoveDown() )
+      {
+        // Check to see if we are to skip the current tag, and also which flavor of skipping if so.
+        typedef typename t_TyReadCursor::_TyStrView _TyStrViewCursor;
+        typedef typename _TyStrViewCursor::_TyChar _TyCharCursor;
+        _TyStrViewCursor svTag = _rxrc.SvTagCur();
+        if ( svTag == str_array_cast< _TyChar >( "skip" ) )
+          fSkipCurrentTag = true;
+        else
+        if ( svTag == str_array_cast< _TyChar >( "skipdownup" ) )
+        {
+          if ( _rxrc.FMoveDown() )
+            (void)_rxrc.FMoveUp();
+          fSkipCurrentTag = true;
+        }
+        else
+        if ( svTag == str_array_cast< _TyChar >( "skipleafup" ) )
+        {
+          size_t nMoveDown = 0;
+          while ( _rxrc.FMoveDown() )
+            ++nMoveDown;
+          while ( nMoveDown-- )
+            (void)_rxrc.FMoveUp();
+          fSkipCurrentTag = true;
+        }
+        _rfSkippedSomething = _rfSkippedSomething || fSkipCurrentTag;
+
+        if ( !fSkipCurrentTag ) // otherwise we just want to call FNextTag() to move to the next tag and not write the content.
+        {
+          // A tag is current on the read cursor - as always. We can move data out of it since it only needs its name and its namespace decls.
+          _TyXmlWriteTag xwt( StartTag( std::move( _rxrc.GetTagCur() ), true ) ); // push tag on output context stack.
+          xwt.Commit( true ); // Write the tag's data. We don't use xwt's lifetime to end the tag because we don't want to recurse here.
+          ++nCurDepth;
+        }
+        continue;
+      }
+      else
+      {
+        fSkipCurrentTag = false; // Once we get to here we will reset the skipping.
         bool fNextTag = _rxrc.FNextTag();
         _EndTag( &m_lContexts.back() );
         if ( fNextTag )
