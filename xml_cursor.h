@@ -438,8 +438,13 @@ public:
     }
   #endif //ASSERTSENABLED
   }
-  _TyXmlReadContext &
-  GetContextCur()
+  _TyXmlReadContext & GetContextCur()
+  {
+    Assert( m_lContexts.size() );
+    AssertValid();
+    return *m_itCurContext;
+  }
+  const _TyXmlReadContext & GetContextCur() const
   {
     Assert( m_lContexts.size() );
     AssertValid();
@@ -454,7 +459,7 @@ public:
     return GetContextCur().GetTag();
   }
   // Access the tag name on this curson. If we are in the XMLDecl then this will throw.
-  _TyStrView const & SvTagCur() const
+  _TyStrView SvTagCur() const
   {
     VerifyThrow( !FInProlog() && !FInEpilog() );
     // If we aren't in the prolog then we should be at a tag.
@@ -664,19 +669,20 @@ protected:
     // Tell the xml_user_obj to filter all token data so that we don't pass around data that we are going to throw away.
     m_pXp->_SetFilterAllTokenData( true );
     m_fSkippingTags = true; // This optimizes processing a bit.
-    while( !_FAtTailContext() )
+    while( !_FAtTailContext() || ( s_knTokenETag != m_pltokLookahead->GetTokenId() ) )
     {
       // Each token will be either an end tag or a beginning tag.
       if ( s_knTokenETag == m_pltokLookahead->GetTokenId() )
         _ProcessEndTag( *m_pltokLookahead );
       else
+      if ( s_knTokenEmptyElemTag != m_pltokLookahead->GetTokenId() ) // We just skip empty element tags entirely.
       {
         _ProcessTagName( (*m_pltokLookahead)[vknTagNameIdx] );
         _PushNewContext( *m_pltokLookahead );
       }
-      Assert( m_pltokLookahead->FIsNull() ); // We should have moved this token away...
+      Assert( ( s_knTokenEmptyElemTag == m_pltokLookahead->GetTokenId() ) || m_pltokLookahead->FIsNull() ); // We should have moved this token away...
       m_pltokLookahead.reset(); // Rid the null token object.
-      VerifyThrowSz( m_pXp->GetLexicalAnalyzer().FGetToken( m_pltokLookahead, rgSkipTokens, rgSkipTokens + nSkipTokens, nullptr, false ), "Premature EOF." );
+      VerifyThrowSz( m_pXp->GetLexicalAnalyzer().FGetToken( m_pltokLookahead, rgSkipTokens, rgSkipTokens + nSkipTokens, m_pspStartAll, false ), "Premature EOF." );
     }
     Assert( !m_pltokLookahead || ( s_knTokenETag == m_pltokLookahead->GetTokenId() ) ); // Should always be the case or we have a bug.
     m_pXp->_SetFilterAllTokenData( false );

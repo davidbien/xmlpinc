@@ -538,13 +538,13 @@ public:
   // Write from a xml_read_cursor_var<>. Easy, just grab the underlying read cursor and use that.
   // This one allows special tags and attributes to unit test various additional features of the cursor.
   template < class t_TyReadCursor >
-  size_t NWriteFromReadCursorUnitTest( t_TyReadCursor & _rxrc, size_t _nNextTags = size_t(-1), bool & _rfSkippedSomething )
+  size_t NWriteFromReadCursorUnitTest( t_TyReadCursor & _rxrc, bool& _rfSkippedSomething, size_t _nNextTags = size_t(-1) )
     requires( TFIsReadCursorVar_v< t_TyReadCursor > )
   {
     return std::visit( _VisitHelpOverloadFCall {
-      [this,_nNextTags]( auto & _tCursor ) -> size_t
+      [this,_nNextTags,&_rfSkippedSomething]( auto & _tCursor ) -> size_t
       {
-        return NWriteFromReadCursorUnitTest( _tCursor, _nNextTags, _rfSkippedSomething );
+        return NWriteFromReadCursorUnitTest( _tCursor, _rfSkippedSomething, _nNextTags );
       }
     }, _rxrc.GetVariant() );
   }
@@ -558,7 +558,7 @@ public:
   //    the end of an XML document.
   // Returns the number of NextTags written.
   template < class t_TyReadCursor >
-  size_t NWriteFromReadCursorUnitTest( t_TyReadCursor & _rxrc, size_t _nNextTags = size_t(-1), bool & _rfSkippedSomething )
+  size_t NWriteFromReadCursorUnitTest( t_TyReadCursor & _rxrc, bool& _rfSkippedSomething, size_t _nNextTags = size_t(-1) )
     requires( !TFIsReadCursorVar_v< t_TyReadCursor > )
   {
     // If the following statement throws then you are mixing "including prefixes" and this isn't supported (currrently).
@@ -591,19 +591,19 @@ public:
       {
         // Check to see if we are to skip the current tag, and also which flavor of skipping if so.
         typedef typename t_TyReadCursor::_TyStrView _TyStrViewCursor;
-        typedef typename _TyStrViewCursor::_TyChar _TyCharCursor;
+        typedef typename t_TyReadCursor::_TyChar _TyCharCursor;
         _TyStrViewCursor svTag = _rxrc.SvTagCur();
-        if ( svTag == str_array_cast< _TyChar >( "skip" ) )
+        if ( !svTag.compare( str_array_cast< _TyCharCursor >( "skip" ) ) )
           fSkipCurrentTag = true;
         else
-        if ( svTag == str_array_cast< _TyChar >( "skipdownup" ) )
+        if ( !svTag.compare( str_array_cast< _TyCharCursor >( "skipdownup" ) ) )
         {
           if ( _rxrc.FMoveDown() )
             (void)_rxrc.FMoveUp();
           fSkipCurrentTag = true;
         }
         else
-        if ( svTag == str_array_cast< _TyChar >( "skipleafup" ) )
+        if ( !svTag.compare( str_array_cast< _TyCharCursor >( "skipleafup" ) ) )
         {
           size_t nMoveDown = 0;
           while ( _rxrc.FMoveDown() )
