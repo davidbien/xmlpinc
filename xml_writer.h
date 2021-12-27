@@ -625,22 +625,27 @@ public:
       }
       else
       {
-        fSkipCurrentTag = false; // Once we get to here we will reset the skipping.
         bool fNextTag = _rxrc.FNextTag();
-        _EndTag( &m_lContexts.back() );
-        if ( fNextTag )
+        if ( !fSkipCurrentTag )
         {
-          // Then encountered a next tag without any intervening content.
-          _TyXmlWriteTag xwt( StartTag( std::move( _rxrc.GetTagCur() ), true ) ); // push tag on output context stack.
-          xwt.Commit( true ); // Write the tag's data. We don't use xwt's lifetime to end the tag because we don't want to recurse here.
-          continue; // depth remains the same.
+          // Otherwise the above was just skipping this current tag - we didn't start a tag above and thus we shouldn't end a tag here.
+          _EndTag( &m_lContexts.back() );
+          if ( fNextTag )
+          {
+            // Then encountered a next tag without any intervening content.
+            _TyXmlWriteTag xwt( StartTag( std::move( _rxrc.GetTagCur() ), true ) ); // push tag on output context stack.
+            xwt.Commit( true ); // Write the tag's data. We don't use xwt's lifetime to end the tag because we don't want to recurse here.
+            continue; // depth remains the same.
+          }
+          else
+          if ( --nCurDepth == nDepthStart )
+          {
+            ++nNextTagsWritten;
+            --nTagsRemaining;
+          }
         }
         else
-        if ( --nCurDepth == nDepthStart )
-        {
-          ++nNextTagsWritten;
-          --nTagsRemaining;
-        }
+          fSkipCurrentTag = false;
       }
     }
     while( nTagsRemaining >= 0 );
