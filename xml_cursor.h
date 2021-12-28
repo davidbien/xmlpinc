@@ -682,13 +682,19 @@ protected:
         _PopContext( nullptr, false );
       }
       else
-      if ( s_knTokenEmptyElemTag != m_pltokLookahead->GetTokenId() ) // We just skip empty element tags entirely.
+      if ( s_knTokenSTag == m_pltokLookahead->GetTokenId() ) // We just skip empty element tags entirely.
       {
         _ProcessTagName( (*m_pltokLookahead)[vknTagNameIdx] );
         _PushNewContext( *m_pltokLookahead );
       }
-      Assert( ( s_knTokenEmptyElemTag == m_pltokLookahead->GetTokenId() ) || m_pltokLookahead->FIsNull() ); // We should have moved this token away...
-      m_pltokLookahead.reset(); // Rid the null token object.
+      // else we have either an s_knTokenEmptyElemTag or content that is after a s_knTokenEmptyElemTag or one of the above scenarios.
+      Assert( ( s_knTokenEmptyElemTag == m_pltokLookahead->GetTokenId() ) || 
+              ( s_knTokenEmptyElemTag == m_lContexts.back().GetTagTokenId() ) || m_pltokLookahead->FIsNull() );
+      m_pltokLookahead.reset(); // Rid the lookahead.
+      if ( s_knTokenEmptyElemTag == m_lContexts.back().GetTagTokenId() )
+      {
+        _PopContext( nullptr, false );
+      }
       VerifyThrowSz( m_pXp->GetLexicalAnalyzer().FGetToken( m_pltokLookahead, rgSkipTokens, rgSkipTokens + nSkipTokens, m_pspStartAll, false ), "Premature EOF." );
     }
     Assert( !m_pltokLookahead || ( s_knTokenETag == m_pltokLookahead->GetTokenId() ) ); // Should always be the case or we have a bug.
