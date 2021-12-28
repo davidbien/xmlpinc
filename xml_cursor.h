@@ -68,7 +68,8 @@ public:
 #if ASSERTSENABLED
     size_t nSize = m_saTokens.GetSize();
     Assert( nSize ); // should always have at least the tag token at element 0.
-    Assert( ( nSize <= 1 ) || _fIsTail );
+    // Assert( ( nSize <= 1 ) || _fIsTail ); - This has changed - we now keep the content until new content is read - this allows
+    //  a user to MoveDown, check values (for instance) and then move up without losing data.
 #endif //ASSERTSENABLED
   }
 
@@ -516,7 +517,8 @@ public:
   // Move down - i.e. to the next subtag.
   // If the context is already present - i.e. we are not at the end of the context list - then we just move the context pointer and return true.
   // If we are at the end of the context list then this has some side effects:
-  // 1) If successful then all content tokens in the current context are cleared. There are operational reasons for this as well as logical reasons.
+  // 1) If successful then all content tokens in the current context are cleared. Changed: This doesn't allow filtering correctly - i.e.
+  //      if you want to move down to check sub-tags and then filter either positively or negatively then the content would be missing.
   //    a) Then the next tag is read, a new context is created below the current one, and all content tokens for that next tag are read.
   // 2) If not sucessful then there is no change to any state - i.e. nothing is read or processed. To move further from here 
   bool FMoveDown()
@@ -543,7 +545,9 @@ public:
     VerifyThrowSz( _FGetToken( m_pltokLookahead ) || ( ( s_knTokenEmptyElemTag == tidLookahead ) && ( m_lContexts.size() == 2 ) ), "Premature EOF." );
     _ReadTokenContent();
     // Now remove the token content from our current context (the old tail) and move down to our newly read context.
-    m_itCurContext->ClearContent();
+    // Changed: We don't want to rid this while moving down because this doesn't allow a user to MoveDown and then check sub-tag content and then
+    //  move back up and again and then read the content (or not).
+    // m_itCurContext->ClearContent();
     ++m_itCurContext;
     return true; // We moved down.
   }
@@ -673,7 +677,10 @@ protected:
     {
       // Each token will be either an end tag or a beginning tag.
       if ( s_knTokenETag == m_pltokLookahead->GetTokenId() )
+      {
         _ProcessEndTag( *m_pltokLookahead );
+        _PopContext( nullptr, false );
+      }
       else
       if ( s_knTokenEmptyElemTag != m_pltokLookahead->GetTokenId() ) // We just skip empty element tags entirely.
       {
@@ -766,6 +773,8 @@ protected:
   {
     if ( !m_pltokLookahead || ( s_knTokenEmptyElemTag == m_lContexts.back().GetTagTokenId() ) )
       return; // At eof or tag with no content.
+    // Clear any existing content here instead of in FMoveDown() as we were previously:
+    m_lContexts.back().ClearContent();
     // The invarient is that we have a token in the m_pltokLookahead or we have hit eof.
     // After the last end token of the file, the Misc production is active - which means
     //  that whitespace CharData, Comments and PIs are still allowed.

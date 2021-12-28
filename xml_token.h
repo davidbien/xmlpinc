@@ -674,46 +674,53 @@ protected:
     Assert( vknTagArrayCount == rvRoot.GetSize() );
     if ( vknTagArrayCount == rvRoot.GetSize() )
     {
-      vtySignedLvalueInt nNamespaceDecls = 0;
       _TyLexValue const & rvTag = rvRoot[vknTagNameIdx];
-      Assert( vknTagName_ArrayCount == rvTag.GetSize() );
+      // When we are skipping tags we don't parse namespace decls to speed up processing.
+      Assert( ( vknTagName_ArrayCount == rvTag.GetSize() ) || ( vknTagName_ArrayCount-1 == rvTag.GetSize() ) );
       if ( vknTagName_ArrayCount == rvTag.GetSize() )
       {
+        vtySignedLvalueInt nNamespaceDecls = 0;
         const _TyXmlNamespaceValueWrap * pxnvw;
         _AssertValidName( true, rvTag, nNamespaceDecls, &pxnvw );
         Assert( !pxnvw || pxnvw->FIsNamespaceReference() );
         Assert( rvTag[vknTagName_NNamespaceDeclsIdx].template FIsA<vtySignedLvalueInt>() );
-      }
-      _TyLexValue const & rrgvAttrs = rvRoot[vknAttributesIdx];
-      Assert( rrgvAttrs.FIsArray() );
-      if ( rrgvAttrs.FIsArray() )
-      {
-        const typename _TyLexValue::_TySegArrayValues & rsaAttrs = rrgvAttrs.GetValueArray();
-        rsaAttrs.ApplyContiguous( 0, rsaAttrs.NElements(),
-          [this,&nNamespaceDecls,&_fUseNamespaces]( const _TyLexValue * _pvBegin, const _TyLexValue * _pvEnd )
-          {
-            for ( const _TyLexValue * pvCur = _pvBegin; _pvEnd != pvCur; ++pvCur )
+        _TyLexValue const & rrgvAttrs = rvRoot[vknAttributesIdx];
+        Assert( rrgvAttrs.FIsArray() );
+        if ( rrgvAttrs.FIsArray() )
+        {
+          const typename _TyLexValue::_TySegArrayValues & rsaAttrs = rrgvAttrs.GetValueArray();
+          rsaAttrs.ApplyContiguous( 0, rsaAttrs.NElements(),
+            [this,&nNamespaceDecls,&_fUseNamespaces]( const _TyLexValue * _pvBegin, const _TyLexValue * _pvEnd )
             {
-              Assert( vknAttr_ArrayCount == pvCur->GetSize() );
-              if ( vknAttr_ArrayCount == pvCur->GetSize() )
+              for ( const _TyLexValue * pvCur = _pvBegin; _pvEnd != pvCur; ++pvCur )
               {
-                const _TyXmlNamespaceValueWrap * pxnvw;
-                bool fIsAttrNamespaceDecl;
-                bool fIsAttr = _FIsAttribute( *pvCur, &fIsAttrNamespaceDecl );
-                _AssertValidName( false, *pvCur, nNamespaceDecls, &pxnvw, fIsAttrNamespaceDecl );
-                Assert( fIsAttr );
-                Assert( !pxnvw || !pxnvw->FIsNull() );
-                Assert( !( !!pxnvw && pxnvw->FIsNamespaceDeclaration() ) || fIsAttrNamespaceDecl );
-                Assert( !_fUseNamespaces || !fIsAttrNamespaceDecl || ( !!pxnvw && !pxnvw->FIsNull() ) );
-                const _TyLexValue & rvValue = (*pvCur)[vknAttr_ValueIdx];
-                Assert( rvValue.FHasTypedData() || rvValue.FIsString() ); // might be empty.
-                Assert( (*pvCur)[vknAttr_FDoubleQuoteIdx].FIsBool() );
+                Assert( vknAttr_ArrayCount == pvCur->GetSize() );
+                if ( vknAttr_ArrayCount == pvCur->GetSize() )
+                {
+                  const _TyXmlNamespaceValueWrap * pxnvw;
+                  bool fIsAttrNamespaceDecl;
+                  bool fIsAttr = _FIsAttribute( *pvCur, &fIsAttrNamespaceDecl );
+                  _AssertValidName( false, *pvCur, nNamespaceDecls, &pxnvw, fIsAttrNamespaceDecl );
+                  Assert( fIsAttr );
+                  Assert( !pxnvw || !pxnvw->FIsNull() );
+                  Assert( !( !!pxnvw && pxnvw->FIsNamespaceDeclaration() ) || fIsAttrNamespaceDecl );
+                  Assert( !_fUseNamespaces || !fIsAttrNamespaceDecl || ( !!pxnvw && !pxnvw->FIsNull() ) );
+                  const _TyLexValue & rvValue = (*pvCur)[vknAttr_ValueIdx];
+                  Assert( rvValue.FHasTypedData() || rvValue.FIsString() ); // might be empty.
+                  Assert( (*pvCur)[vknAttr_FDoubleQuoteIdx].FIsBool() );
+                }
               }
             }
-          }
-        );
+          );
+        }
+        Assert( !_fUseNamespaces || ( nNamespaceDecls == rvTag[vknTagName_NNamespaceDeclsIdx].template GetVal<vtySignedLvalueInt>() ) );
       }
-      Assert( !_fUseNamespaces || ( vknTagName_ArrayCount != rvTag.GetSize() ) || ( nNamespaceDecls == rvTag[vknTagName_NNamespaceDeclsIdx].template GetVal<vtySignedLvalueInt>() ) );
+      else
+      if ( vknTagName_ArrayCount-1 == rvTag.GetSize() )
+      {
+        // Then we are in "skip" mode (or we have a bug). In this case we aren't processing namespace declarations, etc. so
+        //  we aren't as strict about our assertions. In fact there isn't too much to do here... lol.
+      }
     }
   }
   void _AssertValidComment() const

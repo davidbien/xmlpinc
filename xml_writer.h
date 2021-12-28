@@ -612,8 +612,22 @@ public:
             (void)_rxrc.FMoveUp();
           fSkipCurrentTag = true;
         }
+        else
+        if ( !svTag.compare( str_array_cast< _TyCharCursor >( "movedownup" ) ) )
+        {
+          if ( _rxrc.FMoveDown() )
+            (void)_rxrc.FMoveUp();
+        }
+        else
+        if ( !svTag.compare( str_array_cast< _TyCharCursor >( "moveleafup" ) ) )
+        {
+          size_t nMoveDown = 0;
+          while ( _rxrc.FMoveDown() )
+            ++nMoveDown;
+          while ( nMoveDown-- )
+            (void)_rxrc.FMoveUp();
+        }
         _rfSkippedSomething = _rfSkippedSomething || fSkipCurrentTag;
-
         if ( !fSkipCurrentTag ) // otherwise we just want to call FNextTag() to move to the next tag and not write the content.
         {
           // A tag is current on the read cursor - as always. We can move data out of it since it only needs its name and its namespace decls.
