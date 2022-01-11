@@ -15,6 +15,167 @@
 
 __XMLP_BEGIN_NAMESPACE
 
+// _xml_tag_import_context_var:
+// Context for reading from an XML Stream - variant edition. This keeps track of the current mapping of namespaces
+//  to allow appropriate creation of namespace declarations when none are present for a given
+//  (prefix,URI). Also stores any options associated with the conversion of the stream into the document
+//  object model.
+template < class t_TyTpTransports >
+class _xml_tag_import_context_var
+{
+  typedef _xml_tag_import_context_var _TyThis;
+public:
+  typedef t_TyTpTransports _TyTpTransports;
+  // Get the first transport from the tuple-pack and use that character type as the type for namespace storage, arbitrarily.
+  typedef typename tuple_element< 0, _TyTpTransports >::type _TyTransportFirst;
+  typedef typename _TyTransportFirst::_TyChar _TyCharTransportFirst;
+  typedef _xml_tag_import_options _TyXmlTagImportOptions;
+  typedef _xml_document_context_transport_var< _TyTpTransports > _TyXmlDocumentContextVar;
+
+  // We map to the permanent URI in the document context (somewhere).
+  typedef typename xml_namespace_tree_node< _TyCharTransportFirst >::_TyMapNamespaces _TyMapNamespaces;
+
+  _xml_tag_import_context_var( _xml_tag_import_context_var const & ) = delete;
+  _xml_tag_import_context_var( _TyXmlDocumentContext & _rxdcDocumentContext )
+    : m_rxdcDocumentContext( _rxdcDocumentContext )
+  {
+  }
+
+  void SetImportOptions( _TyXmlTagImportOptions const & _rxtio )
+  {
+    m_xtioImportOptions = _rxtio;
+  }
+
+  template < class t_TyStrViewOrString >
+  const typename _TyMapNamespaces::value_type * PVtFindPrefix( t_TyStrViewOrString const & _rsvPrefix ) const
+  {
+    typename _TyMapNamespaces::const_iterator cit = m_mapNamespacesDirect.find( _rsvPrefix );
+    if ( m_mapNamespacesDirect.end() == cit )
+      return nullptr;
+    return &*cit;
+  }
+  template < class t_TyStrViewOrString >
+  typename _TyMapNamespaces::value_type * PVtFindPrefix( t_TyStrViewOrString const & _rsvPrefix )
+  {
+    typename _TyMapNamespaces::iterator it = m_mapNamespacesDirect.find( _rsvPrefix );
+    if ( m_mapNamespacesDirect.end() == it )
+      return nullptr;
+    return &*it;
+  }
+
+  // A reference to the containing document context.
+  _TyXmlDocumentContextVar & m_rxdcDocumentContext;
+
+  // This contains the current *direct* lookup from prefix->URI that models the state of the entire namespace tree at this point. 
+  _TyMapNamespaces m_mapNamespacesDirect;
+
+  // We store the current namespace node for our 
+  typedef typename xml_namespace_tree_node< _TyCharTransportFirst >::_TyStrongThis _TyStrongNamespaceTreeNode;
+  _TyStrongNamespaceTreeNode m_spCurNamespaceNode;
+
+  _TyXmlTagImportOptions m_xtioImportOptions;
+};
+
+// _xml_local_import_context_var:
+// This is stored on the stack in each xml_tag<>::FromXmlStream() context.
+// It contains the set of prefixes that we added this time paired with their previous URI values.
+// This allows us to have a single map lookup for all active prefixes at all points in time - one that
+//  mirrors the lookup represented in the tree but will lookup (prefix,uri) faster.
+template < class t_TyTpTransports >
+class _xml_local_import_context_var
+{
+  typedef _xml_local_import_context_var _TyThis;
+public:
+  typedef t_TyTpTransports _TyTpTransports;
+  typedef typename tuple_element< 0, _TyTpTransports >::type _TyTransportFirst;
+  typedef typename _TyTransportFirst::_TyChar _TyCharTransportFirst;
+  typedef basic_string< _TyCharTransportFirst > _TyStdStrTransportFirst;
+  typedef typename _TyTpTransports::_TyStdStrTransportFirst _TyStdStrTransportFirst;
+  typedef std::pair< const _TyStdStrTransportFirst *, const _TyStdStrTransportFirst * > _TyPrPStr;
+  typedef vector< _TyPrPStr > _TyRgPrPStr;
+
+  typedef _xml_tag_import_context_var< _TyTpTransports > _TyXmlTagImportContext;
+  typedef typename _TyXmlTagImportContext::_TyMapNamespaces _TyMapNamespaces;
+  typedef typename xml_namespace_tree_node< _TyCharTransportFirst >::_TyStrongThis _TyStrongNamespaceTreeNode;
+
+  _xml_local_import_context_var( _TyXmlTagImportContext & _rctx )
+    : m_rctx( _rctx )
+  {
+  }
+  ~_xml_local_import_context_var()
+  {
+    typename _TyRgPrPStr::const_iterator citRestore = m_rgprpstrOldMappings.begin();
+    typename _TyRgPrPStr::const_iterator citRestoreEnd = m_rgprpstrOldMappings.end();
+    for ( ; citRestoreEnd != citRestore; ++citRestore )
+    {
+      if ( !citRestore->second )
+      {
+        size_t nErased = m_rctx.m_mapNamespacesDirect.erase( *citRestore->first );
+        Assert( 1 == nErased ); // Should always be there.
+      }
+      else
+      {
+          typedef typename _TyXmlTagImportContext::_TyMapNamespaces _TyMapNamespaces;
+          typename _TyMapNamespaces::iterator itFound = m_rctx.m_mapNamespacesDirect.find( *citRestore->first );
+          Assert( m_rctx.m_mapNamespacesDirect.end() != itFound );
+          if ( m_rctx.m_mapNamespacesDirect.end() != itFound )
+            itFound->second = citRestore->second; // restore it to previous value.
+      }
+    }
+    if ( m_spRestoreNamespaceNode )
+      m_rctx.m_spCurNamespaceNode = m_spRestoreNamespaceNode;
+  }
+
+  void RegisterPrefixUri( const _TyStdStrTransportFirst & _rstrPrefix, const _TyStdStrTransportFirst & _rstrUri, bool _fIsNamespaceDecl )
+  {
+    // The namespace tree must correspond to the set of namespace declarations in the corresponding tags.
+    // If we map to the same (prefix,uri) in this tag as already existed then we can prune the namespace declaration.
+    // If we are not pruning then we must add even redundant namespace declarations to the namespace tree since they are
+    //  present in the XML and the namespace tree mirrors the XML structure wrt namespace declarations.
+    typename _TyMapNamespaces::value_type * pvt = m_rctx.PVtFindPrefix( _rstrPrefix );
+    bool fSameMapping = ( pvt && pvt->second && ( pvt->second == &_rstrUri ) );
+    if ( fSameMapping && ( !_fIsNamespaceDecl || m_rctx.m_xtioImportOptions.m_fFilterRedundantNamespaceDecls ) )
+      return;
+
+    if ( !fSameMapping )
+    {
+      // New (prefix,uri) pair.
+      // Record it so that the old value can be restored:
+      m_rgprpstrOldMappings.push_back( _TyPrPStr( &_rstrPrefix, pvt ? pvt->second : nullptr ) );
+      if ( !pvt )
+      {
+        // Must insert:
+        m_rctx.m_mapNamespacesDirect.insert( typename _TyMapNamespaces::value_type( _rstrPrefix, &_rstrUri ) );
+      }
+      else
+        pvt->second = &_rstrUri; // update existing entry.
+    }
+    
+    // Update the set of locally declared (prefix,uri) - these will be swapped in to the namespace tree before we move down.
+    pair< typename _TyMapNamespaces::iterator, bool > pib = m_mapNamespacesCurrentTag.insert( typename _TyMapNamespaces::value_type( _rstrPrefix, &_rstrUri ) );
+    Assert( pib.second || fSameMapping ); // No need for a throw here since if the cursor is working correctly then we would have already failed there.
+  }
+  // If we have mappings for this current tag then create a new namespace tree node, etc.
+  void CreateNamespaceTreeNode( const void * _pvOwner )
+  {
+    if ( m_mapNamespacesCurrentTag.size() )
+    {
+      m_spRestoreNamespaceNode = m_rctx.m_spCurNamespaceNode;
+      m_rctx.m_spCurNamespaceNode.emplace( std::in_place_t(), _pvOwner, &m_spRestoreNamespaceNode );
+      m_rctx.m_spCurNamespaceNode->CopyNamespaces( m_mapNamespacesCurrentTag ); // We want to keep a copy for bookkeeping.
+      m_spRestoreNamespaceNode->AddChildNamespaceNode( m_rctx.m_spCurNamespaceNode ); // add on to the end of the children.
+    }
+  }
+
+  _TyXmlTagImportContext & m_rctx;
+  // This contains the current lookup for the current tag only which we will update as we find mappings passed to 
+  _TyMapNamespaces m_mapNamespacesCurrentTag;
+  // This contains the old mappings for each (prefix,uri) so they can be restored.
+  _TyRgPrPStr m_rgprpstrOldMappings;
+  // This contains the old namespace tree node to restore.
+  _TyStrongNamespaceTreeNode m_spRestoreNamespaceNode;
+};
+
 template < class t_TyTpTransports >
 class xml_tag_var
 {
@@ -38,6 +199,19 @@ public:
   typedef std::variant< _TyStrongThis, _TyXmlTokenVar > _TyVariant;
   typedef std::vector< _TyVariant > _TyRgTokens;
   typedef _xml_document_context_transport_var< _TyTpTransports > _TyXmlDocumentContextVar;
+
+  // Get the first transport from the tuple-pack and use that character type as the type for namespace storage, arbitrarily.
+  typedef typename tuple_element< 0, _TyTpTransports >::type _TyTransportFirst;
+  typedef typename _TyTransportFirst::_TyChar _TyCharTransportFirst;
+  // If we contain namespaces then we will have an associated namespace tree.
+  typedef xml_namespace_tree_node< _TyCharTransportFirst > _TyXmlNamespaceTreeNode;
+  typedef typename _TyXmlNamespaceTreeNode::_TyStrongThis _TyStrongNamespaceTreeNode;
+  
+  // When importing via xml_read_cursor we need to maintain a context in order to transmit options
+  //  and contain context used in construction of the namespace tree.
+  typedef _xml_tag_import_context_var< _TyTpTransports > _TyXmlTagImportContext;
+  typedef typename _TyXmlTagImportContext::_TyXmlTagImportOptions _TyXmlTagImportOptions;
+  typedef _xml_local_import_context_var< _TyTpTransports > _TyXmlLocalImportContext;
 
   virtual ~xml_tag_var() = default;
   xml_tag_var() = default;
@@ -93,6 +267,7 @@ public:
   {
     Assert( _rxrc.FInsideDocumentTag() );
     VerifyThrowSz( _rxrc.FInsideDocumentTag(), "Read cursor is in an invalid state." );
+    VerifyThrowSz( _rspThis.FIsT( this ), "Must pass the shared object containing this xml_tag_var object." );
 
     // We can't acquire the token until the call the FNextTag().
     _AcquireContent( _rxrc );
@@ -257,6 +432,7 @@ public:
   {
     Assert( _rxrc.FInProlog() || _rxrc.FInsideDocumentTag() );
     VerifyThrowSz( _rxrc.FInProlog() || _rxrc.FInsideDocumentTag(), "Read cursor is in an invalid state." );
+    VerifyThrowSz( _rspThis.FIsT( this ), "Must pass the shared object containing this xml_document_var object." );
     // Read each element in order. When done transfer the user object, UriMap and PrefixMap over to this object.
     // We can attach at any point during the iteration and we will glean the XMLDecl top node from the read cursor.
     

@@ -22,7 +22,6 @@ __XMLP_BEGIN_NAMESPACE
 
 // _xml_tag_import_options:
 // Options for importing from an xml_read_cursor into the DOM.
-template < class t_TyXmlTraits >
 class _xml_tag_import_options
 {
   typedef _xml_tag_import_options _TyThis;
@@ -34,6 +33,7 @@ public:
   bool m_fFilterRedundantNamespaceDecls{false}; // This will remove redundant namespace declarations while importing into the DOM.
 };
 
+// _xml_tag_import_context:
 // Context for reading from an XML Stream. This keeps track of the current mapping of namespaces
 //  to allow appropriate creation of namespace declarations when none are present for a given
 //  (prefix,URI). Also stores any options associated with the conversion of the stream into the document
@@ -46,7 +46,7 @@ public:
   typedef t_TyXmlTraits _TyXmlTraits;
   typedef typename _TyXmlTraits::_TyChar _TyChar;
   typedef typename _TyXmlTraits::_TyStdStr _TyStdStr;
-  typedef _xml_tag_import_options< _TyXmlTraits > _TyXmlTagImportOptions;
+  typedef _xml_tag_import_options _TyXmlTagImportOptions;
   typedef _xml_document_context_transport< _TyXmlTraits > _TyXmlDocumentContext;
 
   // We map to the permanent URI in the document context (somewhere).

@@ -95,13 +95,14 @@ template < class t_TyXmlTraits >
 class xml_tag;
 template < class t_TyXmlTraits >
 class xml_document;
-template < class t_TyXmlTraits >
 class _xml_tag_import_options;
 template < class t_TyXmlTraits >
 class _xml_tag_import_context;
 template < class t_TyXmlTraits >
 class _xml_local_import_context;
 // xml_tag_var.h:
+template < class t_TyTpTransports >
+class _xml_tag_import_context_var;
 template < class t_TyTpTransports >
 class xml_tag_var;
 template < class t_TyTpTransports >
