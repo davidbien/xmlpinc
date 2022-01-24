@@ -175,18 +175,18 @@ public:
     if ( _fWriteBOM )
       WriteBOM< _TyChar, _TyFSwitchEndian >( m_foFile.HFileGet() );
     // Leave the file right where it is and map it here - the mapping will take care of correctly offsetting everything.
-	  m_nbyMapAtPosition = (size_t)NFileSeekAndThrow(m_foFile.HFileGet(), 0, vkSeekCur);
+	  m_nbyMapAtPosition = (uint64_t)NFileSeekAndThrow(m_foFile.HFileGet(), 0, vkSeekCur);
     size_t stMapBytes = s_knGrowFileByBytes;
     int iResult = FileSetSize( m_foFile.HFileGet(), m_nbyMapAtPosition + stMapBytes ); // Set initial size.
     if ( !!iResult )
       THROWNAMEDEXCEPTIONERRNO(GetLastErrNo(), "FileSetSize() failed.");
-    size_t stSizeMapping;
-    size_t stResultMapAtPosition = m_nbyMapAtPosition; // The result will be m_nbyMapAtPosition % PageSize().
-    m_fmoMap.SetHMMFile( MapReadWriteHandle( m_foFile.HFileGet(), &stSizeMapping, &stResultMapAtPosition ) );
+    uint64_t u64SizeMapping;
+    uint64_t u64ResultMapAtPosition = m_nbyMapAtPosition; // The result will be m_nbyMapAtPosition % PageSize().
+    m_fmoMap.SetHMMFile( MapReadWriteHandle( m_foFile.HFileGet(), &u64SizeMapping, &u64ResultMapAtPosition ) );
     if ( !m_fmoMap.FIsOpen() )
       THROWNAMEDEXCEPTIONERRNO(GetLastErrNo(), "MapReadWriteHandle() failed.");
-    Assert( ( stSizeMapping - stResultMapAtPosition ) == stMapBytes );
-    m_pcCur = m_pcBase = (_TyChar*)m_fmoMap.Pby( stResultMapAtPosition );
+    Assert( size_t( u64SizeMapping - u64ResultMapAtPosition ) == stMapBytes );
+    m_pcCur = m_pcBase = (_TyChar*)m_fmoMap.Pby( (size_t)u64ResultMapAtPosition );
     m_pcEnd = m_pcCur + ( stMapBytes / sizeof( _TyChar) );
   }
 
@@ -259,15 +259,15 @@ protected:
     int iFileSetSize = FileSetSize( m_foFile.HFileGet(), m_nbyMapAtPosition + nbyOldMapping + nbyGrowBy );
     if (-1 == iFileSetSize)
       THROWNAMEDEXCEPTIONERRNO( GetLastErrNo(), "FileSetSize() failed." );
-    size_t stSizeMapping;
-    size_t stResultMapAtPosition = m_nbyMapAtPosition; // The result will be m_nbyMapAtPosition % PageSize().
-    m_fmoMap.SetHMMFile( MapReadWriteHandle( m_foFile.HFileGet(), &stSizeMapping, &stResultMapAtPosition ) );
+    uint64_t u64SizeMapping;
+    uint64_t u64ResultMapAtPosition = m_nbyMapAtPosition; // The result will be m_nbyMapAtPosition % PageSize().
+    m_fmoMap.SetHMMFile( MapReadWriteHandle( m_foFile.HFileGet(), &u64SizeMapping, &u64ResultMapAtPosition ) );
     if ( !m_fmoMap.FIsOpen() )
       THROWNAMEDEXCEPTIONERRNO( GetLastErrNo(), "Remapping failed." );
-    Assert( ( stSizeMapping - stResultMapAtPosition ) == nbyOldMapping + nbyGrowBy );
+    Assert( ( u64SizeMapping - u64ResultMapAtPosition ) == nbyOldMapping + nbyGrowBy );
     size_t nchOffsetCur = m_pcCur - m_pcBase;
-    m_pcBase = (_TyChar*)m_fmoMap.Pby( stResultMapAtPosition );
-    m_pcEnd = m_pcBase + ( stSizeMapping / sizeof( _TyChar) );
+    m_pcBase = (_TyChar*)m_fmoMap.Pby( (size_t)u64ResultMapAtPosition );
+    m_pcEnd = m_pcBase + ( u64SizeMapping / sizeof( _TyChar) );
     m_pcCur = m_pcBase + nchOffsetCur;
   }
   // Allow throwing on error because closing actually does something and we need to know if it succeeds.
@@ -318,7 +318,7 @@ protected:
 
   FileObj m_foFile;
   FileMappingObj m_fmoMap;
-  size_t m_nbyMapAtPosition{0}; // We save this because we may be growing the file.
+  uint64_t m_nbyMapAtPosition{0}; // We save this because we may be growing the file.
   _TyChar * m_pcBase{nullptr};
   _TyChar * m_pcCur{nullptr};
   _TyChar * m_pcEnd{nullptr};

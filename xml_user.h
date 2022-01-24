@@ -616,7 +616,7 @@ public:
             if ( !tch )
             {
               Assert( nCharsRemaining >= sv.length() );
-              vtyDataPosition nCharsCopy = min( nCharsRemaining, sv.length() );
+              size_t nCharsCopy = min( nCharsRemaining, sv.length() );
               Assert( nCharsCopy == sv.length() ); // should have reserved enough.
               memcpy( pcCur, &sv[0], nCharsCopy * sizeof( _TyChar ) );
               pcCur += nCharsCopy;

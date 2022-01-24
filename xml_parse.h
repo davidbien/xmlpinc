@@ -197,9 +197,9 @@ public:
       THROWXMLPARSEEXCEPTIONERRNO( vkerrInvalidArgument, "Content is in [%s] character encoding. This parser only supports the [%s] character encoding.", 
           PszCharacterEncodingShort( efceEncoding ), PszCharacterEncodingShort( efceSupported )  );
     }
-    uint64_t nbyLenContent = _nbyLenBytes - nbyLenBOM;
+    size_t nbyLenContent = size_t( _nbyLenBytes - nbyLenBOM );
     void * pvContentStart = (uint8_t*)_pv + nbyLenBOM;
-    VerifyThrowSz( !( nbyLenContent % sizeof(_TyChar) ), "Content byte size[%llu] is not a integral multiple of character size[%zu].", nbyLenContent, sizeof(_TyChar) );
+    VerifyThrowSz( !( nbyLenContent % sizeof(_TyChar) ), "Content byte size[%zu] is not a integral multiple of character size[%zu].", nbyLenContent, sizeof(_TyChar) );
     emplaceTransport( (const _TyChar *)pvContentStart, nbyLenContent / sizeof(_TyChar) );
     return GetReadCursor();
   }
@@ -387,7 +387,7 @@ protected:
   template < class t_TyTransport >
   void _OpenParserTransportVar( const void * _pv, uint64_t _nbyLenContent )
   {
-    emplaceVarTransport< t_TyTransport >( (const _TyChar *)_pv, _nbyLenContent / sizeof( _TyChar ) );
+    emplaceVarTransport< t_TyTransport >( (const _TyChar *)_pv, size_t( _nbyLenContent / sizeof( _TyChar ) ) );
   }
   template <>
   void _OpenParserTransportVar< false_type >( const void * _pv, uint64_t _nbyLenContent )
@@ -647,7 +647,7 @@ protected:
     typedef typename _TyParser::_TyChar _TyChar;
     // We have a type, now, that is present in the variant...
     _TyParser & rp = m_varParser.template emplace< t_TyParser >();
-    rp.emplaceTransport( (const _TyChar *)_pv, _nbyLenBytes / sizeof(_TyChar) );
+    rp.emplaceTransport( (const _TyChar *)_pv, size_t( _nbyLenBytes / sizeof(_TyChar) ) );
   }
   template <>
   void _OpenParser< false_type >( const void * _pv, uint64_t _nbyLenBytes, EFileCharacterEncoding _efceEncoding )
@@ -810,7 +810,7 @@ protected:
     typedef xml_parser< _TyXmlTraits > _TyXmlParser;
     // We have a type, now, that is present in the variant...
     _TyXmlParser & rp = m_varParser.template emplace< _TyXmlParser >();
-    rp.template emplaceVarTransport< _TyTransport >( (const _TyChar *)_pv, _nbyLenBytes / sizeof(_TyChar) );
+    rp.template emplaceVarTransport< _TyTransport >( (const _TyChar *)_pv, size_t( _nbyLenBytes / sizeof(_TyChar) ) );
   }
   template < class t_TyTransport, class t_TyVarTransport >
   void _OpenParserTransportVar( const void * _pv, uint64_t _nbyLenBytes, EFileCharacterEncoding _efceEncoding )
