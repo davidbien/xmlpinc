@@ -593,8 +593,8 @@ public:
       return;
     _rcxt.AssertValidDataRange( kdtr );
     // Then we must back with a string:
-    vtyDataPosition nCharsCount = _NChars( kdtr, _rcxt );
-    vtyDataPosition nCharsRemaining = nCharsCount;
+    size_t nCharsCount = _NChars( kdtr, _rcxt );
+    size_t nCharsRemaining = nCharsCount;
     t_TyString strBacking( nCharsRemaining, 0 ); // Return the type the caller asked for.
     if ( kdtr.FContainsSingleDataRange(s_kdtPlainText) )
     {
@@ -651,8 +651,8 @@ public:
     // Then we must back with a converted string, attempt to use an alloca() buffer:
     static size_t knchMaxAllocaSize = vknbyMaxAllocaSize / sizeof( _TyChar );
     typename t_TyToken::_TyValue::template get_string_type< _TyChar > strTempBuf; // For when we have more than knchMaxAllocaSize.
-    vtyDataPosition nCharsCount = _NChars( kdtr, _rcxt );
-    vtyDataPosition nCharsRemaining = nCharsCount;
+    size_t nCharsCount = _NChars( kdtr, _rcxt );
+    size_t nCharsRemaining = nCharsCount;
     _TyChar * pcBuf;
     if ( nCharsCount > knchMaxAllocaSize )
     {
@@ -682,7 +682,7 @@ public:
             if ( !tch )
             {
               Assert( nCharsRemaining >= sv.length() );
-              vtyDataPosition nCharsCopy = min( nCharsRemaining, sv.length() );
+              size_t nCharsCopy = min( nCharsRemaining, sv.length() );
               Assert( nCharsCopy == sv.length() ); // should have reserved enough.
               memcpy( pcCur, &sv[0], nCharsCopy * sizeof( _TyChar ) );
               pcCur += nCharsCopy;

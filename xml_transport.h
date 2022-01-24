@@ -72,12 +72,12 @@ public:
       if ( !fFlush )
       {
         if ( !fInUnwinding )
-          THROWNAMEDEXCEPTIONERRNO( GetLastErrNo(), "Failed to write to file handle [0x%lx].", (uint64_t)m_foFile.HFileGet() );
+          THROWNAMEDEXCEPTIONERRNO( GetLastErrNo(), "Failed to write to file handle [0x%zx].", (size_t)m_foFile.HFileGet() );
         else
         {
           try
           {
-            LOGSYSLOGERRNO( eslmtError, GetLastErrNo(), "Failed to write to file handle [0x%lx].", (uint64_t)m_foFile.HFileGet() );
+            LOGSYSLOGERRNO( eslmtError, GetLastErrNo(), "Failed to write to file handle [0x%zx].", (size_t)m_foFile.HFileGet() );
           }
           catch( ... )
           {

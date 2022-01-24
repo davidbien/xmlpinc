@@ -20,12 +20,12 @@
 __XMLP_BEGIN_NAMESPACE
 __XMLPLEX_USING_NAMESPACE
 
-inline EFileCharacterEncoding _XmlParserGetEncoding( const void * _pv, size_t _nbyLenBytes, size_t & _rnbyLenBOM )
+inline EFileCharacterEncoding _XmlParserGetEncoding( const void * _pv, uint64_t _nbyLenBytes, uint64_t & _rnbyLenBOM )
 {
   Assert( !!_pv );
   Assert( _nbyLenBytes >= vknBytesBOM );
   VerifyThrowSz( !!_pv, "There is no data that can be derived from a null pointer...");
-  VerifyThrowSz( _nbyLenBytes >= vknBytesBOM, "The smallest XML file is four bytes. This one is less than four[%lu].", _nbyLenBytes );
+  VerifyThrowSz( _nbyLenBytes >= vknBytesBOM, "The smallest XML file is four bytes. This one is less than four[%llu].", _nbyLenBytes );
   _rnbyLenBOM = _nbyLenBytes;
   EFileCharacterEncoding efceEncoding = GetCharacterEncodingFromBOM( (uint8_t*)_pv, _rnbyLenBOM ); // sus the encoding and return its length in nbyRead.
   if ( efceFileCharacterEncodingCount == efceEncoding )
@@ -48,7 +48,7 @@ inline EFileCharacterEncoding _XmlParserOpenFile( const string & _rstrFileName, 
   FileObj fo( OpenReadOnlyFile( _rstrFileName.c_str() ) );
   VerifyThrowSz( fo.FIsOpen(), "Couldn't open file [%s]", _rstrFileName.c_str() );
   uint8_t rgbyBOM[vknBytesBOM];
-  size_t nbyRead;
+  uint64_t nbyRead;
   int iResult = FileRead( fo.HFileGet(), rgbyBOM, vknBytesBOM, &nbyRead );
   Assert( !iResult );
   Assert( nbyRead == vknBytesBOM );
@@ -184,10 +184,10 @@ public:
     return GetReadCursor();
   }
   // This will "open" a memory block. If it is in the wrong format it will throw an xml_parse_exception.
-  _TyReadCursor OpenMemory( const void * _pv, size_t _nbyLenBytes )
+  _TyReadCursor OpenMemory( const void * _pv, uint64_t _nbyLenBytes )
     requires( !s_kfIsVariantTransport )
   {
-    size_t nbyLenBOM;
+    uint64_t nbyLenBOM;
     EFileCharacterEncoding efceEncoding = _XmlParserGetEncoding( _pv, _nbyLenBytes, nbyLenBOM );
     // If we don't support this type of file then we should set the "invalid argument" error code and throw such an error:
     EFileCharacterEncoding efceSupported = _TyTransport::GetSupportedCharacterEncoding();
@@ -197,23 +197,23 @@ public:
       THROWXMLPARSEEXCEPTIONERRNO( vkerrInvalidArgument, "Content is in [%s] character encoding. This parser only supports the [%s] character encoding.", 
           PszCharacterEncodingShort( efceEncoding ), PszCharacterEncodingShort( efceSupported )  );
     }
-    size_t nbyLenContent = _nbyLenBytes - nbyLenBOM;
+    uint64_t nbyLenContent = _nbyLenBytes - nbyLenBOM;
     void * pvContentStart = (uint8_t*)_pv + nbyLenBOM;
-    VerifyThrowSz( !( nbyLenContent % sizeof(_TyChar) ), "Content byte size[%lu] is not a integral multiple of character size[%lu].", nbyLenContent, sizeof(_TyChar) );
+    VerifyThrowSz( !( nbyLenContent % sizeof(_TyChar) ), "Content byte size[%llu] is not a integral multiple of character size[%zu].", nbyLenContent, sizeof(_TyChar) );
     emplaceTransport( (const _TyChar *)pvContentStart, nbyLenContent / sizeof(_TyChar) );
     return GetReadCursor();
   }
   // This will "open" a memory block using the transport var. If it is in the wrong format it will throw an xml_parse_exception.
   // Since currently there is only one type of fixed memory transport.
   template < template < class ... > class t_tempTyTransport = _l_transport_fixedmem >
-  _TyReadCursor OpenMemoryVar( const void * _pv, size_t _nbyLenBytes )
+  _TyReadCursor OpenMemoryVar( const void * _pv, uint64_t _nbyLenBytes )
     requires( s_kfIsVariantTransport )
   {
     typedef typename _TyTransport::_TyVariant _TyTransportVariant;
     static_assert( has_type_v< t_tempTyTransport< _TyChar, false_type >, _TyTransportVariant >
                   || has_type_v< t_tempTyTransport< _TyChar, true_type >, _TyTransportVariant >,
                   "The transport variant type doesn't support this transport template class for any character encoding. Add types to the transport variant to support this transport template." );
-    size_t nbyLenBOM;
+    uint64_t nbyLenBOM;
     EFileCharacterEncoding efceEncoding = _XmlParserGetEncoding( _pv, _nbyLenBytes, nbyLenBOM );
     // If we don't support this type of file then we should set the "invalid argument" error code and throw such an error:
     size_t bvSupportedEncodings = _TyTransport::GetSupportedEncodingBitVector();
@@ -223,9 +223,9 @@ public:
       THROWXMLPARSEEXCEPTIONERRNO( vkerrInvalidArgument, "The content is in [%s] character encoding. This parser type doesn't support that encoding. Use a different parser type or a variant parser.", 
           m_strFileName.c_str(), PszCharacterEncodingShort( efceEncoding ) );
     }
-    size_t nbyLenContent = _nbyLenBytes - nbyLenBOM;
+    uint64_t nbyLenContent = _nbyLenBytes - nbyLenBOM;
     void * pvContentStart = (uint8_t*)_pv + nbyLenBOM;
-    VerifyThrowSz( !( nbyLenContent % sizeof(_TyChar) ), "Content byte size[%lu] is not a integral multiple of character size[%lu].", nbyLenContent, sizeof(_TyChar) );
+    VerifyThrowSz( !( nbyLenContent % sizeof(_TyChar) ), "Content byte size[%llu] is not a integral multiple of character size[%zu].", nbyLenContent, sizeof(_TyChar) );
     // Try to match the encoding to a type that is within the variant. If it doesn't match then we throw an error.
     switch( efceEncoding )
     {
@@ -365,7 +365,7 @@ protected:
     _OpenParserTransportVar< _TyTransportResult >( _rfo);
   }
   template < class t_TyTransport >
-  void _OpenParserCheckTransportVar( const void * _pv, size_t _nbyLenContent )
+  void _OpenParserCheckTransportVar( const void * _pv, uint64_t _nbyLenContent )
   {
     typedef t_TyTransport _TyTransportCheck;
     typedef typename _TyTransport::_TyVariant _TyTransportVariant;
@@ -385,12 +385,12 @@ protected:
     VerifyThrowSz( false, "Shouldn't get here.");
   }
   template < class t_TyTransport >
-  void _OpenParserTransportVar( const void * _pv, size_t _nbyLenContent )
+  void _OpenParserTransportVar( const void * _pv, uint64_t _nbyLenContent )
   {
     emplaceVarTransport< t_TyTransport >( (const _TyChar *)_pv, _nbyLenContent / sizeof( _TyChar ) );
   }
   template <>
-  void _OpenParserTransportVar< false_type >( const void * _pv, size_t _nbyLenContent )
+  void _OpenParserTransportVar< false_type >( const void * _pv, uint64_t _nbyLenContent )
   {
     Assert( 0 ); // We should never get here because we should never be in the case where we would try to instatiate this type...
     // But the code won't compile with out it. Our test cases test all possibilites so we don't even need to throw from here - but we will anyway.
@@ -489,7 +489,7 @@ public:
     return _OpenFileVar< t__tempTyTransport >( _pszFileName );
   }
   // This will "open" a memory block. If it is in the wrong format it will throw an xml_parse_exception.
-  _TyReadCursorVar OpenMemory( const void * _pv, size_t _nbyLenBytes )
+  _TyReadCursorVar OpenMemory( const void * _pv, uint64_t _nbyLenBytes )
     requires( !s_kfIsVariantTransport )
   {
     return _OpenMemory( _pv, _nbyLenBytes );
@@ -497,7 +497,7 @@ public:
   // This will "open" a memory block. If it is in the wrong format it will throw an xml_parse_exception.
   // Default to the only current fixed memory transport template.
   template < template < class ... > class t__tempTyTransport = _l_transport_fixedmem >
-  _TyReadCursorVar OpenMemoryVar( const void * _pv, size_t _nbyLenBytes )
+  _TyReadCursorVar OpenMemoryVar( const void * _pv, uint64_t _nbyLenBytes )
     requires( s_kfIsVariantTransport )
   {
     return _OpenMemoryVar< t__tempTyTransport >( _pv, _nbyLenBytes );
@@ -587,12 +587,12 @@ protected:
         "This variant parser type doesn't support that character encoding. Add types to the parser to support it.", 
         m_strFileName.c_str(), PszCharacterEncodingShort( _efceEncoding ) );
   }
-  _TyReadCursorVar _OpenMemory( const void * _pv, size_t _nbyLenBytes )
+  _TyReadCursorVar _OpenMemory( const void * _pv, uint64_t _nbyLenBytes )
     requires( !s_kfIsVariantTransport )
   {
-    size_t nbyLenBOM;
+    uint64_t nbyLenBOM;
     EFileCharacterEncoding efceEncoding = _XmlParserGetEncoding( _pv, _nbyLenBytes, nbyLenBOM );
-    size_t nbyLenContent = _nbyLenBytes - nbyLenBOM;
+    uint64_t nbyLenContent = _nbyLenBytes - nbyLenBOM;
     void * pvContentStart = (uint8_t*)_pv + nbyLenBOM;
     // Now, based on BOM and type, we must try to instantiate but fail with a throw if the type of file we want to instantiate isn't in our variant's type...
     switch( efceEncoding )
@@ -629,7 +629,7 @@ protected:
     return GetReadCursor();
   }
   template < class t_TyTransport >
-  void _OpenCheckParserType( const void * _pv, size_t _nbyLenBytes, EFileCharacterEncoding _efceEncoding )
+  void _OpenCheckParserType( const void * _pv, uint64_t _nbyLenBytes, EFileCharacterEncoding _efceEncoding )
     requires( !s_kfIsVariantTransport )
   {
     typedef t_TyTransport _TyTransport;
@@ -637,11 +637,11 @@ protected:
     typedef TGetXmlTraitsDefault< _TyTransport > _TyXmlTraits;
     typedef xml_parser< _TyXmlTraits > _TyXmlParser;
     typedef conditional_t< has_type_v< _TyXmlParser, _TyParserVariant >, _TyXmlParser, false_type > _TyXmlParserInVariant;
-    VerifyThrowSz( !( _nbyLenBytes % sizeof( _TyChar ) ), "Content byte size[%ul] is not an integral multiple of character size[%lu].", _nbyLenBytes, sizeof( _TyChar ) );
+    VerifyThrowSz( !( _nbyLenBytes % sizeof( _TyChar ) ), "Content byte size[%llu] is not an integral multiple of character size[%zu].", _nbyLenBytes, sizeof( _TyChar ) );
     _OpenParser< _TyXmlParserInVariant >( _pv, _nbyLenBytes, _efceEncoding );
   }
   template < class t_TyParser >
-  void _OpenParser( const void * _pv, size_t _nbyLenBytes, EFileCharacterEncoding _efceEncoding )
+  void _OpenParser( const void * _pv, uint64_t _nbyLenBytes, EFileCharacterEncoding _efceEncoding )
   {
     typedef t_TyParser _TyParser;
     typedef typename _TyParser::_TyChar _TyChar;
@@ -650,7 +650,7 @@ protected:
     rp.emplaceTransport( (const _TyChar *)_pv, _nbyLenBytes / sizeof(_TyChar) );
   }
   template <>
-  void _OpenParser< false_type >( const void * _pv, size_t _nbyLenBytes, EFileCharacterEncoding _efceEncoding )
+  void _OpenParser< false_type >( const void * _pv, uint64_t _nbyLenBytes, EFileCharacterEncoding _efceEncoding )
   {
     SetLastErrNo( vkerrInvalidArgument );
     THROWXMLPARSEEXCEPTIONERRNO( vkerrInvalidArgument, "The content is in [%s] character encoding. " 
@@ -739,7 +739,7 @@ protected:
   }
   // This will open the file with transport t__tempTyTransport if possible.
   template < template < class ... > class t__tempTyTransport >
-  _TyReadCursorVar _OpenMemoryVar( const void * _pv, size_t _nbyLenBytes )
+  _TyReadCursorVar _OpenMemoryVar( const void * _pv, uint64_t _nbyLenBytes )
     requires( s_kfIsVariantTransport )
   {
     // First we want to fail the compile entirely if the template in question is not present whatsoever for any potential encoding.
@@ -751,9 +751,9 @@ protected:
                   find_container_v< t__tempTyTransport< char32_t, true_type >, _TyTpTransports >,
                   "The transport variant type doesn't support this transport template class for any character encoding. Add types to the transport variant to support this template class." );
 
-    size_t nbyLenBOM;
+    uint64_t nbyLenBOM;
     EFileCharacterEncoding efceEncoding = _XmlParserGetEncoding( _pv, _nbyLenBytes, nbyLenBOM );
-    size_t nbyLenContent = _nbyLenBytes - nbyLenBOM;
+    uint64_t nbyLenContent = _nbyLenBytes - nbyLenBOM;
     void * pvContentStart = (uint8_t*)_pv + nbyLenBOM;
     // Now, based on BOM and type, we must try to instantiate but fail with a throw if the type of file we want to instantiate isn't in our variant's type....
     switch( efceEncoding )
@@ -790,17 +790,17 @@ protected:
     return GetReadCursor();
   }
   template < class t_TyTransport >
-  void _OpenParserCheckTransportVar( const void * _pv, size_t _nbyLenBytes, EFileCharacterEncoding _efceEncoding )
+  void _OpenParserCheckTransportVar( const void * _pv, uint64_t _nbyLenBytes, EFileCharacterEncoding _efceEncoding )
   {
     typedef t_TyTransport _TyTransport;
     typedef typename _TyTransport::_TyChar _TyChar;
     // Find which transport variant this transport type is container in, if any.
     typedef find_container_t< _TyTransport, _TyTpTransports, false_type > _TyVarTransport;
-    VerifyThrowSz( !( _nbyLenBytes % sizeof(_TyChar) ), "Content byte size[%ul] is not an integral multiple of character size[%lu].", _nbyLenBytes, sizeof(_TyChar) );
+    VerifyThrowSz( !( _nbyLenBytes % sizeof(_TyChar) ), "Content byte size[%llu] is not an integral multiple of character size[%zu].", _nbyLenBytes, sizeof(_TyChar) );
     _OpenParserTransportVar< _TyTransport, _TyVarTransport >( _pv, _nbyLenBytes, _efceEncoding );
   }
   template < class t_TyTransport, class t_TyVarTransport >
-  void _OpenParserTransportVar( const void * _pv, size_t _nbyLenBytes, EFileCharacterEncoding _efceEncoding )
+  void _OpenParserTransportVar( const void * _pv, uint64_t _nbyLenBytes, EFileCharacterEncoding _efceEncoding )
     requires ( !is_same_v< t_TyVarTransport, false_type > ) // Can't opartially explicit specialize just one argument of a function template so use this workaround. Thanks requires.
   {
     typedef t_TyVarTransport _TyVarTransport;
@@ -813,7 +813,7 @@ protected:
     rp.template emplaceVarTransport< _TyTransport >( (const _TyChar *)_pv, _nbyLenBytes / sizeof(_TyChar) );
   }
   template < class t_TyTransport, class t_TyVarTransport >
-  void _OpenParserTransportVar( const void * _pv, size_t _nbyLenBytes, EFileCharacterEncoding _efceEncoding )
+  void _OpenParserTransportVar( const void * _pv, uint64_t _nbyLenBytes, EFileCharacterEncoding _efceEncoding )
     requires ( is_same_v< t_TyVarTransport, false_type > )
   {
     SetLastErrNo( vkerrInvalidArgument );
