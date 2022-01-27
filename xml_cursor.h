@@ -425,9 +425,10 @@ public:
       else
       if ( s_knTokenEmptyElemTag == tidTail )
       {
-        // In the case of an empty element we may have content for the parent tag after us, another tag, or the end tag of our parent.
+        // In the case of an empty element we may have content for the parent tag after us, another tag, the end tag of our parent, or nothing at all.
         // So really no restrictions at all... lol.
-        Assert( _FIsContentToken( tidLookahead ) || ( ( s_knTokenSTag == tidLookahead ) || ( s_knTokenEmptyElemTag == tidLookahead ) || ( s_knTokenETag == tidLookahead ) ) );
+        Assert( ( vktidInvalidIdToken == tidLookahead ) || _FIsContentToken( tidLookahead ) || ( ( s_knTokenSTag == tidLookahead ) ||
+                  ( s_knTokenEmptyElemTag == tidLookahead ) || ( s_knTokenETag == tidLookahead ) ) );
       }
       if ( _fIncludeContextList )
       {
@@ -524,7 +525,6 @@ public:
   bool FMoveDown()
   {
     AssertValid( true );
-    Assert( !!m_pltokLookahead );
     if ( !_FAtTailContext() )
     {
       ++m_itCurContext;
@@ -588,8 +588,6 @@ public:
   bool FNextTag( _TyOptXmlToken * _popttokRtnSpentTag = nullptr, bool _fReleaseNamespaces = true )
   {
     AssertValid( true );
-    if ( !m_pltokLookahead )
-      return false; // at eof.
     vtyTokenIdent tidCur = m_itCurContext->GetTagTokenId();
     if ( s_knTokenEmptyElemTag == tidCur )
     {
@@ -599,6 +597,8 @@ public:
       _PopContext( _popttokRtnSpentTag, _fReleaseNamespaces );
       return _FProcessNextTag();
     }
+    if ( !m_pltokLookahead )
+      return false; // at eof.
     if ( s_knTokenSTag == tidCur )
     {
       // We will read until the end of this tag on the current level of the iterator.
