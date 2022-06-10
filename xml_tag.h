@@ -17,6 +17,8 @@
 #include "_shwkptr.h"
 #include "xml_types.h"
 #include "xml_namespace_tree.h"
+#include <deque>
+#include <stack>
 
 __XMLP_BEGIN_NAMESPACE
 
@@ -119,6 +121,14 @@ public:
   }
   ~_xml_local_import_context()
   {
+    Reset();
+  }
+  bool FIsEmpty() const
+  {
+    return m_rgprpstrOldMappings.empty() && !m_spRestoreNamespaceNode;
+  }
+  void Reset()
+  {
     typename _TyRgPrPStr::const_iterator citRestore = m_rgprpstrOldMappings.begin();
     typename _TyRgPrPStr::const_iterator citRestoreEnd = m_rgprpstrOldMappings.end();
     for ( ; citRestoreEnd != citRestore; ++citRestore )
@@ -137,8 +147,12 @@ public:
             itFound->second = citRestore->second; // restore it to previous value.
       }
     }
+    m_rgprpstrOldMappings.clear();
     if ( m_spRestoreNamespaceNode )
+    {
       m_rctx.m_spCurNamespaceNode = m_spRestoreNamespaceNode;
+      m_spRestoreNamespaceNode.reset();
+    }
   }
 
   void RegisterPrefixUri( const _TyStdStr & _rstrPrefix, const _TyStdStr & _rstrUri, bool _fIsNamespaceDecl )
@@ -332,78 +346,142 @@ public:
     m_opttokTag = std::move( _rrtok );
     m_opttokTag->AssertValid();
   }
-  // Read from this read cursor into this object.
-  void FromXmlStream( _TyReadCursor & _rxrc, _TyStrongThis const & _rspThis, _TyXmlTagImportContext & _rxtix )
+
+protected:
+  // To avoid recursion potentially blowing out the stack and exposing a potential vulnerability we use a stack of contexts.
+  struct FXS_Context
   {
-    Assert( _rxrc.FInsideDocumentTag() );
-    VerifyThrowSz( _rxrc.FInsideDocumentTag(), "Read cursor is in an invalid state." );
-
-    _TyXmlLocalImportContext xlic( _rxtix );
-
-    Assert( !m_spNamespaceTreeNode );
-    if ( _rxtix.m_spCurNamespaceNode )
+    FXS_Context( _TyStrongThis const & _rspTag, _TyXmlTagImportContext & _rxtix, _TyStrongThis const & _rspParent )
+      : m_xlic( _rxtix ),
+        m_spXmlTag( _rspTag ),
+        m_spXmlParent( _rspParent )
     {
-      // Then we are processing namespaces and must do so on the current tag before continuing with subtags.
-      // The tag remains in the xml_read_cursor necessarily since it must be there to accomodate the read cursor's
-      //  namespace system. However we must create and populate all eventual namespace declaraions at this tag now
-      //  as we will need these to evaluate the same below in the tree as we move down.
-      _TyXmlToken & tokTagCur = _rxrc.GetTagCur();
-      Assert( ( tokTagCur.GetTokenId() == s_knTokenSTag ) || ( tokTagCur.GetTokenId() == s_knTokenEmptyElemTag ) );
-      {//B - We have to check for any namespace on the tag itself:
-        const _TyLexValue & rvTagNamespace = tokTagCur[vknTagNameIdx][vknNamespaceIdx];
-        if ( rvTagNamespace.template FIsA<_TyXmlNamespaceValueWrap>() )
-        {
-          const _TyXmlNamespaceValueWrap & rxnvw = rvTagNamespace.template GetVal< _TyXmlNamespaceValueWrap >();
-          xlic.RegisterPrefixUri( rxnvw.RStringPrefix(), rxnvw.RStringUri(), false );
-        }
-      }//EB
-      const typename _TyLexValue::_TySegArrayValues & rsaAttrs = tokTagCur[vknAttributesIdx].GetValueArray();
-      (void)rsaAttrs.NApplyContiguous( 0, rsaAttrs.NElements(), 
-        [&xlic]( const _TyLexValue * _pattrBegin, const _TyLexValue * _pattrEnd ) -> size_t
-        {
-          const _TyLexValue * pattrCur = _pattrBegin;
-          for ( ; _pattrEnd != pattrCur; ++pattrCur )
-          {
-            const _TyLexValue & rvNamespace = (*pattrCur)[vknNamespaceIdx];
-            if ( rvNamespace.template FIsA<_TyXmlNamespaceValueWrap>() )
-            {
-              const _TyXmlNamespaceValueWrap & rxnvw = rvNamespace.template GetVal< _TyXmlNamespaceValueWrap >();
-              xlic.RegisterPrefixUri( rxnvw.RStringPrefix(), rxnvw.RStringUri(), rxnvw.FIsAttributeNamespaceDeclaration() );
-            }
-          }
-          return ( _pattrEnd - _pattrBegin );
-        }
-      );
-      // Now check if we need any local namespaces declared or need to be declared. If so we create a node in the namespace tree,
-      //  and copy this set of namespace to it. We keep the local copy so that when we are done with our subtags we can lookup
-      //  namespace decls and determine if any decls need to be added - and which are redundant and might be removed.
-      xlic.CreateNamespaceTreeNode( this );
       
-      // Set the node for the current tag to the current namespace node - which may be the same as the parent or unique to this.
-      m_spNamespaceTreeNode = _rxtix.m_spCurNamespaceNode;
     }
-   
-   // Aquire any leading content:
-    _AcquireContent( _rxrc.GetContextCur() );
-
-    if ( _rxrc.FMoveDown() )
+    // Return if there is another tag, and if so if we _rfMovedDown.
+    bool FMoveDownOrNextTag( _TyReadCursor & _rxrc, bool & _rfMovedDown )
     {
-      bool fNextTag;
-      do
+      _rfMovedDown = false;
+      if ( !m_fNextTag )
+        _rfMovedDown = m_fNextTag = _rxrc.FMoveDown();
+      if ( !_rfMovedDown )
       {
-        _TyStrongThis spXmlTag( std::in_place_t(), make_unique< _TyThis >( &_rspThis ) );
-        (*spXmlTag)->FromXmlStream( _rxrc, spXmlTag, _rxtix );
-        fNextTag = _rxrc.FNextTag( &(*spXmlTag)->m_opttokTag, false ); // we have already processed the namespaces.
-        _AcquireContent( std::move( spXmlTag ) );
-        if ( !fNextTag )
+        (*m_spXmlTag)->_FXS_PostprocessNamespaces( _rxrc, *this );
+        m_xlic.Reset();
+        if ( !m_spXmlParent )
         {
-          _AcquireContent( _rxrc.GetContextCur() );
-          fNextTag = _rxrc.FMoveDown();
+          m_spXmlTag.reset(); // to always return with no m_spXmlTag.
+          return false;
         }
-      }
-      while ( fNextTag );
+        m_fNextTag = _rxrc.FNextTag( &(*m_spXmlTag)->m_opttokTag, false ); // we have already processed the namespaces.
+        (*m_spXmlParent)->_AcquireContent( std::move( m_spXmlTag ) );
+        Assert( !m_spXmlTag );
+        if ( !m_fNextTag )
+        {
+          (*m_spXmlParent)->_AcquireContent( _rxrc.GetContextCur() );
+          m_fNextTag = _rxrc.FMoveDown();
+        }
+        if ( m_fNextTag )
+        {
+          m_spXmlTag = _TyStrongThis( std::in_place_t(), make_unique< _TyThis >( &m_spXmlParent ) );
+          m_fNextTag = false; // need to reset this allowing correct operation first time processing this context.
+          return true;
+        }
+      } 
+      return m_fNextTag;
     }
 
+    _TyStrongThis m_spXmlParent;
+    _TyStrongThis m_spXmlTag;
+    _TyXmlLocalImportContext m_xlic;
+    bool m_fNextTag{ false };
+  };
+  // Then we use a static method which obtains its state from the context and operates appropriately.
+  // This does all the work - calling member methods on contained XmlTag objects. It doesn't recurse - 
+  //  it maintains a stack of current contexts.
+  static void _StaticFromStream( _TyReadCursor & _rxrc, _TyStrongThis const & _rspThis, _TyXmlTagImportContext & _rxtix )
+  {
+    typedef std::stack< FXS_Context, deque< FXS_Context > > _TyStackContexts;
+    _TyStackContexts sxContexts;
+    sxContexts.emplace( _rspThis, _rxtix, _TyStrongThis() );
+    // First operate on the current top of stack.
+    while ( !sxContexts.empty() )
+    {
+      FXS_Context & rcxt = sxContexts.top();
+      
+      if ( !rcxt.m_fNextTag )
+      { // first time through stuff.
+        if ( _rxtix.m_spCurNamespaceNode )
+          (*rcxt.m_spXmlTag)->_FXS_PreprocessNamespaces( _rxrc, rcxt );
+        // Aquire any leading content the first time through.
+        (*rcxt.m_spXmlTag)->_AcquireContent( _rxrc.GetContextCur() );
+      }
+      
+      bool fMovedDown;
+      if ( rcxt.FMoveDownOrNextTag( _rxrc, fMovedDown ) )
+      {
+        if ( fMovedDown )
+        { // This only happens on the first time through.
+          // Then we need to push a new context:
+          _TyStrongThis spXmlTag( std::in_place_t(), make_unique< _TyThis >( &rcxt.m_spXmlTag ) );
+          sxContexts.emplace( spXmlTag, _rxtix, rcxt.m_spXmlTag );
+        }
+        else
+          Assert( !rcxt.m_fNextTag );
+      }
+      else
+      {
+        // We are done with the current context.
+        sxContexts.pop();
+      }
+    }
+  }
+  void _FXS_PreprocessNamespaces( _TyReadCursor & _rxrc, FXS_Context & _rcxt )
+  {
+    Assert( !m_spNamespaceTreeNode );
+    // Then we are processing namespaces and must do so on the current tag before continuing with subtags.
+    // The tag remains in the xml_read_cursor necessarily since it must be there to accomodate the read cursor's
+    //  namespace system. However we must create and populate all eventual namespace declaraions at this tag now
+    //  as we will need these to evaluate the same below in the tree as we move down.
+    _TyXmlToken & tokTagCur = _rxrc.GetTagCur();
+    Assert( ( tokTagCur.GetTokenId() == s_knTokenSTag ) || ( tokTagCur.GetTokenId() == s_knTokenEmptyElemTag ) );
+    {//B - We have to check for any namespace on the tag itself:
+
+      const _TyLexValue & rvTagNamespace = tokTagCur[vknTagNameIdx][vknNamespaceIdx];
+      if ( rvTagNamespace.template FIsA<_TyXmlNamespaceValueWrap>() )
+      {
+        const _TyXmlNamespaceValueWrap & rxnvw = rvTagNamespace.template GetVal< _TyXmlNamespaceValueWrap >();
+        _rcxt.m_xlic.RegisterPrefixUri( rxnvw.RStringPrefix(), rxnvw.RStringUri(), false );
+      }
+    }//EB
+    const typename _TyLexValue::_TySegArrayValues & rsaAttrs = tokTagCur[vknAttributesIdx].GetValueArray();
+    (void)rsaAttrs.NApplyContiguous( 0, rsaAttrs.NElements(), 
+      [&_rcxt]( const _TyLexValue * _pattrBegin, const _TyLexValue * _pattrEnd ) -> size_t
+      {
+        const _TyLexValue * pattrCur = _pattrBegin;
+        for ( ; _pattrEnd != pattrCur; ++pattrCur )
+        {
+          const _TyLexValue & rvNamespace = (*pattrCur)[vknNamespaceIdx];
+          if ( rvNamespace.template FIsA<_TyXmlNamespaceValueWrap>() )
+          {
+            const _TyXmlNamespaceValueWrap & rxnvw = rvNamespace.template GetVal< _TyXmlNamespaceValueWrap >();
+            _rcxt.m_xlic.RegisterPrefixUri( rxnvw.RStringPrefix(), rxnvw.RStringUri(), rxnvw.FIsAttributeNamespaceDeclaration() );
+          }
+        }
+        return ( _pattrEnd - _pattrBegin );
+      }
+    );
+    // Now check if we need any local namespaces declared or need to be declared. If so we create a node in the namespace tree,
+    //  and copy this set of namespace to it. We keep the local copy so that when we are done with our subtags we can lookup
+    //  namespace decls and determine if any decls need to be added - and which are redundant and might be removed.
+    _rcxt.m_xlic.CreateNamespaceTreeNode( this );
+    
+    // Set the node for the current tag to the current namespace node - which may be the same as the parent or unique to this.
+    m_spNamespaceTreeNode = _rcxt.m_xlic.m_rctx.m_spCurNamespaceNode;
+  }
+  void _FXS_PostprocessNamespaces( _TyReadCursor & _rxrc, FXS_Context & _rcxt )
+  {
+    Assert( !!m_spNamespaceTreeNode );
     // We still don't have the tag token because it's our parent's call to FNextTag that populates it.
     // We have updated our namespace tree with declarations required in this tag but now we might need to
     //  actually create those declarations onto the end of the tag that we don't own yet...
@@ -411,66 +489,74 @@ public:
     // It's ok - we are allowed to modify the token at this point because we have already processed all subtags of this tag
     //  and this means the xml_read_cursor's namespace context is current, so when we remove namespace declarations it won't 
     //  matter - in fact they are about to be closed by the parent inside of FNextTag().
-    if ( _rxtix.m_spCurNamespaceNode )
-    {
-      _TyXmlToken & tokTagCur = _rxrc.GetTagCur();
-      typedef typename _TyXmlToken::_TyLexValue _TyLexValue;
-      typename _TyLexValue::_TySegArrayValues & rsaAttrs = tokTagCur[vknAttributesIdx].GetValueArray();
-      // If we are to prune redundant namespace declarations then get a bitmask of deletions:
-      typedef _simple_bitvec< size_t > _TyBV;
-      _TyBV bvDeletions;
-      if ( _rxtix.m_xtioImportOptions.m_fFilterRedundantNamespaceDecls )
-        bvDeletions = _TyBV( rsaAttrs.NElements() );
-      // Clear the count of namespace declarations - we are resetting them below:
-      tokTagCur[vknTagNameIdx][vknTagName_NNamespaceDeclsIdx].template GetVal< vtySignedLvalueInt >() = 0;
+    _TyXmlToken & tokTagCur = _rxrc.GetTagCur();
+    typedef typename _TyXmlToken::_TyLexValue _TyLexValue;
+    typename _TyLexValue::_TySegArrayValues & rsaAttrs = tokTagCur[vknAttributesIdx].GetValueArray();
+    // If we are to prune redundant namespace declarations then get a bitmask of deletions:
+    typedef _simple_bitvec< size_t > _TyBV;
+    _TyBV bvDeletions;
+    if ( _rcxt.m_xlic.m_rctx.m_xtioImportOptions.m_fFilterRedundantNamespaceDecls )
+      bvDeletions = _TyBV( rsaAttrs.NElements() );
+    // Clear the count of namespace declarations - we are resetting them below:
+    tokTagCur[vknTagNameIdx][vknTagName_NNamespaceDeclsIdx].template GetVal< vtySignedLvalueInt >() = 0;
 
-      size_t nAttr = 0;
-      (void)rsaAttrs.NApplyContiguous( 0, rsaAttrs.NElements(), 
-        [&nAttr,&xlic,&_rxtix,&bvDeletions]( _TyLexValue * _pattrBegin, _TyLexValue * _pattrEnd ) -> size_t
+    size_t nAttr = 0;
+    (void)rsaAttrs.NApplyContiguous( 0, rsaAttrs.NElements(), 
+      [&nAttr,&_rcxt,&bvDeletions]( _TyLexValue * _pattrBegin, _TyLexValue * _pattrEnd ) -> size_t
+      {
+        _TyLexValue * pattrCur = _pattrBegin;
+        for ( ; _pattrEnd != pattrCur; ++pattrCur )
         {
-          _TyLexValue * pattrCur = _pattrBegin;
-          for ( ; _pattrEnd != pattrCur; ++pattrCur )
+          _TyLexValue & rvNamespace = (*pattrCur)[vknNamespaceIdx];
+          if ( rvNamespace.template FIsA<_TyXmlNamespaceValueWrap>() )
           {
-            _TyLexValue & rvNamespace = (*pattrCur)[vknNamespaceIdx];
-            if ( rvNamespace.template FIsA<_TyXmlNamespaceValueWrap>() )
+            _TyXmlNamespaceValueWrap & rxnvw = rvNamespace.template GetVal< _TyXmlNamespaceValueWrap >();
+            if ( rxnvw.FIsAttributeNamespaceDeclaration() )
             {
-              _TyXmlNamespaceValueWrap & rxnvw = rvNamespace.template GetVal< _TyXmlNamespaceValueWrap >();
-              if ( rxnvw.FIsAttributeNamespaceDeclaration() )
+              rxnvw.ResetNamespaceDecls(); // The xml_read_cursor also does this but we do it now to save time and then we pass "false" to FNextTag() to stop the read cursor from also doing it.
+              typename _TyXmlLocalImportContext::_TyMapNamespaces::const_iterator citFound = _rcxt.m_xlic.m_mapNamespacesCurrentTag.find( rxnvw.RStringPrefix() );
+              if ( _rcxt.m_xlic.m_mapNamespacesCurrentTag.end() == citFound )
               {
-                rxnvw.ResetNamespaceDecls(); // The xml_read_cursor also does this but we do it now to save time and then we pass "false" to FNextTag() to stop the read cursor from also doing it.
-                typename _TyXmlLocalImportContext::_TyMapNamespaces::const_iterator citFound = xlic.m_mapNamespacesCurrentTag.find( rxnvw.RStringPrefix() );
-                if ( xlic.m_mapNamespacesCurrentTag.end() == citFound )
-                {
-                  // redundant namespace declaration - the (prefix,uri) was already populated.
-                  if ( _rxtix.m_xtioImportOptions.m_fFilterRedundantNamespaceDecls )
-                    bvDeletions.setbit( nAttr );
-                }
-                else
-                {
-                  // Then we found an existing declaration for a required namespace.
-                  Assert( citFound->second == &rxnvw.RStringUri() );
-                  xlic.m_mapNamespacesCurrentTag.erase( citFound ); // erase it so we know the set of declarations that need to be added.
-                }
+                // redundant namespace declaration - the (prefix,uri) was already populated.
+                if ( _rcxt.m_xlic.m_rctx.m_xtioImportOptions.m_fFilterRedundantNamespaceDecls )
+                  bvDeletions.setbit( nAttr );
+              }
+              else
+              {
+                // Then we found an existing declaration for a required namespace.
+                Assert( citFound->second == &rxnvw.RStringUri() );
+                _rcxt.m_xlic.m_mapNamespacesCurrentTag.erase( citFound ); // erase it so we know the set of declarations that need to be added.
               }
             }
           }
-          ++nAttr; // Since we have a segmented array we can't look up our element number and must maintain it.
-          return ( _pattrEnd - _pattrBegin );
         }
-      );
-      // Remove any namespace decls to be deleted:
-      rsaAttrs.RemoveBvElements( bvDeletions );
-      // The (prefix,uri) remaining in the xlic.m_mapNamespacesCurrentTag need have namespace declarations added to this tag.
-      for ( typename _TyXmlLocalImportContext::_TyMapNamespaces::const_iterator citAddNamespace = xlic.m_mapNamespacesCurrentTag.begin();
-            citAddNamespace != xlic.m_mapNamespacesCurrentTag.end();
-            ++citAddNamespace )
-      {
-        // We must create the XmlNamespaceValueWrap using the xml_read_cursor so that we share the (prefix,uri) string values from their hash tables.
-        tokTagCur.DeclareNamespace( _rxtix.m_rxdcDocumentContext.GetBaseContext(), 
-          _rxrc.GetNamespaceValueWrap( enrtAttrNamespaceDeclReference, citAddNamespace->first, *citAddNamespace->second ) );
+        ++nAttr; // Since we have a segmented array we can't look up our element number and must maintain it.
+        return ( _pattrEnd - _pattrBegin );
       }
+    );
+    // Remove any namespace decls to be deleted:
+    rsaAttrs.RemoveBvElements( bvDeletions );
+    // The (prefix,uri) remaining in the xlic.m_mapNamespacesCurrentTag need have namespace declarations added to this tag.
+    for ( typename _TyXmlLocalImportContext::_TyMapNamespaces::const_iterator citAddNamespace = _rcxt.m_xlic.m_mapNamespacesCurrentTag.begin();
+          citAddNamespace != _rcxt.m_xlic.m_mapNamespacesCurrentTag.end();
+          ++citAddNamespace )
+    {
+      // We must create the XmlNamespaceValueWrap using the xml_read_cursor so that we share the (prefix,uri) string values from their hash tables.
+      tokTagCur.DeclareNamespace( _rcxt.m_xlic.m_rctx.m_rxdcDocumentContext.GetBaseContext(), 
+        _rxrc.GetNamespaceValueWrap( enrtAttrNamespaceDeclReference, citAddNamespace->first, *citAddNamespace->second ) );
     }
   }
+public:
+  // Read from this read cursor into this object.
+  // REVIEW: <dbien>: Should change this to be a non-recursive implementation to avoid stack overrun vulnerability issues. <DONE>
+  void FromXmlStream( _TyReadCursor & _rxrc, _TyStrongThis const & _rspThis, _TyXmlTagImportContext & _rxtix )
+  {
+    Assert( _rxrc.FInsideDocumentTag() );
+    VerifyThrowSz( _rxrc.FInsideDocumentTag(), "Read cursor is in an invalid state." );
+    // Use a static to not mistakenly use the this pointer.
+    _StaticFromStream( _rxrc, _rspThis, _rxtix );
+  }
+  // We don't care as much that ToXmlStream() is recursive - it isn't a vulnerability.
   template < class t_TyXmlTransportOut >
   void ToXmlStream( xml_writer< t_TyXmlTransportOut > & _rxw, _TyXmlDocumentContext const & _rxdcxtDocumentContext ) const
   {
