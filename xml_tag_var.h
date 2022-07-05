@@ -89,6 +89,7 @@ public:
     m_opttokTag = std::move( _rrtok );
   }
   // Read from this read cursor into this object.
+  // REVIEW: <dbien>: Should change this to be a non-recursive implementation to avoid stack overrun vulnerability issues.
   void FromXmlStream( _TyReadCursorVar & _rxrc, _TyStrongThis const & _rspThis )
   {
     Assert( _rxrc.FInsideDocumentTag() );
