@@ -153,7 +153,7 @@ public:
     // Use a AllocaArray to efficiently store pieces of the string so that we can then allocate once.
     // We will get the content strings in token's character type and then perform a single conversion at the end.
     typedef AllocaArray< _TyStdStr, true > _TyRgStrings;
-    _TyRgStrings rgStrings( ALLOCA_ARRAY_ALLOC( _TyStdStr, NContentTokens() ) );
+    _TyRgStrings rgStrings( nContentTokens, ALLOCA_ARRAY_ALLOC( _TyStdStr, nContentTokens ) );
     size_t nCharsTotal = 0;
     m_saTokens.ApplyContiguous( 1, m_saTokens.NElements(),
       [&rgStrings,&nCharsTotal]( _TyXmlToken const * _ptokBegin, _TyXmlToken const * _ptokEnd )
@@ -172,7 +172,7 @@ public:
       }
     );
     if ( rgStrings.GetSize() )
-      _KGetContentString( _rstr, rgStrings.begin(), rgStrings.end() );
+      _KGetContentString( _rstr, nCharsTotal, rgStrings.begin(), rgStrings.end() );
   }
   // The non-const version of this will store rendered strings in their elements.
   // That's this one. We will store the strings in the character type requested here in the tokens themselves.
@@ -189,7 +189,7 @@ public:
     // Use a AllocaArray to efficiently store pieces of the string so that we can then allocate once.
     // We will get the content strings in token's character type and then perform a single conversion at the end.
     typedef AllocaArray< _TyStrViewResult, true > _TyRgStrViews;
-    _TyRgStrViews rgStrViews( ALLOCA_ARRAY_ALLOC( _TyStrViewResult, NContentTokens() ) );
+    _TyRgStrViews rgStrViews( nContentTokens, ALLOCA_ARRAY_ALLOC( _TyStrViewResult, nContentTokens ) );
     size_t nCharsTotal = 0;
     m_saTokens.ApplyContiguous( 1, m_saTokens.NElements(),
       [&rgStrViews,&nCharsTotal]( _TyXmlToken * _ptokBegin, _TyXmlToken * _ptokEnd )
@@ -215,7 +215,9 @@ public:
       _TyStrViewResult * const psvEnd = rgStrViews.end();
       for ( ; psvEnd != psvCur; ++psvCur )
       {
-        memcpy( pcCur, &psvCur->at(0), psvCur->length() * sizeof( _TyChar ) );
+        if ( psvCur->empty() )
+          continue; // e.g. an empty CDATA section.
+        memcpy( pcCur, psvCur->data(), psvCur->length() * sizeof( _TyCharResult ) ); // The views are in the result's character type.
         pcCur += psvCur->length();
       }
     }
@@ -223,26 +225,25 @@ public:
 
 protected:
   template< class t_TyStringResult >
-  void _KGetContentString( t_TyStringResult & _rstr, size_t _nCharsTotal, _TyStdStr * _pstrSrcBegin, _TyStdStr * _pstrSrcEnd )
+  void _KGetContentString( t_TyStringResult & _rstr, size_t _nCharsTotal, _TyStdStr * _pstrSrcBegin, _TyStdStr * _pstrSrcEnd ) const
     requires TAreSameSizeTypes_v< typename t_TyStringResult::value_type, _TyChar >
   {
-    if ( 1 == ( _pstrSrcEnd - _pstrSrcBegin ) )
-      _pstrSrcBegin->swap( _rstr );
-    else
+    _rstr.resize( _nCharsTotal );
+    if ( !_nCharsTotal )
+      return;
+    _TyChar * pcCur = (_TyChar*)&_rstr[0]; // t_TyStringResult may be a different character type of the same size.
+    _TyStdStr * pstrSrcCur = _pstrSrcBegin;
+    for ( ; _pstrSrcEnd != pstrSrcCur; ++pstrSrcCur )
     {
-      _rstr.resize( _nCharsTotal );
-      _TyChar * pcCur = &_rstr[0];
-      _TyStdStr * pstrSrcCur = _pstrSrcBegin;
-      for ( ; _pstrSrcEnd != pstrSrcCur; ++pstrSrcCur )
-      {
-        memcpy( pcCur, &pstrSrcCur->at(0), pstrSrcCur->length() * sizeof( _TyChar ) );
-        pcCur += pstrSrcCur->length();
-      }
-      Assert( pcCur == &_rstr[0] + _nCharsTotal );
+      if ( pstrSrcCur->empty() )
+        continue;
+      memcpy( pcCur, pstrSrcCur->data(), pstrSrcCur->length() * sizeof( _TyChar ) );
+      pcCur += pstrSrcCur->length();
     }
+    Assert( pcCur == (_TyChar*)&_rstr[0] + _nCharsTotal );
   }
   template< class t_TyStringResult >
-  void _KGetContentString( t_TyStringResult & _rstr, size_t _nCharsTotal, _TyStdStr * _pstrSrcBegin, _TyStdStr * _pstrSrcEnd )
+  void _KGetContentString( t_TyStringResult & _rstr, size_t _nCharsTotal, _TyStdStr * _pstrSrcBegin, _TyStdStr * _pstrSrcEnd ) const
     requires ( !TAreSameSizeTypes_v< typename t_TyStringResult::value_type, _TyChar > )
   {
     _TyStdStr strTempBuf;
@@ -254,17 +255,18 @@ protected:
       pcBuf = &strTempBuf[0];
     }
     else
-    {
       pcBuf = (_TyChar*)alloca( _nCharsTotal * sizeof( _TyChar ) );
-      _TyChar * pcCur = pcBuf;
-      _TyStdStr * pstrSrcCur = _pstrSrcBegin;
-      for ( ; _pstrSrcEnd != pstrSrcCur; ++pstrSrcCur )
-      {
-        memcpy( pcCur, &pstrSrcCur->at(0), pstrSrcCur->length() * sizeof( _TyChar ) );
-        pcCur += pstrSrcCur->length();
-      }
-      Assert( pcCur == pcBuf + _nCharsTotal );
+    // Fill the buffer regardless of where it was allocated.
+    _TyChar * pcCur = pcBuf;
+    _TyStdStr * pstrSrcCur = _pstrSrcBegin;
+    for ( ; _pstrSrcEnd != pstrSrcCur; ++pstrSrcCur )
+    {
+      if ( pstrSrcCur->empty() )
+        continue;
+      memcpy( pcCur, pstrSrcCur->data(), pstrSrcCur->length() * sizeof( _TyChar ) );
+      pcCur += pstrSrcCur->length();
     }
+    Assert( pcCur == pcBuf + _nCharsTotal );
     ConvertString( _rstr, pcBuf, _nCharsTotal );
   }
 
@@ -356,7 +358,7 @@ public:
     {
       m_fFilterWhitespaceCharData = _fFilterWhitespaceCharData;
       if ( !!m_pXp )
-        m_pXp->SetFilterWhitespaceCharData( m_fFilterWhitespaceCharData );
+        m_pXp->_SetFilterWhitespaceCharData( m_fFilterWhitespaceCharData );
     }
   }
   bool FUseXMLNamespaces() const
@@ -673,6 +675,10 @@ protected:
     // Tell the xml_user_obj to filter all token data so that we don't pass around data that we are going to throw away.
     m_pXp->_SetFilterAllTokenData( true );
     m_fSkippingTags = true; // This optimizes processing a bit.
+    // If the caller moved down into an empty element tag and then back up, that (already complete) context is still at the tail.
+    // Pop it now so that the end tag in the lookahead is matched against its parent and not against the empty element.
+    if ( !_FAtTailContext() && ( s_knTokenEmptyElemTag == m_lContexts.back().GetTagTokenId() ) )
+      _PopContext( nullptr, false );
     while( !_FAtTailContext() || ( s_knTokenETag != m_pltokLookahead->GetTokenId() ) )
     {
       // Each token will be either an end tag or a beginning tag.

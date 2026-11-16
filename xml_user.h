@@ -311,18 +311,24 @@ public:
       break;
       case s_kdtEntityRef:
       {
-        if ( s_kfSupportDTD )
-          nLen = RStrLookupEntity(_rdr,_rcxt).length();
-        else
-          nLen = 1; // We don't need to parse here since we can parse later. All standard entity refs are 1 character.
+        // The entity map is user-extensible so we must look up the actual replacement length.
+        nLen = RStrLookupEntity(_rdr,_rcxt).length();
       }
       break;
       case s_kdtCharDecRef:        
       case s_kdtCharHexRef:
-        nLen = 1; // Parse later - we know that each results in one character in the result.
+      {
+        // A character reference may expand to multiple code units in UTF-8 (up to 4) and UTF-16 (up to 2).
+        // Translate exactly as GetString() will so that the count always matches what is copied.
+        _TyStrView sv;
+        _TyCharRefConvertBuffer crcb;
+        _rcxt.GetStringView( sv, _rdr );
+        nLen = !_TchTranslateRef( _rdr.type(), sv, crcb ) ? sv.length() : 1;
+      }
       break;
       case s_kdtPEReference:
       {
+        nLen = 0;
         if ( s_kfSupportDTD )
           // This isn't entirely true since the parameter entity must be parsed at access time according to the current DTD parse context...
           nLen = _RLookupParameterEntity(_rdr,_rcxt).length();
@@ -343,6 +349,9 @@ public:
       Assert( -1 == iTrans );
       THROWXMLPARSEEXCEPTIONERRNO( GetLastErrNo(), "Error translating character reference[%s].", StrConvertString<char>( _rsv ).c_str() );
     }
+    // Only characters matching the XML Char production may be referenced. This also rejects 0, which callers use to mean "no single character".
+    VerifyThrowSz( ( 0x9 == tch ) || ( 0xA == tch ) || ( 0xD == tch ) || ( ( tch >= 0x20 ) && ( tch <= 0xD7FF ) ) || ( ( tch >= 0xE000 ) && ( tch <= 0xFFFD ) ) || ( ( tch >= 0x10000 ) && ( tch <= 0x10FFFF ) ),
+      "Character reference[%s] is not a legal XML character.", StrConvertString<char>( _rsv ).c_str() );
     return (_TyChar)tch;
   }
   // Different character type char-ref - the reference is always in UTF32.
@@ -357,6 +366,9 @@ public:
       Assert( -1 == iTrans );
       THROWXMLPARSEEXCEPTIONERRNO( GetLastErrNo(), "Error translating character reference[%s].", StrConvertString<char>( _rsv ).c_str() );
     }
+    // Only characters matching the XML Char production may be referenced. This also rejects 0, which callers use to mean "no single character".
+    VerifyThrowSz( ( 0x9 == tch ) || ( 0xA == tch ) || ( 0xD == tch ) || ( ( tch >= 0x20 ) && ( tch <= 0xD7FF ) ) || ( ( tch >= 0xE000 ) && ( tch <= 0xFFFD ) ) || ( ( tch >= 0x10000 ) && ( tch <= 0x10FFFF ) ),
+      "Character reference[%s] is not a legal XML character.", StrConvertString<char>( _rsv ).c_str() );
     // Now we must convert the character into potentially a string:
     _TyStdStr strConverted;
     ConvertString( strConverted, &tch, 1 );
@@ -537,8 +549,8 @@ public:
     else
     {
       // We could set the stringview into the object since it doesn't really hurt:
-      _rcxt.GetStringView( _rsvDest, kdtr );
-      _rval.SetVal( _rsvDest );
+      _rcxt.GetStringView( _rsvDest, kdtr.DataRangeGetSingle() );
+      _rval.SetVal( std::as_const( _rsvDest ) ); // const so that the same-size converting SetVal() overloads are chosen (e.g. char->char8_t).
     }
   }
   template < class t_TyStringView, class t_TyToken, class t_TyTransportCtxt >
@@ -578,7 +590,7 @@ public:
     }
     else
     {
-      _rcxt.GetStringView( _rsvDest, kdtr );
+      _rcxt.GetStringView( _rsvDest, kdtr.DataRangeGetSingle() );
       return true;
     }
   }
@@ -604,7 +616,7 @@ public:
     else
     {
       _TyChar * pcCur = (_TyChar*)&strBacking[0]; // Current output pointer.
-      kdtr.GetSegArrayDataRanges().ApplyContiguous( 0, kdtr.GetSegArrayDataRanges().NElements(), 
+      auto lambdaTranslate = 
         [this,&pcCur,&nCharsRemaining,&_rcxt]( const _l_data_typed_range * _pdtrBegin, const _l_data_typed_range * _pdtrEnd )
         {
           const _l_data_typed_range * pdtrCur = _pdtrBegin;
@@ -628,8 +640,10 @@ public:
               --nCharsRemaining;
             }
           }
-        }
-      );
+        };
+      // A single data range that isn't plain text is a lone reference - it is stored as a single range, not in the segmented array.
+      // _l_data::Apply() handles both the single range and the segmented array cases.
+      kdtr.Apply( lambdaTranslate );
       Assert( !nCharsRemaining ); // Should have eaten everything.
     }
     strBacking.resize( nCharsCount - nCharsRemaining );
@@ -661,7 +675,7 @@ public:
     }
     else
       pcBuf = (_TyChar*)alloca( nCharsCount * sizeof( _TyChar ) );
-    if ( kdtr.FContainsSingleDataRange() )
+    if ( kdtr.FContainsSingleDataRange(s_kdtPlainText) )
     {
       // REVIEW: Could just use a string view here instead and not copy to the stack.
       memcpy( pcBuf, _rcxt.GetTokenBuffer().begin() + kdtr.DataRangeGetSingle().begin() - _rcxt.PosTokenStart(), nCharsRemaining * sizeof( _TyChar ) );
@@ -670,7 +684,7 @@ public:
     else
     {
       _TyChar * pcCur = pcBuf; // Current output pointer.
-      kdtr.GetSegArrayDataRanges().ApplyContiguous( 0, kdtr.GetSegArrayDataRanges().NElements(), 
+      auto lambdaTranslate = 
         [this,&pcCur,&nCharsRemaining,&_rcxt]( const _l_data_typed_range * _pdtrBegin, const _l_data_typed_range * _pdtrEnd )
         {
           const _l_data_typed_range * pdtrCur = _pdtrBegin;
@@ -694,8 +708,10 @@ public:
               --nCharsRemaining;
             }
           }
-        }
-      );
+        };
+      // A single data range that isn't plain text is a lone reference - it is stored as a single range, not in the segmented array.
+      // _l_data::Apply() handles both the single range and the segmented array cases.
+      kdtr.Apply( lambdaTranslate );
       Assert( !nCharsRemaining );
     }
     if ( nCharsRemaining )

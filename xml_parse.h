@@ -221,7 +221,7 @@ public:
     {
       SetLastErrNo( vkerrInvalidArgument );
       THROWXMLPARSEEXCEPTIONERRNO( vkerrInvalidArgument, "The content is in [%s] character encoding. This parser type doesn't support that encoding. Use a different parser type or a variant parser.", 
-          m_strFileName.c_str(), PszCharacterEncodingShort( efceEncoding ) );
+          PszCharacterEncodingShort( efceEncoding ) );
     }
     uint64_t nbyLenContent = _nbyLenBytes - nbyLenBOM;
     void * pvContentStart = (uint8_t*)_pv + nbyLenBOM;

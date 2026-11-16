@@ -319,12 +319,26 @@ public:
   {
     return GetStringView( _rsv, _rtok );
   }
+  // A view of a different character size can't be produced since we have nowhere to store a converted string.
+  // These exist so that _l_value's visitors compile for every view type - they throw if actually reached.
+  template < class t_TyStringView, class t_TyToken >
+  void GetStringView( t_TyStringView & /* _rsv */, t_TyToken & /* _rtok */ ) const
+    requires( sizeof( _TyChar ) != sizeof( typename t_TyStringView::value_type ) )
+  {
+    THROWNAMEDBADVARIANTACCESSEXCEPTION("Can't get a string view of a namespace URI in a character type not matching that of the parser - use GetString() instead.");
+  }
+  template < class t_TyStringView, class t_TyToken >
+  void KGetStringView( t_TyStringView & /* _rsv */, t_TyToken & /* _rtok */ ) const
+    requires( sizeof( _TyChar ) != sizeof( typename t_TyStringView::value_type ) )
+  {
+    THROWNAMEDBADVARIANTACCESSEXCEPTION("Can't get a string view of a namespace URI in a character type not matching that of the parser - use GetString() instead.");
+  }
   template < class t_TyString, class t_TyToken >
   void GetString( t_TyString & _rstr, t_TyToken & /* _rtok */ ) const
   {
     AssertValid();
     Assert( _rstr.empty() );
-    if ( !m_pvtNamespaceMap )
+    if ( !m_pvtUri )
       return;
     // Allow conversion to any character type - or just copy:
     ConvertString( _rstr, *m_pvtUri );
@@ -360,19 +374,21 @@ public:
     AssertValid();
     if ( !m_pvtUri )
       return _rjv.SetNullValue();
-    _rjv.SetArrayCapacity( !m_pvtNamespaceMap ? 2 : 3 ); // preallocate
-    _rjv[size_t(0)].SetStringValue( *m_pvtPrefix );
-    _rjv[1].SetStringValue( *m_pvtUri );
-    if ( m_pvtNamespaceMap )
+    // Must use PvtNamespaceMap() since the raw union member holds the reference type marker (size_t(-1)) for namespace references.
+    _TyNamespaceMapValue * const pvtNamespaceMap = PvtNamespaceMap();
+    _rjv.SetArrayCapacity( !pvtNamespaceMap ? 2 : 3 ); // preallocate
+    _rjv.CreateOrGetEl( size_t(0) ).SetStringValue( *m_pvtPrefix ); // operator [] doesn't create elements.
+    _rjv.CreateOrGetEl( size_t(1) ).SetStringValue( *m_pvtUri );
+    if ( pvtNamespaceMap )
     {
-      const size_t knUris = m_pvtNamespaceMap->second.second.count();
-      t_TyJsoValue & rrgjvUris = _rjv[2];
+      const size_t knUris = pvtNamespaceMap->second.second.count();
+      t_TyJsoValue & rrgjvUris = _rjv.CreateOrGetEl( size_t(2) );
       rrgjvUris.SetArrayCapacity( knUris );
       size_t nUri = 0;
-      m_pvtNamespaceMap->second.second.Apply( 
+      pvtNamespaceMap->second.second.Apply( 
         [&nUri,&rrgjvUris]( _TyNamespaceUri const & _rnu )
         {
-          rrgjvUris[nUri++].SetStringValue( _rnu.RStrUri() );
+          rrgjvUris.CreateOrGetEl( nUri++ ).SetStringValue( _rnu.RStrUri() );
         }
       );
     }
@@ -440,7 +456,7 @@ public:
   {
     typename _TyNamespaceMap::iterator it = m_mapNamespaces.find( _TyStrView() );
     bool fHasDefault = ( m_mapNamespaces.end() != it ) && !it->second.second.front().RStrUri().empty();
-    if ( fHasDefault )
+    if ( fHasDefault && !!_pxnvw )
       *_pxnvw = _TyXmlNamespaceValueWrap( *it, nullptr, enrtTagNameReference );
     return fHasDefault;
   }
