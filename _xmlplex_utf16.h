@@ -562,6 +562,757 @@ extern _l_state< char16_t, 4, false, false, 0, 0 >		stateUTF16_284;
 extern _l_state< char16_t, 0, true, false, 0, 0 >		stateUTF16_285;
 extern _l_state< char16_t, 0, true, false, 0, 0 >		stateUTF16_286;
 
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		startUTF16DtdTextDecl;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_288;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_289;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_290;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_291;
+template < class t_TyTraits >
+extern _l_state< char16_t, 3, false, false, 0, 0 >		stateUTF16_292;
+template < class t_TyTraits >
+extern _l_state< char16_t, 5, false, false, 0, 0 >		stateUTF16_293;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_294;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_295;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_296;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_297;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_298;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_299;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_300;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_301;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_302;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_303;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_304;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_305;
+template < class t_TyTraits >
+extern _l_state< char16_t, 4, false, false, 0, 0 >		stateUTF16_306;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_307;
+template < class t_TyTraits >
+extern _l_state< char16_t, 5, false, false, 0, 0 >		stateUTF16_308;
+template < class t_TyTraits >
+extern _l_state< char16_t, 4, false, false, 0, 0 >		stateUTF16_309;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_310;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 0 >		stateUTF16_311;
+template < class t_TyTraits >
+extern _l_state< char16_t, 5, false, false, 0, 0 >		stateUTF16_312;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_313;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_314;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 0 >		stateUTF16_315;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 0 >		stateUTF16_316;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 0 >		stateUTF16_317;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_318;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_319;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_320;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_321;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_322;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 0 >		stateUTF16_323;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 0 >		stateUTF16_324;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_325;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 0 >		stateUTF16_326;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_327;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_328;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_329;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_330;
+template < class t_TyTraits >
+extern _l_state< char16_t, 2, false, false, 0, 0 >		stateUTF16_331;
+template < class t_TyTraits >
+extern _l_state< char16_t, 2, false, false, 0, 0 >		stateUTF16_332;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_333;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_334;
+template < class t_TyTraits >
+extern _l_state< char16_t, 5, false, false, 0, 0 >		stateUTF16_335;
+template < class t_TyTraits >
+extern _l_state< char16_t, 5, false, false, 0, 0 >		stateUTF16_336;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_337;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_338;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_339;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_340;
+template < class t_TyTraits >
+extern _l_state< char16_t, 3, false, false, 0, 0 >		stateUTF16_341;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_342;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_343;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_344;
+template < class t_TyTraits >
+extern _l_state< char16_t, 4, false, false, 0, 0 >		stateUTF16_345;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_346;
+template < class t_TyTraits >
+extern _l_state< char16_t, 4, false, false, 0, 0 >		stateUTF16_347;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_348;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, true, false, 0, 0 >		stateUTF16_349;
+
+template < class t_TyTraits >
+extern _l_state< char16_t, 7, false, false, 0, 0 >		startUTF16DtdKeyword;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_351;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_352;
+template < class t_TyTraits >
+extern _l_state< char16_t, 3, false, false, 0, 0 >		stateUTF16_353;
+template < class t_TyTraits >
+extern _l_state< char16_t, 3, false, false, 0, 0 >		stateUTF16_354;
+template < class t_TyTraits >
+extern _l_state< char16_t, 2, false, false, 0, 0 >		stateUTF16_355;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_356;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_357;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_358;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_359;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_360;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_361;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_362;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_363;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_364;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, true, false, 0, 0 >		stateUTF16_365;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_366;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_367;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_368;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_369;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_370;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_371;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_372;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_373;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_374;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_375;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_376;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_377;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_378;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_379;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_380;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, true, false, 0, 0 >		stateUTF16_381;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_382;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_383;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_384;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_385;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_386;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_387;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_388;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_389;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_390;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_391;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_392;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_393;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_394;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_395;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_396;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, true, false, 0, 0 >		stateUTF16_397;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_398;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_399;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, true, false, 0, 0 >		stateUTF16_400;
+template < class t_TyTraits >
+extern _l_state< char16_t, 2, false, false, 0, 0 >		stateUTF16_401;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, true, false, 0, 0 >		stateUTF16_402;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, true, false, 0, 0 >		stateUTF16_403;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, true, false, 0, 0 >		stateUTF16_404;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, true, false, 0, 0 >		stateUTF16_405;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_406;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_407;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_408;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, true, false, 0, 0 >		stateUTF16_409;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, true, false, 0, 0 >		stateUTF16_410;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, true, false, 0, 0 >		stateUTF16_411;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_412;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_413;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, true, false, 0, 0 >		stateUTF16_414;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, true, false, 0, 0 >		stateUTF16_415;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_416;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, true, false, 0, 0 >		stateUTF16_417;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, true, false, 0, 0 >		stateUTF16_418;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, true, false, 0, 0 >		stateUTF16_419;
+
+template < class t_TyTraits >
+extern _l_state< char16_t, 17, false, false, 0, 0 >		startUTF16DtdNmtoken;
+template < class t_TyTraits >
+extern _l_state< char16_t, 17, true, false, 0, 0 >		stateUTF16_421;
+
+template < class t_TyTraits >
+extern _l_state< char16_t, 2, false, false, 0, 0 >		startUTF16DtdEntityValue;
+template < class t_TyTraits >
+extern _l_state< char16_t, 3, false, false, 0, 0 >		stateUTF16_423;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 0 >		stateUTF16_424;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_425;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, true, false, 0, 0 >		stateUTF16_426;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_427;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 0 >		stateUTF16_428;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_429;
+template < class t_TyTraits >
+extern _l_state< char16_t, 2, false, false, 0, 0 >		stateUTF16_430;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_431;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_432;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_433;
+template < class t_TyTraits >
+extern _l_state< char16_t, 3, false, false, 0, 0 >		stateUTF16_434;
+template < class t_TyTraits >
+extern _l_state< char16_t, 2, false, false, 0, 0 >		stateUTF16_435;
+template < class t_TyTraits >
+extern _l_state< char16_t, 15, false, false, 0, 0 >		stateUTF16_436;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_437;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 0 >		stateUTF16_438;
+template < class t_TyTraits >
+extern _l_state< char16_t, 15, false, false, 0, 0 >		stateUTF16_439;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_440;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_441;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 0 >		stateUTF16_442;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_443;
+template < class t_TyTraits >
+extern _l_state< char16_t, 17, false, false, 0, 0 >		stateUTF16_444;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_445;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_446;
+template < class t_TyTraits >
+extern _l_state< char16_t, 17, false, false, 0, 0 >		stateUTF16_447;
+template < class t_TyTraits >
+extern _l_state< char16_t, 3, false, false, 0, 0 >		stateUTF16_448;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_449;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_450;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_451;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_452;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_453;
+template < class t_TyTraits >
+extern _l_state< char16_t, 3, false, false, 0, 0 >		stateUTF16_454;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_455;
+template < class t_TyTraits >
+extern _l_state< char16_t, 3, false, false, 0, 0 >		stateUTF16_456;
+template < class t_TyTraits >
+extern _l_state< char16_t, 15, false, false, 0, 0 >		stateUTF16_457;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_458;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 0 >		stateUTF16_459;
+template < class t_TyTraits >
+extern _l_state< char16_t, 15, false, false, 0, 0 >		stateUTF16_460;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_461;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_462;
+template < class t_TyTraits >
+extern _l_state< char16_t, 3, false, false, 0, 0 >		stateUTF16_463;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_464;
+template < class t_TyTraits >
+extern _l_state< char16_t, 17, false, false, 0, 0 >		stateUTF16_465;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_466;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_467;
+template < class t_TyTraits >
+extern _l_state< char16_t, 17, false, false, 0, 0 >		stateUTF16_468;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_469;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_470;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_471;
+template < class t_TyTraits >
+extern _l_state< char16_t, 3, false, false, 0, 0 >		stateUTF16_472;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_473;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_474;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_475;
+template < class t_TyTraits >
+extern _l_state< char16_t, 3, false, false, 0, 0 >		stateUTF16_476;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_477;
+
+template < class t_TyTraits >
+extern _l_state< char16_t, 2, false, false, 0, 0 >		startUTF16DtdAttValue;
+template < class t_TyTraits >
+extern _l_state< char16_t, 2, false, false, 0, 0 >		stateUTF16_479;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 0 >		stateUTF16_480;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_481;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, true, false, 0, 0 >		stateUTF16_482;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_483;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_484;
+template < class t_TyTraits >
+extern _l_state< char16_t, 3, false, false, 0, 0 >		stateUTF16_485;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_486;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_487;
+template < class t_TyTraits >
+extern _l_state< char16_t, 2, false, false, 0, 0 >		stateUTF16_488;
+template < class t_TyTraits >
+extern _l_state< char16_t, 3, false, false, 0, 0 >		stateUTF16_489;
+template < class t_TyTraits >
+extern _l_state< char16_t, 15, false, false, 0, 0 >		stateUTF16_490;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_491;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 0 >		stateUTF16_492;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_493;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_494;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_495;
+template < class t_TyTraits >
+extern _l_state< char16_t, 17, false, false, 0, 0 >		stateUTF16_496;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_497;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_498;
+template < class t_TyTraits >
+extern _l_state< char16_t, 4, false, false, 0, 0 >		stateUTF16_499;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_500;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_501;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_502;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_503;
+template < class t_TyTraits >
+extern _l_state< char16_t, 3, false, false, 0, 0 >		stateUTF16_504;
+template < class t_TyTraits >
+extern _l_state< char16_t, 4, false, false, 0, 0 >		stateUTF16_505;
+template < class t_TyTraits >
+extern _l_state< char16_t, 15, false, false, 0, 0 >		stateUTF16_506;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_507;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 0 >		stateUTF16_508;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_509;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_510;
+template < class t_TyTraits >
+extern _l_state< char16_t, 3, false, false, 0, 0 >		stateUTF16_511;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_512;
+template < class t_TyTraits >
+extern _l_state< char16_t, 17, false, false, 0, 0 >		stateUTF16_513;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_514;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_515;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_516;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_517;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_518;
+template < class t_TyTraits >
+extern _l_state< char16_t, 3, false, false, 0, 0 >		stateUTF16_519;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_520;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_521;
+template < class t_TyTraits >
+extern _l_state< char16_t, 3, false, false, 0, 0 >		stateUTF16_522;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_523;
+
+template < class t_TyTraits >
+extern _l_state< char16_t, 2, false, false, 0, 0 >		startUTF16DtdSystemLiteral;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 0 >		stateUTF16_525;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 0 >		stateUTF16_526;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_527;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_528;
+template < class t_TyTraits >
+extern _l_state< char16_t, 2, false, false, 0, 0 >		stateUTF16_529;
+template < class t_TyTraits >
+extern _l_state< char16_t, 2, false, false, 0, 0 >		stateUTF16_530;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_531;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_532;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_533;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_534;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, true, false, 0, 0 >		stateUTF16_535;
+
+template < class t_TyTraits >
+extern _l_state< char16_t, 2, false, false, 0, 0 >		startUTF16DtdPubidLiteral;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 0 >		stateUTF16_537;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 0 >		stateUTF16_538;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_539;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_540;
+template < class t_TyTraits >
+extern _l_state< char16_t, 9, false, false, 0, 0 >		stateUTF16_541;
+template < class t_TyTraits >
+extern _l_state< char16_t, 9, false, false, 0, 0 >		stateUTF16_542;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_543;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_544;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_545;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_546;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, true, false, 0, 0 >		stateUTF16_547;
+
+template < class t_TyTraits >
+extern _l_state< char16_t, 31, false, false, 0, 0 >		startUTF16Dtd;
+template < class t_TyTraits >
+extern _l_state< char16_t, 17, true, false, 0, 0 >		stateUTF16_549;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, true, false, 0, 0 >		stateUTF16_550;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, true, false, 0, 0 >		stateUTF16_551;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, true, false, 0, 0 >		stateUTF16_552;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, true, false, 0, 0 >		stateUTF16_553;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, true, false, 0, 0 >		stateUTF16_554;
+template < class t_TyTraits >
+extern _l_state< char16_t, 2, false, false, 0, 0 >		stateUTF16_555;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, true, false, 0, 0 >		stateUTF16_556;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, true, false, 0, 0 >		stateUTF16_557;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, true, false, 0, 0 >		stateUTF16_558;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, true, false, 0, 0 >		stateUTF16_559;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, true, false, 0, 0 >		stateUTF16_560;
+template < class t_TyTraits >
+extern _l_state< char16_t, 15, true, false, 0, 0 >		stateUTF16_561;
+template < class t_TyTraits >
+extern _l_state< char16_t, 4, false, false, 0, 0 >		stateUTF16_562;
+template < class t_TyTraits >
+extern _l_state< char16_t, 3, true, false, 0, 0 >		stateUTF16_563;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_564;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 0 >		stateUTF16_565;
+template < class t_TyTraits >
+extern _l_state< char16_t, 6, false, false, 0, 0 >		stateUTF16_566;
+template < class t_TyTraits >
+extern _l_state< char16_t, 18, false, false, 0, 0 >		stateUTF16_567;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_568;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_569;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_570;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_571;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, true, false, 0, 0 >		stateUTF16_572;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_573;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, true, false, 0, 0 >		stateUTF16_574;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_575;
+template < class t_TyTraits >
+extern _l_state< char16_t, 2, false, false, 0, 0 >		stateUTF16_576;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_577;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_578;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_579;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, true, false, 0, 0 >		stateUTF16_580;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_581;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_582;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_583;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_584;
+template < class t_TyTraits >
+extern _l_state< char16_t, 19, false, false, 0, 0 >		stateUTF16_585;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_586;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_587;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_588;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_589;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_590;
+template < class t_TyTraits >
+extern _l_state< char16_t, 5, false, false, 0, 0 >		stateUTF16_591;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_592;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_593;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_594;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_595;
+template < class t_TyTraits >
+extern _l_state< char16_t, 17, false, false, 0, 0 >		stateUTF16_596;
+template < class t_TyTraits >
+extern _l_state< char16_t, 21, false, false, 0, 0 >		stateUTF16_597;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_598;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_599;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_600;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_601;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_602;
+template < class t_TyTraits >
+extern _l_state< char16_t, 5, false, false, 0, 0 >		stateUTF16_603;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_604;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_605;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_606;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_607;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_608;
+template < class t_TyTraits >
+extern _l_state< char16_t, 21, false, false, 0, 0 >		stateUTF16_609;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_610;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_611;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_612;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_613;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_614;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_615;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_616;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_617;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_618;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, true, false, 0, 0 >		stateUTF16_619;
+template < class t_TyTraits >
+extern _l_state< char16_t, 4, false, false, 0, 0 >		stateUTF16_620;
+template < class t_TyTraits >
+extern _l_state< char16_t, 17, false, false, 0, 0 >		stateUTF16_621;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_622;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_623;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_624;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_625;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_626;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, true, false, 0, 0 >		stateUTF16_627;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_628;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, true, false, 0, 0 >		stateUTF16_629;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_630;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_631;
+template < class t_TyTraits >
+extern _l_state< char16_t, 3, false, false, 0, 0 >		stateUTF16_632;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_633;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, true, false, 0, 0 >		stateUTF16_634;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_635;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_636;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_637;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_638;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, true, false, 0, 0 >		stateUTF16_639;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, true, false, 0, 0 >		stateUTF16_640;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, false, false, 0, 1 >		stateUTF16_641;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_642;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, true, false, 0, 0 >		stateUTF16_643;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, true, false, 0, 0 >		stateUTF16_644;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, true, false, 0, 0 >		stateUTF16_645;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, true, false, 0, 0 >		stateUTF16_646;
+template < class t_TyTraits >
+extern _l_state< char16_t, 5, false, false, 0, 0 >		stateUTF16_647;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, true, false, 0, 0 >		stateUTF16_648;
+template < class t_TyTraits >
+extern _l_state< char16_t, 6, false, false, 0, 0 >		stateUTF16_649;
+
+template < class t_TyTraits >
+extern _l_state< char16_t, 5, false, false, 0, 0 >		startUTF16DtdIgnore;
+template < class t_TyTraits >
+extern _l_state< char16_t, 3, true, false, 0, 0 >		stateUTF16_651;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, true, false, 0, 0 >		stateUTF16_652;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, true, false, 0, 0 >		stateUTF16_653;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_654;
+template < class t_TyTraits >
+extern _l_state< char16_t, 1, false, false, 0, 0 >		stateUTF16_655;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, true, false, 0, 0 >		stateUTF16_656;
+template < class t_TyTraits >
+extern _l_state< char16_t, 0, true, false, 0, 0 >		stateUTF16_657;
+
 typedef _l_state< char16_t, 7, false, false, 0, 0 > _TystateUTF160;
 template < class t_TyTraits > inline
 _TystateUTF160 startUTF16All = {
@@ -4311,6 +5062,4294 @@ _TystateUTF16286 stateUTF16_286 = {
 #endif //LXOBJ_STATENUMBERS
 	0, 0, kucAccept, 0, 
 	offsetof( _TystateUTF16286, m_pmfnAccept ),  0, 3002, nullptr /* ActionToken3002 */ };
+
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16287;
+template < class t_TyTraits > inline
+_TystateUTF16287 startUTF16DtdTextDecl = {
+#ifdef LXOBJ_STATENUMBERS
+	287,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'<', u'<', (vTyStateProtoChar16*)( & stateUTF16_288<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16288;
+template < class t_TyTraits > inline
+_TystateUTF16288 stateUTF16_288 = {
+#ifdef LXOBJ_STATENUMBERS
+	288,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'?', u'?', (vTyStateProtoChar16*)( & stateUTF16_289<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16289;
+template < class t_TyTraits > inline
+_TystateUTF16289 stateUTF16_289 = {
+#ifdef LXOBJ_STATENUMBERS
+	289,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'x', u'x', (vTyStateProtoChar16*)( & stateUTF16_290<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16290;
+template < class t_TyTraits > inline
+_TystateUTF16290 stateUTF16_290 = {
+#ifdef LXOBJ_STATENUMBERS
+	290,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'm', u'm', (vTyStateProtoChar16*)( & stateUTF16_291<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16291;
+template < class t_TyTraits > inline
+_TystateUTF16291 stateUTF16_291 = {
+#ifdef LXOBJ_STATENUMBERS
+	291,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'l', u'l', (vTyStateProtoChar16*)( & stateUTF16_292<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 3, false, false, 0, 0 > _TystateUTF16292;
+template < class t_TyTraits > inline
+_TystateUTF16292 stateUTF16_292 = {
+#ifdef LXOBJ_STATENUMBERS
+	292,
+#endif //LXOBJ_STATENUMBERS
+	3, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ 0x09, 0x0a, (vTyStateProtoChar16*)( & stateUTF16_293<t_TyTraits> ) },
+		{ 0x0d, 0x0d, (vTyStateProtoChar16*)( & stateUTF16_293<t_TyTraits> ) },
+		{ u' ', u' ', (vTyStateProtoChar16*)( & stateUTF16_293<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 5, false, false, 0, 0 > _TystateUTF16293;
+template < class t_TyTraits > inline
+_TystateUTF16293 stateUTF16_293 = {
+#ifdef LXOBJ_STATENUMBERS
+	293,
+#endif //LXOBJ_STATENUMBERS
+	5, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ 0x09, 0x0a, (vTyStateProtoChar16*)( & stateUTF16_293<t_TyTraits> ) },
+		{ 0x0d, 0x0d, (vTyStateProtoChar16*)( & stateUTF16_293<t_TyTraits> ) },
+		{ u' ', u' ', (vTyStateProtoChar16*)( & stateUTF16_293<t_TyTraits> ) },
+		{ u'e', u'e', (vTyStateProtoChar16*)( & stateUTF16_295<t_TyTraits> ) },
+		{ u'v', u'v', (vTyStateProtoChar16*)( & stateUTF16_294<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16294;
+template < class t_TyTraits > inline
+_TystateUTF16294 stateUTF16_294 = {
+#ifdef LXOBJ_STATENUMBERS
+	294,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'e', u'e', (vTyStateProtoChar16*)( & stateUTF16_296<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16295;
+template < class t_TyTraits > inline
+_TystateUTF16295 stateUTF16_295 = {
+#ifdef LXOBJ_STATENUMBERS
+	295,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'n', u'n', (vTyStateProtoChar16*)( & stateUTF16_297<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16296;
+template < class t_TyTraits > inline
+_TystateUTF16296 stateUTF16_296 = {
+#ifdef LXOBJ_STATENUMBERS
+	296,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'r', u'r', (vTyStateProtoChar16*)( & stateUTF16_298<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16297;
+template < class t_TyTraits > inline
+_TystateUTF16297 stateUTF16_297 = {
+#ifdef LXOBJ_STATENUMBERS
+	297,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'c', u'c', (vTyStateProtoChar16*)( & stateUTF16_299<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16298;
+template < class t_TyTraits > inline
+_TystateUTF16298 stateUTF16_298 = {
+#ifdef LXOBJ_STATENUMBERS
+	298,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u's', u's', (vTyStateProtoChar16*)( & stateUTF16_300<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16299;
+template < class t_TyTraits > inline
+_TystateUTF16299 stateUTF16_299 = {
+#ifdef LXOBJ_STATENUMBERS
+	299,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'o', u'o', (vTyStateProtoChar16*)( & stateUTF16_301<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16300;
+template < class t_TyTraits > inline
+_TystateUTF16300 stateUTF16_300 = {
+#ifdef LXOBJ_STATENUMBERS
+	300,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'i', u'i', (vTyStateProtoChar16*)( & stateUTF16_302<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16301;
+template < class t_TyTraits > inline
+_TystateUTF16301 stateUTF16_301 = {
+#ifdef LXOBJ_STATENUMBERS
+	301,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'd', u'd', (vTyStateProtoChar16*)( & stateUTF16_303<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16302;
+template < class t_TyTraits > inline
+_TystateUTF16302 stateUTF16_302 = {
+#ifdef LXOBJ_STATENUMBERS
+	302,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'o', u'o', (vTyStateProtoChar16*)( & stateUTF16_304<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16303;
+template < class t_TyTraits > inline
+_TystateUTF16303 stateUTF16_303 = {
+#ifdef LXOBJ_STATENUMBERS
+	303,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'i', u'i', (vTyStateProtoChar16*)( & stateUTF16_305<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16304;
+template < class t_TyTraits > inline
+_TystateUTF16304 stateUTF16_304 = {
+#ifdef LXOBJ_STATENUMBERS
+	304,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'n', u'n', (vTyStateProtoChar16*)( & stateUTF16_306<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16305;
+template < class t_TyTraits > inline
+_TystateUTF16305 stateUTF16_305 = {
+#ifdef LXOBJ_STATENUMBERS
+	305,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'n', u'n', (vTyStateProtoChar16*)( & stateUTF16_307<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 4, false, false, 0, 0 > _TystateUTF16306;
+template < class t_TyTraits > inline
+_TystateUTF16306 stateUTF16_306 = {
+#ifdef LXOBJ_STATENUMBERS
+	306,
+#endif //LXOBJ_STATENUMBERS
+	4, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ 0x09, 0x0a, (vTyStateProtoChar16*)( & stateUTF16_306<t_TyTraits> ) },
+		{ 0x0d, 0x0d, (vTyStateProtoChar16*)( & stateUTF16_306<t_TyTraits> ) },
+		{ u' ', u' ', (vTyStateProtoChar16*)( & stateUTF16_306<t_TyTraits> ) },
+		{ u'=', u'=', (vTyStateProtoChar16*)( & stateUTF16_308<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16307;
+template < class t_TyTraits > inline
+_TystateUTF16307 stateUTF16_307 = {
+#ifdef LXOBJ_STATENUMBERS
+	307,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'g', u'g', (vTyStateProtoChar16*)( & stateUTF16_309<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 5, false, false, 0, 0 > _TystateUTF16308;
+template < class t_TyTraits > inline
+_TystateUTF16308 stateUTF16_308 = {
+#ifdef LXOBJ_STATENUMBERS
+	308,
+#endif //LXOBJ_STATENUMBERS
+	5, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ 0x09, 0x0a, (vTyStateProtoChar16*)( & stateUTF16_308<t_TyTraits> ) },
+		{ 0x0d, 0x0d, (vTyStateProtoChar16*)( & stateUTF16_308<t_TyTraits> ) },
+		{ u' ', u' ', (vTyStateProtoChar16*)( & stateUTF16_308<t_TyTraits> ) },
+		{ u'"', u'"', (vTyStateProtoChar16*)( & stateUTF16_311<t_TyTraits> ) },
+		{ 0x027, 0x027, (vTyStateProtoChar16*)( & stateUTF16_310<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 4, false, false, 0, 0 > _TystateUTF16309;
+template < class t_TyTraits > inline
+_TystateUTF16309 stateUTF16_309 = {
+#ifdef LXOBJ_STATENUMBERS
+	309,
+#endif //LXOBJ_STATENUMBERS
+	4, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ 0x09, 0x0a, (vTyStateProtoChar16*)( & stateUTF16_309<t_TyTraits> ) },
+		{ 0x0d, 0x0d, (vTyStateProtoChar16*)( & stateUTF16_309<t_TyTraits> ) },
+		{ u' ', u' ', (vTyStateProtoChar16*)( & stateUTF16_309<t_TyTraits> ) },
+		{ u'=', u'=', (vTyStateProtoChar16*)( & stateUTF16_312<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16310;
+template < class t_TyTraits > inline
+_TystateUTF16310 stateUTF16_310 = {
+#ifdef LXOBJ_STATENUMBERS
+	310,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'1', u'1', (vTyStateProtoChar16*)( & stateUTF16_313<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 0 > _TystateUTF16311;
+template < class t_TyTraits > inline
+_TystateUTF16311 stateUTF16_311 = {
+#ifdef LXOBJ_STATENUMBERS
+	311,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_314<t_TyTraits> ), 0, 0, vktidInvalidIdToken };
+typedef _l_state< char16_t, 5, false, false, 0, 0 > _TystateUTF16312;
+template < class t_TyTraits > inline
+_TystateUTF16312 stateUTF16_312 = {
+#ifdef LXOBJ_STATENUMBERS
+	312,
+#endif //LXOBJ_STATENUMBERS
+	5, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ 0x09, 0x0a, (vTyStateProtoChar16*)( & stateUTF16_312<t_TyTraits> ) },
+		{ 0x0d, 0x0d, (vTyStateProtoChar16*)( & stateUTF16_312<t_TyTraits> ) },
+		{ u' ', u' ', (vTyStateProtoChar16*)( & stateUTF16_312<t_TyTraits> ) },
+		{ u'"', u'"', (vTyStateProtoChar16*)( & stateUTF16_316<t_TyTraits> ) },
+		{ 0x027, 0x027, (vTyStateProtoChar16*)( & stateUTF16_315<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16313;
+template < class t_TyTraits > inline
+_TystateUTF16313 stateUTF16_313 = {
+#ifdef LXOBJ_STATENUMBERS
+	313,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'.', u'.', (vTyStateProtoChar16*)( & stateUTF16_317<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16314;
+template < class t_TyTraits > inline
+_TystateUTF16314 stateUTF16_314 = {
+#ifdef LXOBJ_STATENUMBERS
+	314,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_318<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16314, m_rgpmfnTriggers ), 34,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger34 )
+	} };
+typedef _l_state< char16_t, 0, false, false, 0, 0 > _TystateUTF16315;
+template < class t_TyTraits > inline
+_TystateUTF16315 stateUTF16_315 = {
+#ifdef LXOBJ_STATENUMBERS
+	315,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_319<t_TyTraits> ), 0, 0, vktidInvalidIdToken };
+typedef _l_state< char16_t, 0, false, false, 0, 0 > _TystateUTF16316;
+template < class t_TyTraits > inline
+_TystateUTF16316 stateUTF16_316 = {
+#ifdef LXOBJ_STATENUMBERS
+	316,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_320<t_TyTraits> ), 0, 0, vktidInvalidIdToken };
+typedef _l_state< char16_t, 0, false, false, 0, 0 > _TystateUTF16317;
+template < class t_TyTraits > inline
+_TystateUTF16317 stateUTF16_317 = {
+#ifdef LXOBJ_STATENUMBERS
+	317,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_321<t_TyTraits> ), 0, 0, vktidInvalidIdToken };
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16318;
+template < class t_TyTraits > inline
+_TystateUTF16318 stateUTF16_318 = {
+#ifdef LXOBJ_STATENUMBERS
+	318,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'1', u'1', (vTyStateProtoChar16*)( & stateUTF16_322<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16319;
+template < class t_TyTraits > inline
+_TystateUTF16319 stateUTF16_319 = {
+#ifdef LXOBJ_STATENUMBERS
+	319,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_323<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16319, m_rgpmfnTriggers ), 45,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger45 )
+	} };
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16320;
+template < class t_TyTraits > inline
+_TystateUTF16320 stateUTF16_320 = {
+#ifdef LXOBJ_STATENUMBERS
+	320,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_324<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16320, m_rgpmfnTriggers ), 31,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger31 )
+	} };
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16321;
+template < class t_TyTraits > inline
+_TystateUTF16321 stateUTF16_321 = {
+#ifdef LXOBJ_STATENUMBERS
+	321,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_325<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16321, m_rgpmfnTriggers ), 32,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger32 )
+	} };
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16322;
+template < class t_TyTraits > inline
+_TystateUTF16322 stateUTF16_322 = {
+#ifdef LXOBJ_STATENUMBERS
+	322,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'.', u'.', (vTyStateProtoChar16*)( & stateUTF16_326<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 0 > _TystateUTF16323;
+template < class t_TyTraits > inline
+_TystateUTF16323 stateUTF16_323 = {
+#ifdef LXOBJ_STATENUMBERS
+	323,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_327<t_TyTraits> ), 0, 0, vktidInvalidIdToken };
+typedef _l_state< char16_t, 0, false, false, 0, 0 > _TystateUTF16324;
+template < class t_TyTraits > inline
+_TystateUTF16324 stateUTF16_324 = {
+#ifdef LXOBJ_STATENUMBERS
+	324,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_328<t_TyTraits> ), 0, 0, vktidInvalidIdToken };
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16325;
+template < class t_TyTraits > inline
+_TystateUTF16325 stateUTF16_325 = {
+#ifdef LXOBJ_STATENUMBERS
+	325,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'0', u'9', (vTyStateProtoChar16*)( & stateUTF16_329<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 0 > _TystateUTF16326;
+template < class t_TyTraits > inline
+_TystateUTF16326 stateUTF16_326 = {
+#ifdef LXOBJ_STATENUMBERS
+	326,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_330<t_TyTraits> ), 0, 0, vktidInvalidIdToken };
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16327;
+template < class t_TyTraits > inline
+_TystateUTF16327 stateUTF16_327 = {
+#ifdef LXOBJ_STATENUMBERS
+	327,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_331<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16327, m_rgpmfnTriggers ), 29,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger29 )
+	} };
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16328;
+template < class t_TyTraits > inline
+_TystateUTF16328 stateUTF16_328 = {
+#ifdef LXOBJ_STATENUMBERS
+	328,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_332<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16328, m_rgpmfnTriggers ), 29,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger29 )
+	} };
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16329;
+template < class t_TyTraits > inline
+_TystateUTF16329 stateUTF16_329 = {
+#ifdef LXOBJ_STATENUMBERS
+	329,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_333<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	{
+		{ u'0', u'9', (vTyStateProtoChar16*)( & stateUTF16_329<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16330;
+template < class t_TyTraits > inline
+_TystateUTF16330 stateUTF16_330 = {
+#ifdef LXOBJ_STATENUMBERS
+	330,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_334<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16330, m_rgpmfnTriggers ), 32,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger32 )
+	} };
+typedef _l_state< char16_t, 2, false, false, 0, 0 > _TystateUTF16331;
+template < class t_TyTraits > inline
+_TystateUTF16331 stateUTF16_331 = {
+#ifdef LXOBJ_STATENUMBERS
+	331,
+#endif //LXOBJ_STATENUMBERS
+	2, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'A', u'Z', (vTyStateProtoChar16*)( & stateUTF16_335<t_TyTraits> ) },
+		{ u'a', u'z', (vTyStateProtoChar16*)( & stateUTF16_335<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 2, false, false, 0, 0 > _TystateUTF16332;
+template < class t_TyTraits > inline
+_TystateUTF16332 stateUTF16_332 = {
+#ifdef LXOBJ_STATENUMBERS
+	332,
+#endif //LXOBJ_STATENUMBERS
+	2, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'A', u'Z', (vTyStateProtoChar16*)( & stateUTF16_336<t_TyTraits> ) },
+		{ u'a', u'z', (vTyStateProtoChar16*)( & stateUTF16_336<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16333;
+template < class t_TyTraits > inline
+_TystateUTF16333 stateUTF16_333 = {
+#ifdef LXOBJ_STATENUMBERS
+	333,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_337<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16333, m_rgpmfnTriggers ), 33,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger33 )
+	} };
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16334;
+template < class t_TyTraits > inline
+_TystateUTF16334 stateUTF16_334 = {
+#ifdef LXOBJ_STATENUMBERS
+	334,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'0', u'9', (vTyStateProtoChar16*)( & stateUTF16_338<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 5, false, false, 0, 0 > _TystateUTF16335;
+template < class t_TyTraits > inline
+_TystateUTF16335 stateUTF16_335 = {
+#ifdef LXOBJ_STATENUMBERS
+	335,
+#endif //LXOBJ_STATENUMBERS
+	5, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_339<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	{
+		{ u'-', u'.', (vTyStateProtoChar16*)( & stateUTF16_335<t_TyTraits> ) },
+		{ u'0', u'9', (vTyStateProtoChar16*)( & stateUTF16_335<t_TyTraits> ) },
+		{ u'A', u'Z', (vTyStateProtoChar16*)( & stateUTF16_335<t_TyTraits> ) },
+		{ u'_', u'_', (vTyStateProtoChar16*)( & stateUTF16_335<t_TyTraits> ) },
+		{ u'a', u'z', (vTyStateProtoChar16*)( & stateUTF16_335<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 5, false, false, 0, 0 > _TystateUTF16336;
+template < class t_TyTraits > inline
+_TystateUTF16336 stateUTF16_336 = {
+#ifdef LXOBJ_STATENUMBERS
+	336,
+#endif //LXOBJ_STATENUMBERS
+	5, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_340<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	{
+		{ u'-', u'.', (vTyStateProtoChar16*)( & stateUTF16_336<t_TyTraits> ) },
+		{ u'0', u'9', (vTyStateProtoChar16*)( & stateUTF16_336<t_TyTraits> ) },
+		{ u'A', u'Z', (vTyStateProtoChar16*)( & stateUTF16_336<t_TyTraits> ) },
+		{ u'_', u'_', (vTyStateProtoChar16*)( & stateUTF16_336<t_TyTraits> ) },
+		{ u'a', u'z', (vTyStateProtoChar16*)( & stateUTF16_336<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16337;
+template < class t_TyTraits > inline
+_TystateUTF16337 stateUTF16_337 = {
+#ifdef LXOBJ_STATENUMBERS
+	337,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ 0x027, 0x027, (vTyStateProtoChar16*)( & stateUTF16_341<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16338;
+template < class t_TyTraits > inline
+_TystateUTF16338 stateUTF16_338 = {
+#ifdef LXOBJ_STATENUMBERS
+	338,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_342<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	{
+		{ u'0', u'9', (vTyStateProtoChar16*)( & stateUTF16_338<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16339;
+template < class t_TyTraits > inline
+_TystateUTF16339 stateUTF16_339 = {
+#ifdef LXOBJ_STATENUMBERS
+	339,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_343<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16339, m_rgpmfnTriggers ), 30,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger30 )
+	} };
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16340;
+template < class t_TyTraits > inline
+_TystateUTF16340 stateUTF16_340 = {
+#ifdef LXOBJ_STATENUMBERS
+	340,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_344<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16340, m_rgpmfnTriggers ), 30,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger30 )
+	} };
+typedef _l_state< char16_t, 3, false, false, 0, 0 > _TystateUTF16341;
+template < class t_TyTraits > inline
+_TystateUTF16341 stateUTF16_341 = {
+#ifdef LXOBJ_STATENUMBERS
+	341,
+#endif //LXOBJ_STATENUMBERS
+	3, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ 0x09, 0x0a, (vTyStateProtoChar16*)( & stateUTF16_345<t_TyTraits> ) },
+		{ 0x0d, 0x0d, (vTyStateProtoChar16*)( & stateUTF16_345<t_TyTraits> ) },
+		{ u' ', u' ', (vTyStateProtoChar16*)( & stateUTF16_345<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16342;
+template < class t_TyTraits > inline
+_TystateUTF16342 stateUTF16_342 = {
+#ifdef LXOBJ_STATENUMBERS
+	342,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_346<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16342, m_rgpmfnTriggers ), 33,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger33 )
+	} };
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16343;
+template < class t_TyTraits > inline
+_TystateUTF16343 stateUTF16_343 = {
+#ifdef LXOBJ_STATENUMBERS
+	343,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ 0x027, 0x027, (vTyStateProtoChar16*)( & stateUTF16_347<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16344;
+template < class t_TyTraits > inline
+_TystateUTF16344 stateUTF16_344 = {
+#ifdef LXOBJ_STATENUMBERS
+	344,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'"', u'"', (vTyStateProtoChar16*)( & stateUTF16_347<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 4, false, false, 0, 0 > _TystateUTF16345;
+template < class t_TyTraits > inline
+_TystateUTF16345 stateUTF16_345 = {
+#ifdef LXOBJ_STATENUMBERS
+	345,
+#endif //LXOBJ_STATENUMBERS
+	4, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ 0x09, 0x0a, (vTyStateProtoChar16*)( & stateUTF16_345<t_TyTraits> ) },
+		{ 0x0d, 0x0d, (vTyStateProtoChar16*)( & stateUTF16_345<t_TyTraits> ) },
+		{ u' ', u' ', (vTyStateProtoChar16*)( & stateUTF16_345<t_TyTraits> ) },
+		{ u'e', u'e', (vTyStateProtoChar16*)( & stateUTF16_295<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16346;
+template < class t_TyTraits > inline
+_TystateUTF16346 stateUTF16_346 = {
+#ifdef LXOBJ_STATENUMBERS
+	346,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'"', u'"', (vTyStateProtoChar16*)( & stateUTF16_341<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 4, false, false, 0, 0 > _TystateUTF16347;
+template < class t_TyTraits > inline
+_TystateUTF16347 stateUTF16_347 = {
+#ifdef LXOBJ_STATENUMBERS
+	347,
+#endif //LXOBJ_STATENUMBERS
+	4, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ 0x09, 0x0a, (vTyStateProtoChar16*)( & stateUTF16_347<t_TyTraits> ) },
+		{ 0x0d, 0x0d, (vTyStateProtoChar16*)( & stateUTF16_347<t_TyTraits> ) },
+		{ u' ', u' ', (vTyStateProtoChar16*)( & stateUTF16_347<t_TyTraits> ) },
+		{ u'?', u'?', (vTyStateProtoChar16*)( & stateUTF16_348<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16348;
+template < class t_TyTraits > inline
+_TystateUTF16348 stateUTF16_348 = {
+#ifdef LXOBJ_STATENUMBERS
+	348,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'>', u'>', (vTyStateProtoChar16*)( & stateUTF16_349<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, true, false, 0, 0 > _TystateUTF16349;
+template < class t_TyTraits > inline
+_TystateUTF16349 stateUTF16_349 = {
+#ifdef LXOBJ_STATENUMBERS
+	349,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16349, m_pmfnAccept ),  0, 4047, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4047 ) };
+
+typedef _l_state< char16_t, 7, false, false, 0, 0 > _TystateUTF16350;
+template < class t_TyTraits > inline
+_TystateUTF16350 startUTF16DtdKeyword = {
+#ifdef LXOBJ_STATENUMBERS
+	350,
+#endif //LXOBJ_STATENUMBERS
+	7, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'A', u'A', (vTyStateProtoChar16*)( & stateUTF16_357<t_TyTraits> ) },
+		{ u'C', u'C', (vTyStateProtoChar16*)( & stateUTF16_356<t_TyTraits> ) },
+		{ u'E', u'E', (vTyStateProtoChar16*)( & stateUTF16_355<t_TyTraits> ) },
+		{ u'I', u'I', (vTyStateProtoChar16*)( & stateUTF16_354<t_TyTraits> ) },
+		{ u'N', u'N', (vTyStateProtoChar16*)( & stateUTF16_353<t_TyTraits> ) },
+		{ u'P', u'P', (vTyStateProtoChar16*)( & stateUTF16_352<t_TyTraits> ) },
+		{ u'S', u'S', (vTyStateProtoChar16*)( & stateUTF16_351<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16351;
+template < class t_TyTraits > inline
+_TystateUTF16351 stateUTF16_351 = {
+#ifdef LXOBJ_STATENUMBERS
+	351,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'Y', u'Y', (vTyStateProtoChar16*)( & stateUTF16_358<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16352;
+template < class t_TyTraits > inline
+_TystateUTF16352 stateUTF16_352 = {
+#ifdef LXOBJ_STATENUMBERS
+	352,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'U', u'U', (vTyStateProtoChar16*)( & stateUTF16_359<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 3, false, false, 0, 0 > _TystateUTF16353;
+template < class t_TyTraits > inline
+_TystateUTF16353 stateUTF16_353 = {
+#ifdef LXOBJ_STATENUMBERS
+	353,
+#endif //LXOBJ_STATENUMBERS
+	3, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'D', u'D', (vTyStateProtoChar16*)( & stateUTF16_362<t_TyTraits> ) },
+		{ u'M', u'M', (vTyStateProtoChar16*)( & stateUTF16_361<t_TyTraits> ) },
+		{ u'O', u'O', (vTyStateProtoChar16*)( & stateUTF16_360<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 3, false, false, 0, 0 > _TystateUTF16354;
+template < class t_TyTraits > inline
+_TystateUTF16354 stateUTF16_354 = {
+#ifdef LXOBJ_STATENUMBERS
+	354,
+#endif //LXOBJ_STATENUMBERS
+	3, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'D', u'D', (vTyStateProtoChar16*)( & stateUTF16_365<t_TyTraits> ) },
+		{ u'G', u'G', (vTyStateProtoChar16*)( & stateUTF16_364<t_TyTraits> ) },
+		{ u'N', u'N', (vTyStateProtoChar16*)( & stateUTF16_363<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 2, false, false, 0, 0 > _TystateUTF16355;
+template < class t_TyTraits > inline
+_TystateUTF16355 stateUTF16_355 = {
+#ifdef LXOBJ_STATENUMBERS
+	355,
+#endif //LXOBJ_STATENUMBERS
+	2, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'M', u'M', (vTyStateProtoChar16*)( & stateUTF16_367<t_TyTraits> ) },
+		{ u'N', u'N', (vTyStateProtoChar16*)( & stateUTF16_366<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16356;
+template < class t_TyTraits > inline
+_TystateUTF16356 stateUTF16_356 = {
+#ifdef LXOBJ_STATENUMBERS
+	356,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'D', u'D', (vTyStateProtoChar16*)( & stateUTF16_368<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16357;
+template < class t_TyTraits > inline
+_TystateUTF16357 stateUTF16_357 = {
+#ifdef LXOBJ_STATENUMBERS
+	357,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'N', u'N', (vTyStateProtoChar16*)( & stateUTF16_369<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16358;
+template < class t_TyTraits > inline
+_TystateUTF16358 stateUTF16_358 = {
+#ifdef LXOBJ_STATENUMBERS
+	358,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'S', u'S', (vTyStateProtoChar16*)( & stateUTF16_370<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16359;
+template < class t_TyTraits > inline
+_TystateUTF16359 stateUTF16_359 = {
+#ifdef LXOBJ_STATENUMBERS
+	359,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'B', u'B', (vTyStateProtoChar16*)( & stateUTF16_371<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16360;
+template < class t_TyTraits > inline
+_TystateUTF16360 stateUTF16_360 = {
+#ifdef LXOBJ_STATENUMBERS
+	360,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'T', u'T', (vTyStateProtoChar16*)( & stateUTF16_372<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16361;
+template < class t_TyTraits > inline
+_TystateUTF16361 stateUTF16_361 = {
+#ifdef LXOBJ_STATENUMBERS
+	361,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'T', u'T', (vTyStateProtoChar16*)( & stateUTF16_373<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16362;
+template < class t_TyTraits > inline
+_TystateUTF16362 stateUTF16_362 = {
+#ifdef LXOBJ_STATENUMBERS
+	362,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'A', u'A', (vTyStateProtoChar16*)( & stateUTF16_374<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16363;
+template < class t_TyTraits > inline
+_TystateUTF16363 stateUTF16_363 = {
+#ifdef LXOBJ_STATENUMBERS
+	363,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'C', u'C', (vTyStateProtoChar16*)( & stateUTF16_375<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16364;
+template < class t_TyTraits > inline
+_TystateUTF16364 stateUTF16_364 = {
+#ifdef LXOBJ_STATENUMBERS
+	364,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'N', u'N', (vTyStateProtoChar16*)( & stateUTF16_376<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, true, false, 0, 0 > _TystateUTF16365;
+template < class t_TyTraits > inline
+_TystateUTF16365 stateUTF16_365 = {
+#ifdef LXOBJ_STATENUMBERS
+	365,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16365, m_pmfnAccept ),  0, 4023,
+	{
+		{ u'R', u'R', (vTyStateProtoChar16*)( & stateUTF16_377<t_TyTraits> ) }
+	}, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4023 ) };
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16366;
+template < class t_TyTraits > inline
+_TystateUTF16366 stateUTF16_366 = {
+#ifdef LXOBJ_STATENUMBERS
+	366,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'T', u'T', (vTyStateProtoChar16*)( & stateUTF16_378<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16367;
+template < class t_TyTraits > inline
+_TystateUTF16367 stateUTF16_367 = {
+#ifdef LXOBJ_STATENUMBERS
+	367,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'P', u'P', (vTyStateProtoChar16*)( & stateUTF16_379<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16368;
+template < class t_TyTraits > inline
+_TystateUTF16368 stateUTF16_368 = {
+#ifdef LXOBJ_STATENUMBERS
+	368,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'A', u'A', (vTyStateProtoChar16*)( & stateUTF16_380<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16369;
+template < class t_TyTraits > inline
+_TystateUTF16369 stateUTF16_369 = {
+#ifdef LXOBJ_STATENUMBERS
+	369,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'Y', u'Y', (vTyStateProtoChar16*)( & stateUTF16_381<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16370;
+template < class t_TyTraits > inline
+_TystateUTF16370 stateUTF16_370 = {
+#ifdef LXOBJ_STATENUMBERS
+	370,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'T', u'T', (vTyStateProtoChar16*)( & stateUTF16_382<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16371;
+template < class t_TyTraits > inline
+_TystateUTF16371 stateUTF16_371 = {
+#ifdef LXOBJ_STATENUMBERS
+	371,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'L', u'L', (vTyStateProtoChar16*)( & stateUTF16_383<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16372;
+template < class t_TyTraits > inline
+_TystateUTF16372 stateUTF16_372 = {
+#ifdef LXOBJ_STATENUMBERS
+	372,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'A', u'A', (vTyStateProtoChar16*)( & stateUTF16_384<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16373;
+template < class t_TyTraits > inline
+_TystateUTF16373 stateUTF16_373 = {
+#ifdef LXOBJ_STATENUMBERS
+	373,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'O', u'O', (vTyStateProtoChar16*)( & stateUTF16_385<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16374;
+template < class t_TyTraits > inline
+_TystateUTF16374 stateUTF16_374 = {
+#ifdef LXOBJ_STATENUMBERS
+	374,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'T', u'T', (vTyStateProtoChar16*)( & stateUTF16_386<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16375;
+template < class t_TyTraits > inline
+_TystateUTF16375 stateUTF16_375 = {
+#ifdef LXOBJ_STATENUMBERS
+	375,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'L', u'L', (vTyStateProtoChar16*)( & stateUTF16_387<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16376;
+template < class t_TyTraits > inline
+_TystateUTF16376 stateUTF16_376 = {
+#ifdef LXOBJ_STATENUMBERS
+	376,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'O', u'O', (vTyStateProtoChar16*)( & stateUTF16_388<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16377;
+template < class t_TyTraits > inline
+_TystateUTF16377 stateUTF16_377 = {
+#ifdef LXOBJ_STATENUMBERS
+	377,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'E', u'E', (vTyStateProtoChar16*)( & stateUTF16_389<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16378;
+template < class t_TyTraits > inline
+_TystateUTF16378 stateUTF16_378 = {
+#ifdef LXOBJ_STATENUMBERS
+	378,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'I', u'I', (vTyStateProtoChar16*)( & stateUTF16_390<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16379;
+template < class t_TyTraits > inline
+_TystateUTF16379 stateUTF16_379 = {
+#ifdef LXOBJ_STATENUMBERS
+	379,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'T', u'T', (vTyStateProtoChar16*)( & stateUTF16_391<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16380;
+template < class t_TyTraits > inline
+_TystateUTF16380 stateUTF16_380 = {
+#ifdef LXOBJ_STATENUMBERS
+	380,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'T', u'T', (vTyStateProtoChar16*)( & stateUTF16_392<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, true, false, 0, 0 > _TystateUTF16381;
+template < class t_TyTraits > inline
+_TystateUTF16381 stateUTF16_381 = {
+#ifdef LXOBJ_STATENUMBERS
+	381,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16381, m_pmfnAccept ),  0, 4021, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4021 ) };
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16382;
+template < class t_TyTraits > inline
+_TystateUTF16382 stateUTF16_382 = {
+#ifdef LXOBJ_STATENUMBERS
+	382,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'E', u'E', (vTyStateProtoChar16*)( & stateUTF16_393<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16383;
+template < class t_TyTraits > inline
+_TystateUTF16383 stateUTF16_383 = {
+#ifdef LXOBJ_STATENUMBERS
+	383,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'I', u'I', (vTyStateProtoChar16*)( & stateUTF16_394<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16384;
+template < class t_TyTraits > inline
+_TystateUTF16384 stateUTF16_384 = {
+#ifdef LXOBJ_STATENUMBERS
+	384,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'T', u'T', (vTyStateProtoChar16*)( & stateUTF16_395<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16385;
+template < class t_TyTraits > inline
+_TystateUTF16385 stateUTF16_385 = {
+#ifdef LXOBJ_STATENUMBERS
+	385,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'K', u'K', (vTyStateProtoChar16*)( & stateUTF16_396<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16386;
+template < class t_TyTraits > inline
+_TystateUTF16386 stateUTF16_386 = {
+#ifdef LXOBJ_STATENUMBERS
+	386,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'A', u'A', (vTyStateProtoChar16*)( & stateUTF16_397<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16387;
+template < class t_TyTraits > inline
+_TystateUTF16387 stateUTF16_387 = {
+#ifdef LXOBJ_STATENUMBERS
+	387,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'U', u'U', (vTyStateProtoChar16*)( & stateUTF16_398<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16388;
+template < class t_TyTraits > inline
+_TystateUTF16388 stateUTF16_388 = {
+#ifdef LXOBJ_STATENUMBERS
+	388,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'R', u'R', (vTyStateProtoChar16*)( & stateUTF16_399<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16389;
+template < class t_TyTraits > inline
+_TystateUTF16389 stateUTF16_389 = {
+#ifdef LXOBJ_STATENUMBERS
+	389,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'F', u'F', (vTyStateProtoChar16*)( & stateUTF16_400<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16390;
+template < class t_TyTraits > inline
+_TystateUTF16390 stateUTF16_390 = {
+#ifdef LXOBJ_STATENUMBERS
+	390,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'T', u'T', (vTyStateProtoChar16*)( & stateUTF16_401<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16391;
+template < class t_TyTraits > inline
+_TystateUTF16391 stateUTF16_391 = {
+#ifdef LXOBJ_STATENUMBERS
+	391,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'Y', u'Y', (vTyStateProtoChar16*)( & stateUTF16_402<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16392;
+template < class t_TyTraits > inline
+_TystateUTF16392 stateUTF16_392 = {
+#ifdef LXOBJ_STATENUMBERS
+	392,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'A', u'A', (vTyStateProtoChar16*)( & stateUTF16_403<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16393;
+template < class t_TyTraits > inline
+_TystateUTF16393 stateUTF16_393 = {
+#ifdef LXOBJ_STATENUMBERS
+	393,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'M', u'M', (vTyStateProtoChar16*)( & stateUTF16_404<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16394;
+template < class t_TyTraits > inline
+_TystateUTF16394 stateUTF16_394 = {
+#ifdef LXOBJ_STATENUMBERS
+	394,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'C', u'C', (vTyStateProtoChar16*)( & stateUTF16_405<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16395;
+template < class t_TyTraits > inline
+_TystateUTF16395 stateUTF16_395 = {
+#ifdef LXOBJ_STATENUMBERS
+	395,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'I', u'I', (vTyStateProtoChar16*)( & stateUTF16_406<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16396;
+template < class t_TyTraits > inline
+_TystateUTF16396 stateUTF16_396 = {
+#ifdef LXOBJ_STATENUMBERS
+	396,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'E', u'E', (vTyStateProtoChar16*)( & stateUTF16_407<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, true, false, 0, 0 > _TystateUTF16397;
+template < class t_TyTraits > inline
+_TystateUTF16397 stateUTF16_397 = {
+#ifdef LXOBJ_STATENUMBERS
+	397,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16397, m_pmfnAccept ),  0, 4036, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4036 ) };
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16398;
+template < class t_TyTraits > inline
+_TystateUTF16398 stateUTF16_398 = {
+#ifdef LXOBJ_STATENUMBERS
+	398,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'D', u'D', (vTyStateProtoChar16*)( & stateUTF16_408<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16399;
+template < class t_TyTraits > inline
+_TystateUTF16399 stateUTF16_399 = {
+#ifdef LXOBJ_STATENUMBERS
+	399,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'E', u'E', (vTyStateProtoChar16*)( & stateUTF16_409<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, true, false, 0, 0 > _TystateUTF16400;
+template < class t_TyTraits > inline
+_TystateUTF16400 stateUTF16_400 = {
+#ifdef LXOBJ_STATENUMBERS
+	400,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16400, m_pmfnAccept ),  0, 4024,
+	{
+		{ u'S', u'S', (vTyStateProtoChar16*)( & stateUTF16_410<t_TyTraits> ) }
+	}, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4024 ) };
+typedef _l_state< char16_t, 2, false, false, 0, 0 > _TystateUTF16401;
+template < class t_TyTraits > inline
+_TystateUTF16401 stateUTF16_401 = {
+#ifdef LXOBJ_STATENUMBERS
+	401,
+#endif //LXOBJ_STATENUMBERS
+	2, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'I', u'I', (vTyStateProtoChar16*)( & stateUTF16_412<t_TyTraits> ) },
+		{ u'Y', u'Y', (vTyStateProtoChar16*)( & stateUTF16_411<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, true, false, 0, 0 > _TystateUTF16402;
+template < class t_TyTraits > inline
+_TystateUTF16402 stateUTF16_402 = {
+#ifdef LXOBJ_STATENUMBERS
+	402,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16402, m_pmfnAccept ),  0, 4020, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4020 ) };
+typedef _l_state< char16_t, 0, true, false, 0, 0 > _TystateUTF16403;
+template < class t_TyTraits > inline
+_TystateUTF16403 stateUTF16_403 = {
+#ifdef LXOBJ_STATENUMBERS
+	403,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16403, m_pmfnAccept ),  0, 4022, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4022 ) };
+typedef _l_state< char16_t, 0, true, false, 0, 0 > _TystateUTF16404;
+template < class t_TyTraits > inline
+_TystateUTF16404 stateUTF16_404 = {
+#ifdef LXOBJ_STATENUMBERS
+	404,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16404, m_pmfnAccept ),  0, 4034, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4034 ) };
+typedef _l_state< char16_t, 0, true, false, 0, 0 > _TystateUTF16405;
+template < class t_TyTraits > inline
+_TystateUTF16405 stateUTF16_405 = {
+#ifdef LXOBJ_STATENUMBERS
+	405,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16405, m_pmfnAccept ),  0, 4035, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4035 ) };
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16406;
+template < class t_TyTraits > inline
+_TystateUTF16406 stateUTF16_406 = {
+#ifdef LXOBJ_STATENUMBERS
+	406,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'O', u'O', (vTyStateProtoChar16*)( & stateUTF16_413<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16407;
+template < class t_TyTraits > inline
+_TystateUTF16407 stateUTF16_407 = {
+#ifdef LXOBJ_STATENUMBERS
+	407,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'N', u'N', (vTyStateProtoChar16*)( & stateUTF16_414<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16408;
+template < class t_TyTraits > inline
+_TystateUTF16408 stateUTF16_408 = {
+#ifdef LXOBJ_STATENUMBERS
+	408,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'E', u'E', (vTyStateProtoChar16*)( & stateUTF16_415<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, true, false, 0, 0 > _TystateUTF16409;
+template < class t_TyTraits > inline
+_TystateUTF16409 stateUTF16_409 = {
+#ifdef LXOBJ_STATENUMBERS
+	409,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16409, m_pmfnAccept ),  0, 4045, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4045 ) };
+typedef _l_state< char16_t, 0, true, false, 0, 0 > _TystateUTF16410;
+template < class t_TyTraits > inline
+_TystateUTF16410 stateUTF16_410 = {
+#ifdef LXOBJ_STATENUMBERS
+	410,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16410, m_pmfnAccept ),  0, 4025, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4025 ) };
+typedef _l_state< char16_t, 0, true, false, 0, 0 > _TystateUTF16411;
+template < class t_TyTraits > inline
+_TystateUTF16411 stateUTF16_411 = {
+#ifdef LXOBJ_STATENUMBERS
+	411,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16411, m_pmfnAccept ),  0, 4026, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4026 ) };
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16412;
+template < class t_TyTraits > inline
+_TystateUTF16412 stateUTF16_412 = {
+#ifdef LXOBJ_STATENUMBERS
+	412,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'E', u'E', (vTyStateProtoChar16*)( & stateUTF16_416<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16413;
+template < class t_TyTraits > inline
+_TystateUTF16413 stateUTF16_413 = {
+#ifdef LXOBJ_STATENUMBERS
+	413,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'N', u'N', (vTyStateProtoChar16*)( & stateUTF16_417<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, true, false, 0, 0 > _TystateUTF16414;
+template < class t_TyTraits > inline
+_TystateUTF16414 stateUTF16_414 = {
+#ifdef LXOBJ_STATENUMBERS
+	414,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16414, m_pmfnAccept ),  0, 4028,
+	{
+		{ u'S', u'S', (vTyStateProtoChar16*)( & stateUTF16_418<t_TyTraits> ) }
+	}, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4028 ) };
+typedef _l_state< char16_t, 0, true, false, 0, 0 > _TystateUTF16415;
+template < class t_TyTraits > inline
+_TystateUTF16415 stateUTF16_415 = {
+#ifdef LXOBJ_STATENUMBERS
+	415,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16415, m_pmfnAccept ),  0, 4044, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4044 ) };
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16416;
+template < class t_TyTraits > inline
+_TystateUTF16416 stateUTF16_416 = {
+#ifdef LXOBJ_STATENUMBERS
+	416,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'S', u'S', (vTyStateProtoChar16*)( & stateUTF16_419<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, true, false, 0, 0 > _TystateUTF16417;
+template < class t_TyTraits > inline
+_TystateUTF16417 stateUTF16_417 = {
+#ifdef LXOBJ_STATENUMBERS
+	417,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16417, m_pmfnAccept ),  0, 4030, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4030 ) };
+typedef _l_state< char16_t, 0, true, false, 0, 0 > _TystateUTF16418;
+template < class t_TyTraits > inline
+_TystateUTF16418 stateUTF16_418 = {
+#ifdef LXOBJ_STATENUMBERS
+	418,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16418, m_pmfnAccept ),  0, 4029, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4029 ) };
+typedef _l_state< char16_t, 0, true, false, 0, 0 > _TystateUTF16419;
+template < class t_TyTraits > inline
+_TystateUTF16419 stateUTF16_419 = {
+#ifdef LXOBJ_STATENUMBERS
+	419,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16419, m_pmfnAccept ),  0, 4027, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4027 ) };
+
+typedef _l_state< char16_t, 17, false, false, 0, 0 > _TystateUTF16420;
+template < class t_TyTraits > inline
+_TystateUTF16420 startUTF16DtdNmtoken = {
+#ifdef LXOBJ_STATENUMBERS
+	420,
+#endif //LXOBJ_STATENUMBERS
+	17, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'-', u'.', (vTyStateProtoChar16*)( & stateUTF16_421<t_TyTraits> ) },
+		{ u'0', u':', (vTyStateProtoChar16*)( & stateUTF16_421<t_TyTraits> ) },
+		{ u'A', u'Z', (vTyStateProtoChar16*)( & stateUTF16_421<t_TyTraits> ) },
+		{ u'_', u'_', (vTyStateProtoChar16*)( & stateUTF16_421<t_TyTraits> ) },
+		{ u'a', u'z', (vTyStateProtoChar16*)( & stateUTF16_421<t_TyTraits> ) },
+		{ 0x0b7, 0x0b7, (vTyStateProtoChar16*)( & stateUTF16_421<t_TyTraits> ) },
+		{ 0x0c0, 0x0d6, (vTyStateProtoChar16*)( & stateUTF16_421<t_TyTraits> ) },
+		{ 0x0d8, 0x0f6, (vTyStateProtoChar16*)( & stateUTF16_421<t_TyTraits> ) },
+		{ 0x0f8, 0x037d, (vTyStateProtoChar16*)( & stateUTF16_421<t_TyTraits> ) },
+		{ 0x037f, 0x01fff, (vTyStateProtoChar16*)( & stateUTF16_421<t_TyTraits> ) },
+		{ 0x0200c, 0x0200d, (vTyStateProtoChar16*)( & stateUTF16_421<t_TyTraits> ) },
+		{ 0x0203f, 0x02040, (vTyStateProtoChar16*)( & stateUTF16_421<t_TyTraits> ) },
+		{ 0x02070, 0x0218f, (vTyStateProtoChar16*)( & stateUTF16_421<t_TyTraits> ) },
+		{ 0x02c00, 0x02fef, (vTyStateProtoChar16*)( & stateUTF16_421<t_TyTraits> ) },
+		{ 0x03001, 0x0dfff, (vTyStateProtoChar16*)( & stateUTF16_421<t_TyTraits> ) },
+		{ 0x0f900, 0x0fdcf, (vTyStateProtoChar16*)( & stateUTF16_421<t_TyTraits> ) },
+		{ 0x0fdf0, 0x0fffd, (vTyStateProtoChar16*)( & stateUTF16_421<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 17, true, false, 0, 0 > _TystateUTF16421;
+template < class t_TyTraits > inline
+_TystateUTF16421 stateUTF16_421 = {
+#ifdef LXOBJ_STATENUMBERS
+	421,
+#endif //LXOBJ_STATENUMBERS
+	17, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16421, m_pmfnAccept ),  0, 4002,
+	{
+		{ u'-', u'.', (vTyStateProtoChar16*)( & stateUTF16_421<t_TyTraits> ) },
+		{ u'0', u':', (vTyStateProtoChar16*)( & stateUTF16_421<t_TyTraits> ) },
+		{ u'A', u'Z', (vTyStateProtoChar16*)( & stateUTF16_421<t_TyTraits> ) },
+		{ u'_', u'_', (vTyStateProtoChar16*)( & stateUTF16_421<t_TyTraits> ) },
+		{ u'a', u'z', (vTyStateProtoChar16*)( & stateUTF16_421<t_TyTraits> ) },
+		{ 0x0b7, 0x0b7, (vTyStateProtoChar16*)( & stateUTF16_421<t_TyTraits> ) },
+		{ 0x0c0, 0x0d6, (vTyStateProtoChar16*)( & stateUTF16_421<t_TyTraits> ) },
+		{ 0x0d8, 0x0f6, (vTyStateProtoChar16*)( & stateUTF16_421<t_TyTraits> ) },
+		{ 0x0f8, 0x037d, (vTyStateProtoChar16*)( & stateUTF16_421<t_TyTraits> ) },
+		{ 0x037f, 0x01fff, (vTyStateProtoChar16*)( & stateUTF16_421<t_TyTraits> ) },
+		{ 0x0200c, 0x0200d, (vTyStateProtoChar16*)( & stateUTF16_421<t_TyTraits> ) },
+		{ 0x0203f, 0x02040, (vTyStateProtoChar16*)( & stateUTF16_421<t_TyTraits> ) },
+		{ 0x02070, 0x0218f, (vTyStateProtoChar16*)( & stateUTF16_421<t_TyTraits> ) },
+		{ 0x02c00, 0x02fef, (vTyStateProtoChar16*)( & stateUTF16_421<t_TyTraits> ) },
+		{ 0x03001, 0x0dfff, (vTyStateProtoChar16*)( & stateUTF16_421<t_TyTraits> ) },
+		{ 0x0f900, 0x0fdcf, (vTyStateProtoChar16*)( & stateUTF16_421<t_TyTraits> ) },
+		{ 0x0fdf0, 0x0fffd, (vTyStateProtoChar16*)( & stateUTF16_421<t_TyTraits> ) }
+	}, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4002 ) };
+
+typedef _l_state< char16_t, 2, false, false, 0, 0 > _TystateUTF16422;
+template < class t_TyTraits > inline
+_TystateUTF16422 startUTF16DtdEntityValue = {
+#ifdef LXOBJ_STATENUMBERS
+	422,
+#endif //LXOBJ_STATENUMBERS
+	2, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'"', u'"', (vTyStateProtoChar16*)( & stateUTF16_424<t_TyTraits> ) },
+		{ 0x027, 0x027, (vTyStateProtoChar16*)( & stateUTF16_423<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 3, false, false, 0, 0 > _TystateUTF16423;
+template < class t_TyTraits > inline
+_TystateUTF16423 stateUTF16_423 = {
+#ifdef LXOBJ_STATENUMBERS
+	423,
+#endif //LXOBJ_STATENUMBERS
+	3, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_425<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	{
+		{ u'%', u'%', (vTyStateProtoChar16*)( & stateUTF16_428<t_TyTraits> ) },
+		{ u'&', u'&', (vTyStateProtoChar16*)( & stateUTF16_427<t_TyTraits> ) },
+		{ 0x027, 0x027, (vTyStateProtoChar16*)( & stateUTF16_426<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 0 > _TystateUTF16424;
+template < class t_TyTraits > inline
+_TystateUTF16424 stateUTF16_424 = {
+#ifdef LXOBJ_STATENUMBERS
+	424,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_429<t_TyTraits> ), 0, 0, vktidInvalidIdToken };
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16425;
+template < class t_TyTraits > inline
+_TystateUTF16425 stateUTF16_425 = {
+#ifdef LXOBJ_STATENUMBERS
+	425,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_430<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16425, m_rgpmfnTriggers ), 9,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger9 )
+	} };
+typedef _l_state< char16_t, 0, true, false, 0, 0 > _TystateUTF16426;
+template < class t_TyTraits > inline
+_TystateUTF16426 stateUTF16_426 = {
+#ifdef LXOBJ_STATENUMBERS
+	426,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16426, m_pmfnAccept ),  0, 4037, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4037 ) };
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16427;
+template < class t_TyTraits > inline
+_TystateUTF16427 stateUTF16_427 = {
+#ifdef LXOBJ_STATENUMBERS
+	427,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_431<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	{
+		{ u'#', u'#', (vTyStateProtoChar16*)( & stateUTF16_432<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 0 > _TystateUTF16428;
+template < class t_TyTraits > inline
+_TystateUTF16428 stateUTF16_428 = {
+#ifdef LXOBJ_STATENUMBERS
+	428,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_433<t_TyTraits> ), 0, 0, vktidInvalidIdToken };
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16429;
+template < class t_TyTraits > inline
+_TystateUTF16429 stateUTF16_429 = {
+#ifdef LXOBJ_STATENUMBERS
+	429,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_434<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16429, m_rgpmfnTriggers ), 17,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger17 )
+	} };
+typedef _l_state< char16_t, 2, false, false, 0, 0 > _TystateUTF16430;
+template < class t_TyTraits > inline
+_TystateUTF16430 stateUTF16_430 = {
+#ifdef LXOBJ_STATENUMBERS
+	430,
+#endif //LXOBJ_STATENUMBERS
+	2, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ 0x01, u'$', (vTyStateProtoChar16*)( & stateUTF16_435<t_TyTraits> ) },
+		{ u'(', 0x0ffff, (vTyStateProtoChar16*)( & stateUTF16_435<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16431;
+template < class t_TyTraits > inline
+_TystateUTF16431 stateUTF16_431 = {
+#ifdef LXOBJ_STATENUMBERS
+	431,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_436<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16431, m_rgpmfnTriggers ), 11,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger11 )
+	} };
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16432;
+template < class t_TyTraits > inline
+_TystateUTF16432 stateUTF16_432 = {
+#ifdef LXOBJ_STATENUMBERS
+	432,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_437<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	{
+		{ u'x', u'x', (vTyStateProtoChar16*)( & stateUTF16_438<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16433;
+template < class t_TyTraits > inline
+_TystateUTF16433 stateUTF16_433 = {
+#ifdef LXOBJ_STATENUMBERS
+	433,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_439<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16433, m_rgpmfnTriggers ), 46,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger46 )
+	} };
+typedef _l_state< char16_t, 3, false, false, 0, 0 > _TystateUTF16434;
+template < class t_TyTraits > inline
+_TystateUTF16434 stateUTF16_434 = {
+#ifdef LXOBJ_STATENUMBERS
+	434,
+#endif //LXOBJ_STATENUMBERS
+	3, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_440<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	{
+		{ u'"', u'"', (vTyStateProtoChar16*)( & stateUTF16_426<t_TyTraits> ) },
+		{ u'%', u'%', (vTyStateProtoChar16*)( & stateUTF16_442<t_TyTraits> ) },
+		{ u'&', u'&', (vTyStateProtoChar16*)( & stateUTF16_441<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 2, false, false, 0, 0 > _TystateUTF16435;
+template < class t_TyTraits > inline
+_TystateUTF16435 stateUTF16_435 = {
+#ifdef LXOBJ_STATENUMBERS
+	435,
+#endif //LXOBJ_STATENUMBERS
+	2, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_443<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	{
+		{ 0x01, u'$', (vTyStateProtoChar16*)( & stateUTF16_435<t_TyTraits> ) },
+		{ u'(', 0x0ffff, (vTyStateProtoChar16*)( & stateUTF16_435<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 15, false, false, 0, 0 > _TystateUTF16436;
+template < class t_TyTraits > inline
+_TystateUTF16436 stateUTF16_436 = {
+#ifdef LXOBJ_STATENUMBERS
+	436,
+#endif //LXOBJ_STATENUMBERS
+	15, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u':', u':', (vTyStateProtoChar16*)( & stateUTF16_444<t_TyTraits> ) },
+		{ u'A', u'Z', (vTyStateProtoChar16*)( & stateUTF16_444<t_TyTraits> ) },
+		{ u'_', u'_', (vTyStateProtoChar16*)( & stateUTF16_444<t_TyTraits> ) },
+		{ u'a', u'z', (vTyStateProtoChar16*)( & stateUTF16_444<t_TyTraits> ) },
+		{ 0x0c0, 0x0d6, (vTyStateProtoChar16*)( & stateUTF16_444<t_TyTraits> ) },
+		{ 0x0d8, 0x0f6, (vTyStateProtoChar16*)( & stateUTF16_444<t_TyTraits> ) },
+		{ 0x0f8, 0x02ff, (vTyStateProtoChar16*)( & stateUTF16_444<t_TyTraits> ) },
+		{ 0x0370, 0x037d, (vTyStateProtoChar16*)( & stateUTF16_444<t_TyTraits> ) },
+		{ 0x037f, 0x01fff, (vTyStateProtoChar16*)( & stateUTF16_444<t_TyTraits> ) },
+		{ 0x0200c, 0x0200d, (vTyStateProtoChar16*)( & stateUTF16_444<t_TyTraits> ) },
+		{ 0x02070, 0x0218f, (vTyStateProtoChar16*)( & stateUTF16_444<t_TyTraits> ) },
+		{ 0x02c00, 0x02fef, (vTyStateProtoChar16*)( & stateUTF16_444<t_TyTraits> ) },
+		{ 0x03001, 0x0dfff, (vTyStateProtoChar16*)( & stateUTF16_444<t_TyTraits> ) },
+		{ 0x0f900, 0x0fdcf, (vTyStateProtoChar16*)( & stateUTF16_444<t_TyTraits> ) },
+		{ 0x0fdf0, 0x0fffd, (vTyStateProtoChar16*)( & stateUTF16_444<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16437;
+template < class t_TyTraits > inline
+_TystateUTF16437 stateUTF16_437 = {
+#ifdef LXOBJ_STATENUMBERS
+	437,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_445<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16437, m_rgpmfnTriggers ), 13,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger13 )
+	} };
+typedef _l_state< char16_t, 0, false, false, 0, 0 > _TystateUTF16438;
+template < class t_TyTraits > inline
+_TystateUTF16438 stateUTF16_438 = {
+#ifdef LXOBJ_STATENUMBERS
+	438,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_446<t_TyTraits> ), 0, 0, vktidInvalidIdToken };
+typedef _l_state< char16_t, 15, false, false, 0, 0 > _TystateUTF16439;
+template < class t_TyTraits > inline
+_TystateUTF16439 stateUTF16_439 = {
+#ifdef LXOBJ_STATENUMBERS
+	439,
+#endif //LXOBJ_STATENUMBERS
+	15, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u':', u':', (vTyStateProtoChar16*)( & stateUTF16_447<t_TyTraits> ) },
+		{ u'A', u'Z', (vTyStateProtoChar16*)( & stateUTF16_447<t_TyTraits> ) },
+		{ u'_', u'_', (vTyStateProtoChar16*)( & stateUTF16_447<t_TyTraits> ) },
+		{ u'a', u'z', (vTyStateProtoChar16*)( & stateUTF16_447<t_TyTraits> ) },
+		{ 0x0c0, 0x0d6, (vTyStateProtoChar16*)( & stateUTF16_447<t_TyTraits> ) },
+		{ 0x0d8, 0x0f6, (vTyStateProtoChar16*)( & stateUTF16_447<t_TyTraits> ) },
+		{ 0x0f8, 0x02ff, (vTyStateProtoChar16*)( & stateUTF16_447<t_TyTraits> ) },
+		{ 0x0370, 0x037d, (vTyStateProtoChar16*)( & stateUTF16_447<t_TyTraits> ) },
+		{ 0x037f, 0x01fff, (vTyStateProtoChar16*)( & stateUTF16_447<t_TyTraits> ) },
+		{ 0x0200c, 0x0200d, (vTyStateProtoChar16*)( & stateUTF16_447<t_TyTraits> ) },
+		{ 0x02070, 0x0218f, (vTyStateProtoChar16*)( & stateUTF16_447<t_TyTraits> ) },
+		{ 0x02c00, 0x02fef, (vTyStateProtoChar16*)( & stateUTF16_447<t_TyTraits> ) },
+		{ 0x03001, 0x0dfff, (vTyStateProtoChar16*)( & stateUTF16_447<t_TyTraits> ) },
+		{ 0x0f900, 0x0fdcf, (vTyStateProtoChar16*)( & stateUTF16_447<t_TyTraits> ) },
+		{ 0x0fdf0, 0x0fffd, (vTyStateProtoChar16*)( & stateUTF16_447<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16440;
+template < class t_TyTraits > inline
+_TystateUTF16440 stateUTF16_440 = {
+#ifdef LXOBJ_STATENUMBERS
+	440,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_448<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16440, m_rgpmfnTriggers ), 7,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger7 )
+	} };
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16441;
+template < class t_TyTraits > inline
+_TystateUTF16441 stateUTF16_441 = {
+#ifdef LXOBJ_STATENUMBERS
+	441,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_449<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	{
+		{ u'#', u'#', (vTyStateProtoChar16*)( & stateUTF16_450<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 0 > _TystateUTF16442;
+template < class t_TyTraits > inline
+_TystateUTF16442 stateUTF16_442 = {
+#ifdef LXOBJ_STATENUMBERS
+	442,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_451<t_TyTraits> ), 0, 0, vktidInvalidIdToken };
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16443;
+template < class t_TyTraits > inline
+_TystateUTF16443 stateUTF16_443 = {
+#ifdef LXOBJ_STATENUMBERS
+	443,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_423<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16443, m_rgpmfnTriggers ), 10,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger10 )
+	} };
+typedef _l_state< char16_t, 17, false, false, 0, 0 > _TystateUTF16444;
+template < class t_TyTraits > inline
+_TystateUTF16444 stateUTF16_444 = {
+#ifdef LXOBJ_STATENUMBERS
+	444,
+#endif //LXOBJ_STATENUMBERS
+	17, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_452<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	{
+		{ u'-', u'.', (vTyStateProtoChar16*)( & stateUTF16_444<t_TyTraits> ) },
+		{ u'0', u':', (vTyStateProtoChar16*)( & stateUTF16_444<t_TyTraits> ) },
+		{ u'A', u'Z', (vTyStateProtoChar16*)( & stateUTF16_444<t_TyTraits> ) },
+		{ u'_', u'_', (vTyStateProtoChar16*)( & stateUTF16_444<t_TyTraits> ) },
+		{ u'a', u'z', (vTyStateProtoChar16*)( & stateUTF16_444<t_TyTraits> ) },
+		{ 0x0b7, 0x0b7, (vTyStateProtoChar16*)( & stateUTF16_444<t_TyTraits> ) },
+		{ 0x0c0, 0x0d6, (vTyStateProtoChar16*)( & stateUTF16_444<t_TyTraits> ) },
+		{ 0x0d8, 0x0f6, (vTyStateProtoChar16*)( & stateUTF16_444<t_TyTraits> ) },
+		{ 0x0f8, 0x037d, (vTyStateProtoChar16*)( & stateUTF16_444<t_TyTraits> ) },
+		{ 0x037f, 0x01fff, (vTyStateProtoChar16*)( & stateUTF16_444<t_TyTraits> ) },
+		{ 0x0200c, 0x0200d, (vTyStateProtoChar16*)( & stateUTF16_444<t_TyTraits> ) },
+		{ 0x0203f, 0x02040, (vTyStateProtoChar16*)( & stateUTF16_444<t_TyTraits> ) },
+		{ 0x02070, 0x0218f, (vTyStateProtoChar16*)( & stateUTF16_444<t_TyTraits> ) },
+		{ 0x02c00, 0x02fef, (vTyStateProtoChar16*)( & stateUTF16_444<t_TyTraits> ) },
+		{ 0x03001, 0x0dfff, (vTyStateProtoChar16*)( & stateUTF16_444<t_TyTraits> ) },
+		{ 0x0f900, 0x0fdcf, (vTyStateProtoChar16*)( & stateUTF16_444<t_TyTraits> ) },
+		{ 0x0fdf0, 0x0fffd, (vTyStateProtoChar16*)( & stateUTF16_444<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16445;
+template < class t_TyTraits > inline
+_TystateUTF16445 stateUTF16_445 = {
+#ifdef LXOBJ_STATENUMBERS
+	445,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'0', u'9', (vTyStateProtoChar16*)( & stateUTF16_453<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16446;
+template < class t_TyTraits > inline
+_TystateUTF16446 stateUTF16_446 = {
+#ifdef LXOBJ_STATENUMBERS
+	446,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_454<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16446, m_rgpmfnTriggers ), 15,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger15 )
+	} };
+typedef _l_state< char16_t, 17, false, false, 0, 0 > _TystateUTF16447;
+template < class t_TyTraits > inline
+_TystateUTF16447 stateUTF16_447 = {
+#ifdef LXOBJ_STATENUMBERS
+	447,
+#endif //LXOBJ_STATENUMBERS
+	17, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_455<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	{
+		{ u'-', u'.', (vTyStateProtoChar16*)( & stateUTF16_447<t_TyTraits> ) },
+		{ u'0', u':', (vTyStateProtoChar16*)( & stateUTF16_447<t_TyTraits> ) },
+		{ u'A', u'Z', (vTyStateProtoChar16*)( & stateUTF16_447<t_TyTraits> ) },
+		{ u'_', u'_', (vTyStateProtoChar16*)( & stateUTF16_447<t_TyTraits> ) },
+		{ u'a', u'z', (vTyStateProtoChar16*)( & stateUTF16_447<t_TyTraits> ) },
+		{ 0x0b7, 0x0b7, (vTyStateProtoChar16*)( & stateUTF16_447<t_TyTraits> ) },
+		{ 0x0c0, 0x0d6, (vTyStateProtoChar16*)( & stateUTF16_447<t_TyTraits> ) },
+		{ 0x0d8, 0x0f6, (vTyStateProtoChar16*)( & stateUTF16_447<t_TyTraits> ) },
+		{ 0x0f8, 0x037d, (vTyStateProtoChar16*)( & stateUTF16_447<t_TyTraits> ) },
+		{ 0x037f, 0x01fff, (vTyStateProtoChar16*)( & stateUTF16_447<t_TyTraits> ) },
+		{ 0x0200c, 0x0200d, (vTyStateProtoChar16*)( & stateUTF16_447<t_TyTraits> ) },
+		{ 0x0203f, 0x02040, (vTyStateProtoChar16*)( & stateUTF16_447<t_TyTraits> ) },
+		{ 0x02070, 0x0218f, (vTyStateProtoChar16*)( & stateUTF16_447<t_TyTraits> ) },
+		{ 0x02c00, 0x02fef, (vTyStateProtoChar16*)( & stateUTF16_447<t_TyTraits> ) },
+		{ 0x03001, 0x0dfff, (vTyStateProtoChar16*)( & stateUTF16_447<t_TyTraits> ) },
+		{ 0x0f900, 0x0fdcf, (vTyStateProtoChar16*)( & stateUTF16_447<t_TyTraits> ) },
+		{ 0x0fdf0, 0x0fffd, (vTyStateProtoChar16*)( & stateUTF16_447<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 3, false, false, 0, 0 > _TystateUTF16448;
+template < class t_TyTraits > inline
+_TystateUTF16448 stateUTF16_448 = {
+#ifdef LXOBJ_STATENUMBERS
+	448,
+#endif //LXOBJ_STATENUMBERS
+	3, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ 0x01, u'!', (vTyStateProtoChar16*)( & stateUTF16_456<t_TyTraits> ) },
+		{ u'#', u'$', (vTyStateProtoChar16*)( & stateUTF16_456<t_TyTraits> ) },
+		{ 0x027, 0x0ffff, (vTyStateProtoChar16*)( & stateUTF16_456<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16449;
+template < class t_TyTraits > inline
+_TystateUTF16449 stateUTF16_449 = {
+#ifdef LXOBJ_STATENUMBERS
+	449,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_457<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16449, m_rgpmfnTriggers ), 11,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger11 )
+	} };
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16450;
+template < class t_TyTraits > inline
+_TystateUTF16450 stateUTF16_450 = {
+#ifdef LXOBJ_STATENUMBERS
+	450,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_458<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	{
+		{ u'x', u'x', (vTyStateProtoChar16*)( & stateUTF16_459<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16451;
+template < class t_TyTraits > inline
+_TystateUTF16451 stateUTF16_451 = {
+#ifdef LXOBJ_STATENUMBERS
+	451,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_460<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16451, m_rgpmfnTriggers ), 46,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger46 )
+	} };
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16452;
+template < class t_TyTraits > inline
+_TystateUTF16452 stateUTF16_452 = {
+#ifdef LXOBJ_STATENUMBERS
+	452,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_461<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16452, m_rgpmfnTriggers ), 12,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger12 )
+	} };
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16453;
+template < class t_TyTraits > inline
+_TystateUTF16453 stateUTF16_453 = {
+#ifdef LXOBJ_STATENUMBERS
+	453,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_462<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	{
+		{ u'0', u'9', (vTyStateProtoChar16*)( & stateUTF16_453<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 3, false, false, 0, 0 > _TystateUTF16454;
+template < class t_TyTraits > inline
+_TystateUTF16454 stateUTF16_454 = {
+#ifdef LXOBJ_STATENUMBERS
+	454,
+#endif //LXOBJ_STATENUMBERS
+	3, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'0', u'9', (vTyStateProtoChar16*)( & stateUTF16_463<t_TyTraits> ) },
+		{ u'A', u'F', (vTyStateProtoChar16*)( & stateUTF16_463<t_TyTraits> ) },
+		{ u'a', u'f', (vTyStateProtoChar16*)( & stateUTF16_463<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16455;
+template < class t_TyTraits > inline
+_TystateUTF16455 stateUTF16_455 = {
+#ifdef LXOBJ_STATENUMBERS
+	455,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_461<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16455, m_rgpmfnTriggers ), 47,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger47 )
+	} };
+typedef _l_state< char16_t, 3, false, false, 0, 0 > _TystateUTF16456;
+template < class t_TyTraits > inline
+_TystateUTF16456 stateUTF16_456 = {
+#ifdef LXOBJ_STATENUMBERS
+	456,
+#endif //LXOBJ_STATENUMBERS
+	3, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_464<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	{
+		{ 0x01, u'!', (vTyStateProtoChar16*)( & stateUTF16_456<t_TyTraits> ) },
+		{ u'#', u'$', (vTyStateProtoChar16*)( & stateUTF16_456<t_TyTraits> ) },
+		{ 0x027, 0x0ffff, (vTyStateProtoChar16*)( & stateUTF16_456<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 15, false, false, 0, 0 > _TystateUTF16457;
+template < class t_TyTraits > inline
+_TystateUTF16457 stateUTF16_457 = {
+#ifdef LXOBJ_STATENUMBERS
+	457,
+#endif //LXOBJ_STATENUMBERS
+	15, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u':', u':', (vTyStateProtoChar16*)( & stateUTF16_465<t_TyTraits> ) },
+		{ u'A', u'Z', (vTyStateProtoChar16*)( & stateUTF16_465<t_TyTraits> ) },
+		{ u'_', u'_', (vTyStateProtoChar16*)( & stateUTF16_465<t_TyTraits> ) },
+		{ u'a', u'z', (vTyStateProtoChar16*)( & stateUTF16_465<t_TyTraits> ) },
+		{ 0x0c0, 0x0d6, (vTyStateProtoChar16*)( & stateUTF16_465<t_TyTraits> ) },
+		{ 0x0d8, 0x0f6, (vTyStateProtoChar16*)( & stateUTF16_465<t_TyTraits> ) },
+		{ 0x0f8, 0x02ff, (vTyStateProtoChar16*)( & stateUTF16_465<t_TyTraits> ) },
+		{ 0x0370, 0x037d, (vTyStateProtoChar16*)( & stateUTF16_465<t_TyTraits> ) },
+		{ 0x037f, 0x01fff, (vTyStateProtoChar16*)( & stateUTF16_465<t_TyTraits> ) },
+		{ 0x0200c, 0x0200d, (vTyStateProtoChar16*)( & stateUTF16_465<t_TyTraits> ) },
+		{ 0x02070, 0x0218f, (vTyStateProtoChar16*)( & stateUTF16_465<t_TyTraits> ) },
+		{ 0x02c00, 0x02fef, (vTyStateProtoChar16*)( & stateUTF16_465<t_TyTraits> ) },
+		{ 0x03001, 0x0dfff, (vTyStateProtoChar16*)( & stateUTF16_465<t_TyTraits> ) },
+		{ 0x0f900, 0x0fdcf, (vTyStateProtoChar16*)( & stateUTF16_465<t_TyTraits> ) },
+		{ 0x0fdf0, 0x0fffd, (vTyStateProtoChar16*)( & stateUTF16_465<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16458;
+template < class t_TyTraits > inline
+_TystateUTF16458 stateUTF16_458 = {
+#ifdef LXOBJ_STATENUMBERS
+	458,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_466<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16458, m_rgpmfnTriggers ), 13,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger13 )
+	} };
+typedef _l_state< char16_t, 0, false, false, 0, 0 > _TystateUTF16459;
+template < class t_TyTraits > inline
+_TystateUTF16459 stateUTF16_459 = {
+#ifdef LXOBJ_STATENUMBERS
+	459,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_467<t_TyTraits> ), 0, 0, vktidInvalidIdToken };
+typedef _l_state< char16_t, 15, false, false, 0, 0 > _TystateUTF16460;
+template < class t_TyTraits > inline
+_TystateUTF16460 stateUTF16_460 = {
+#ifdef LXOBJ_STATENUMBERS
+	460,
+#endif //LXOBJ_STATENUMBERS
+	15, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u':', u':', (vTyStateProtoChar16*)( & stateUTF16_468<t_TyTraits> ) },
+		{ u'A', u'Z', (vTyStateProtoChar16*)( & stateUTF16_468<t_TyTraits> ) },
+		{ u'_', u'_', (vTyStateProtoChar16*)( & stateUTF16_468<t_TyTraits> ) },
+		{ u'a', u'z', (vTyStateProtoChar16*)( & stateUTF16_468<t_TyTraits> ) },
+		{ 0x0c0, 0x0d6, (vTyStateProtoChar16*)( & stateUTF16_468<t_TyTraits> ) },
+		{ 0x0d8, 0x0f6, (vTyStateProtoChar16*)( & stateUTF16_468<t_TyTraits> ) },
+		{ 0x0f8, 0x02ff, (vTyStateProtoChar16*)( & stateUTF16_468<t_TyTraits> ) },
+		{ 0x0370, 0x037d, (vTyStateProtoChar16*)( & stateUTF16_468<t_TyTraits> ) },
+		{ 0x037f, 0x01fff, (vTyStateProtoChar16*)( & stateUTF16_468<t_TyTraits> ) },
+		{ 0x0200c, 0x0200d, (vTyStateProtoChar16*)( & stateUTF16_468<t_TyTraits> ) },
+		{ 0x02070, 0x0218f, (vTyStateProtoChar16*)( & stateUTF16_468<t_TyTraits> ) },
+		{ 0x02c00, 0x02fef, (vTyStateProtoChar16*)( & stateUTF16_468<t_TyTraits> ) },
+		{ 0x03001, 0x0dfff, (vTyStateProtoChar16*)( & stateUTF16_468<t_TyTraits> ) },
+		{ 0x0f900, 0x0fdcf, (vTyStateProtoChar16*)( & stateUTF16_468<t_TyTraits> ) },
+		{ 0x0fdf0, 0x0fffd, (vTyStateProtoChar16*)( & stateUTF16_468<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16461;
+template < class t_TyTraits > inline
+_TystateUTF16461 stateUTF16_461 = {
+#ifdef LXOBJ_STATENUMBERS
+	461,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u';', u';', (vTyStateProtoChar16*)( & stateUTF16_423<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16462;
+template < class t_TyTraits > inline
+_TystateUTF16462 stateUTF16_462 = {
+#ifdef LXOBJ_STATENUMBERS
+	462,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_461<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16462, m_rgpmfnTriggers ), 14,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger14 )
+	} };
+typedef _l_state< char16_t, 3, false, false, 0, 0 > _TystateUTF16463;
+template < class t_TyTraits > inline
+_TystateUTF16463 stateUTF16_463 = {
+#ifdef LXOBJ_STATENUMBERS
+	463,
+#endif //LXOBJ_STATENUMBERS
+	3, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_469<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	{
+		{ u'0', u'9', (vTyStateProtoChar16*)( & stateUTF16_463<t_TyTraits> ) },
+		{ u'A', u'F', (vTyStateProtoChar16*)( & stateUTF16_463<t_TyTraits> ) },
+		{ u'a', u'f', (vTyStateProtoChar16*)( & stateUTF16_463<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16464;
+template < class t_TyTraits > inline
+_TystateUTF16464 stateUTF16_464 = {
+#ifdef LXOBJ_STATENUMBERS
+	464,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_434<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16464, m_rgpmfnTriggers ), 8,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger8 )
+	} };
+typedef _l_state< char16_t, 17, false, false, 0, 0 > _TystateUTF16465;
+template < class t_TyTraits > inline
+_TystateUTF16465 stateUTF16_465 = {
+#ifdef LXOBJ_STATENUMBERS
+	465,
+#endif //LXOBJ_STATENUMBERS
+	17, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_470<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	{
+		{ u'-', u'.', (vTyStateProtoChar16*)( & stateUTF16_465<t_TyTraits> ) },
+		{ u'0', u':', (vTyStateProtoChar16*)( & stateUTF16_465<t_TyTraits> ) },
+		{ u'A', u'Z', (vTyStateProtoChar16*)( & stateUTF16_465<t_TyTraits> ) },
+		{ u'_', u'_', (vTyStateProtoChar16*)( & stateUTF16_465<t_TyTraits> ) },
+		{ u'a', u'z', (vTyStateProtoChar16*)( & stateUTF16_465<t_TyTraits> ) },
+		{ 0x0b7, 0x0b7, (vTyStateProtoChar16*)( & stateUTF16_465<t_TyTraits> ) },
+		{ 0x0c0, 0x0d6, (vTyStateProtoChar16*)( & stateUTF16_465<t_TyTraits> ) },
+		{ 0x0d8, 0x0f6, (vTyStateProtoChar16*)( & stateUTF16_465<t_TyTraits> ) },
+		{ 0x0f8, 0x037d, (vTyStateProtoChar16*)( & stateUTF16_465<t_TyTraits> ) },
+		{ 0x037f, 0x01fff, (vTyStateProtoChar16*)( & stateUTF16_465<t_TyTraits> ) },
+		{ 0x0200c, 0x0200d, (vTyStateProtoChar16*)( & stateUTF16_465<t_TyTraits> ) },
+		{ 0x0203f, 0x02040, (vTyStateProtoChar16*)( & stateUTF16_465<t_TyTraits> ) },
+		{ 0x02070, 0x0218f, (vTyStateProtoChar16*)( & stateUTF16_465<t_TyTraits> ) },
+		{ 0x02c00, 0x02fef, (vTyStateProtoChar16*)( & stateUTF16_465<t_TyTraits> ) },
+		{ 0x03001, 0x0dfff, (vTyStateProtoChar16*)( & stateUTF16_465<t_TyTraits> ) },
+		{ 0x0f900, 0x0fdcf, (vTyStateProtoChar16*)( & stateUTF16_465<t_TyTraits> ) },
+		{ 0x0fdf0, 0x0fffd, (vTyStateProtoChar16*)( & stateUTF16_465<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16466;
+template < class t_TyTraits > inline
+_TystateUTF16466 stateUTF16_466 = {
+#ifdef LXOBJ_STATENUMBERS
+	466,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'0', u'9', (vTyStateProtoChar16*)( & stateUTF16_471<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16467;
+template < class t_TyTraits > inline
+_TystateUTF16467 stateUTF16_467 = {
+#ifdef LXOBJ_STATENUMBERS
+	467,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_472<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16467, m_rgpmfnTriggers ), 15,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger15 )
+	} };
+typedef _l_state< char16_t, 17, false, false, 0, 0 > _TystateUTF16468;
+template < class t_TyTraits > inline
+_TystateUTF16468 stateUTF16_468 = {
+#ifdef LXOBJ_STATENUMBERS
+	468,
+#endif //LXOBJ_STATENUMBERS
+	17, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_473<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	{
+		{ u'-', u'.', (vTyStateProtoChar16*)( & stateUTF16_468<t_TyTraits> ) },
+		{ u'0', u':', (vTyStateProtoChar16*)( & stateUTF16_468<t_TyTraits> ) },
+		{ u'A', u'Z', (vTyStateProtoChar16*)( & stateUTF16_468<t_TyTraits> ) },
+		{ u'_', u'_', (vTyStateProtoChar16*)( & stateUTF16_468<t_TyTraits> ) },
+		{ u'a', u'z', (vTyStateProtoChar16*)( & stateUTF16_468<t_TyTraits> ) },
+		{ 0x0b7, 0x0b7, (vTyStateProtoChar16*)( & stateUTF16_468<t_TyTraits> ) },
+		{ 0x0c0, 0x0d6, (vTyStateProtoChar16*)( & stateUTF16_468<t_TyTraits> ) },
+		{ 0x0d8, 0x0f6, (vTyStateProtoChar16*)( & stateUTF16_468<t_TyTraits> ) },
+		{ 0x0f8, 0x037d, (vTyStateProtoChar16*)( & stateUTF16_468<t_TyTraits> ) },
+		{ 0x037f, 0x01fff, (vTyStateProtoChar16*)( & stateUTF16_468<t_TyTraits> ) },
+		{ 0x0200c, 0x0200d, (vTyStateProtoChar16*)( & stateUTF16_468<t_TyTraits> ) },
+		{ 0x0203f, 0x02040, (vTyStateProtoChar16*)( & stateUTF16_468<t_TyTraits> ) },
+		{ 0x02070, 0x0218f, (vTyStateProtoChar16*)( & stateUTF16_468<t_TyTraits> ) },
+		{ 0x02c00, 0x02fef, (vTyStateProtoChar16*)( & stateUTF16_468<t_TyTraits> ) },
+		{ 0x03001, 0x0dfff, (vTyStateProtoChar16*)( & stateUTF16_468<t_TyTraits> ) },
+		{ 0x0f900, 0x0fdcf, (vTyStateProtoChar16*)( & stateUTF16_468<t_TyTraits> ) },
+		{ 0x0fdf0, 0x0fffd, (vTyStateProtoChar16*)( & stateUTF16_468<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16469;
+template < class t_TyTraits > inline
+_TystateUTF16469 stateUTF16_469 = {
+#ifdef LXOBJ_STATENUMBERS
+	469,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_461<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16469, m_rgpmfnTriggers ), 16,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger16 )
+	} };
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16470;
+template < class t_TyTraits > inline
+_TystateUTF16470 stateUTF16_470 = {
+#ifdef LXOBJ_STATENUMBERS
+	470,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_474<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16470, m_rgpmfnTriggers ), 12,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger12 )
+	} };
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16471;
+template < class t_TyTraits > inline
+_TystateUTF16471 stateUTF16_471 = {
+#ifdef LXOBJ_STATENUMBERS
+	471,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_475<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	{
+		{ u'0', u'9', (vTyStateProtoChar16*)( & stateUTF16_471<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 3, false, false, 0, 0 > _TystateUTF16472;
+template < class t_TyTraits > inline
+_TystateUTF16472 stateUTF16_472 = {
+#ifdef LXOBJ_STATENUMBERS
+	472,
+#endif //LXOBJ_STATENUMBERS
+	3, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'0', u'9', (vTyStateProtoChar16*)( & stateUTF16_476<t_TyTraits> ) },
+		{ u'A', u'F', (vTyStateProtoChar16*)( & stateUTF16_476<t_TyTraits> ) },
+		{ u'a', u'f', (vTyStateProtoChar16*)( & stateUTF16_476<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16473;
+template < class t_TyTraits > inline
+_TystateUTF16473 stateUTF16_473 = {
+#ifdef LXOBJ_STATENUMBERS
+	473,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_474<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16473, m_rgpmfnTriggers ), 47,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger47 )
+	} };
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16474;
+template < class t_TyTraits > inline
+_TystateUTF16474 stateUTF16_474 = {
+#ifdef LXOBJ_STATENUMBERS
+	474,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u';', u';', (vTyStateProtoChar16*)( & stateUTF16_434<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16475;
+template < class t_TyTraits > inline
+_TystateUTF16475 stateUTF16_475 = {
+#ifdef LXOBJ_STATENUMBERS
+	475,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_474<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16475, m_rgpmfnTriggers ), 14,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger14 )
+	} };
+typedef _l_state< char16_t, 3, false, false, 0, 0 > _TystateUTF16476;
+template < class t_TyTraits > inline
+_TystateUTF16476 stateUTF16_476 = {
+#ifdef LXOBJ_STATENUMBERS
+	476,
+#endif //LXOBJ_STATENUMBERS
+	3, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_477<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	{
+		{ u'0', u'9', (vTyStateProtoChar16*)( & stateUTF16_476<t_TyTraits> ) },
+		{ u'A', u'F', (vTyStateProtoChar16*)( & stateUTF16_476<t_TyTraits> ) },
+		{ u'a', u'f', (vTyStateProtoChar16*)( & stateUTF16_476<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16477;
+template < class t_TyTraits > inline
+_TystateUTF16477 stateUTF16_477 = {
+#ifdef LXOBJ_STATENUMBERS
+	477,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_474<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16477, m_rgpmfnTriggers ), 16,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger16 )
+	} };
+
+typedef _l_state< char16_t, 2, false, false, 0, 0 > _TystateUTF16478;
+template < class t_TyTraits > inline
+_TystateUTF16478 startUTF16DtdAttValue = {
+#ifdef LXOBJ_STATENUMBERS
+	478,
+#endif //LXOBJ_STATENUMBERS
+	2, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'"', u'"', (vTyStateProtoChar16*)( & stateUTF16_480<t_TyTraits> ) },
+		{ 0x027, 0x027, (vTyStateProtoChar16*)( & stateUTF16_479<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 2, false, false, 0, 0 > _TystateUTF16479;
+template < class t_TyTraits > inline
+_TystateUTF16479 stateUTF16_479 = {
+#ifdef LXOBJ_STATENUMBERS
+	479,
+#endif //LXOBJ_STATENUMBERS
+	2, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_481<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	{
+		{ u'&', u'&', (vTyStateProtoChar16*)( & stateUTF16_483<t_TyTraits> ) },
+		{ 0x027, 0x027, (vTyStateProtoChar16*)( & stateUTF16_482<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 0 > _TystateUTF16480;
+template < class t_TyTraits > inline
+_TystateUTF16480 stateUTF16_480 = {
+#ifdef LXOBJ_STATENUMBERS
+	480,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_484<t_TyTraits> ), 0, 0, vktidInvalidIdToken };
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16481;
+template < class t_TyTraits > inline
+_TystateUTF16481 stateUTF16_481 = {
+#ifdef LXOBJ_STATENUMBERS
+	481,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_485<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16481, m_rgpmfnTriggers ), 9,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger9 )
+	} };
+typedef _l_state< char16_t, 0, true, false, 0, 0 > _TystateUTF16482;
+template < class t_TyTraits > inline
+_TystateUTF16482 stateUTF16_482 = {
+#ifdef LXOBJ_STATENUMBERS
+	482,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16482, m_pmfnAccept ),  0, 4038, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4038 ) };
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16483;
+template < class t_TyTraits > inline
+_TystateUTF16483 stateUTF16_483 = {
+#ifdef LXOBJ_STATENUMBERS
+	483,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_486<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	{
+		{ u'#', u'#', (vTyStateProtoChar16*)( & stateUTF16_487<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16484;
+template < class t_TyTraits > inline
+_TystateUTF16484 stateUTF16_484 = {
+#ifdef LXOBJ_STATENUMBERS
+	484,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_488<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16484, m_rgpmfnTriggers ), 17,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger17 )
+	} };
+typedef _l_state< char16_t, 3, false, false, 0, 0 > _TystateUTF16485;
+template < class t_TyTraits > inline
+_TystateUTF16485 stateUTF16_485 = {
+#ifdef LXOBJ_STATENUMBERS
+	485,
+#endif //LXOBJ_STATENUMBERS
+	3, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ 0x01, u'%', (vTyStateProtoChar16*)( & stateUTF16_489<t_TyTraits> ) },
+		{ u'(', u';', (vTyStateProtoChar16*)( & stateUTF16_489<t_TyTraits> ) },
+		{ u'=', 0x0ffff, (vTyStateProtoChar16*)( & stateUTF16_489<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16486;
+template < class t_TyTraits > inline
+_TystateUTF16486 stateUTF16_486 = {
+#ifdef LXOBJ_STATENUMBERS
+	486,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_490<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16486, m_rgpmfnTriggers ), 11,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger11 )
+	} };
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16487;
+template < class t_TyTraits > inline
+_TystateUTF16487 stateUTF16_487 = {
+#ifdef LXOBJ_STATENUMBERS
+	487,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_491<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	{
+		{ u'x', u'x', (vTyStateProtoChar16*)( & stateUTF16_492<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 2, false, false, 0, 0 > _TystateUTF16488;
+template < class t_TyTraits > inline
+_TystateUTF16488 stateUTF16_488 = {
+#ifdef LXOBJ_STATENUMBERS
+	488,
+#endif //LXOBJ_STATENUMBERS
+	2, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_493<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	{
+		{ u'"', u'"', (vTyStateProtoChar16*)( & stateUTF16_482<t_TyTraits> ) },
+		{ u'&', u'&', (vTyStateProtoChar16*)( & stateUTF16_494<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 3, false, false, 0, 0 > _TystateUTF16489;
+template < class t_TyTraits > inline
+_TystateUTF16489 stateUTF16_489 = {
+#ifdef LXOBJ_STATENUMBERS
+	489,
+#endif //LXOBJ_STATENUMBERS
+	3, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_495<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	{
+		{ 0x01, u'%', (vTyStateProtoChar16*)( & stateUTF16_489<t_TyTraits> ) },
+		{ u'(', u';', (vTyStateProtoChar16*)( & stateUTF16_489<t_TyTraits> ) },
+		{ u'=', 0x0ffff, (vTyStateProtoChar16*)( & stateUTF16_489<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 15, false, false, 0, 0 > _TystateUTF16490;
+template < class t_TyTraits > inline
+_TystateUTF16490 stateUTF16_490 = {
+#ifdef LXOBJ_STATENUMBERS
+	490,
+#endif //LXOBJ_STATENUMBERS
+	15, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u':', u':', (vTyStateProtoChar16*)( & stateUTF16_496<t_TyTraits> ) },
+		{ u'A', u'Z', (vTyStateProtoChar16*)( & stateUTF16_496<t_TyTraits> ) },
+		{ u'_', u'_', (vTyStateProtoChar16*)( & stateUTF16_496<t_TyTraits> ) },
+		{ u'a', u'z', (vTyStateProtoChar16*)( & stateUTF16_496<t_TyTraits> ) },
+		{ 0x0c0, 0x0d6, (vTyStateProtoChar16*)( & stateUTF16_496<t_TyTraits> ) },
+		{ 0x0d8, 0x0f6, (vTyStateProtoChar16*)( & stateUTF16_496<t_TyTraits> ) },
+		{ 0x0f8, 0x02ff, (vTyStateProtoChar16*)( & stateUTF16_496<t_TyTraits> ) },
+		{ 0x0370, 0x037d, (vTyStateProtoChar16*)( & stateUTF16_496<t_TyTraits> ) },
+		{ 0x037f, 0x01fff, (vTyStateProtoChar16*)( & stateUTF16_496<t_TyTraits> ) },
+		{ 0x0200c, 0x0200d, (vTyStateProtoChar16*)( & stateUTF16_496<t_TyTraits> ) },
+		{ 0x02070, 0x0218f, (vTyStateProtoChar16*)( & stateUTF16_496<t_TyTraits> ) },
+		{ 0x02c00, 0x02fef, (vTyStateProtoChar16*)( & stateUTF16_496<t_TyTraits> ) },
+		{ 0x03001, 0x0dfff, (vTyStateProtoChar16*)( & stateUTF16_496<t_TyTraits> ) },
+		{ 0x0f900, 0x0fdcf, (vTyStateProtoChar16*)( & stateUTF16_496<t_TyTraits> ) },
+		{ 0x0fdf0, 0x0fffd, (vTyStateProtoChar16*)( & stateUTF16_496<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16491;
+template < class t_TyTraits > inline
+_TystateUTF16491 stateUTF16_491 = {
+#ifdef LXOBJ_STATENUMBERS
+	491,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_497<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16491, m_rgpmfnTriggers ), 13,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger13 )
+	} };
+typedef _l_state< char16_t, 0, false, false, 0, 0 > _TystateUTF16492;
+template < class t_TyTraits > inline
+_TystateUTF16492 stateUTF16_492 = {
+#ifdef LXOBJ_STATENUMBERS
+	492,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_498<t_TyTraits> ), 0, 0, vktidInvalidIdToken };
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16493;
+template < class t_TyTraits > inline
+_TystateUTF16493 stateUTF16_493 = {
+#ifdef LXOBJ_STATENUMBERS
+	493,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_499<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16493, m_rgpmfnTriggers ), 7,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger7 )
+	} };
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16494;
+template < class t_TyTraits > inline
+_TystateUTF16494 stateUTF16_494 = {
+#ifdef LXOBJ_STATENUMBERS
+	494,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_500<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	{
+		{ u'#', u'#', (vTyStateProtoChar16*)( & stateUTF16_501<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16495;
+template < class t_TyTraits > inline
+_TystateUTF16495 stateUTF16_495 = {
+#ifdef LXOBJ_STATENUMBERS
+	495,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_479<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16495, m_rgpmfnTriggers ), 10,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger10 )
+	} };
+typedef _l_state< char16_t, 17, false, false, 0, 0 > _TystateUTF16496;
+template < class t_TyTraits > inline
+_TystateUTF16496 stateUTF16_496 = {
+#ifdef LXOBJ_STATENUMBERS
+	496,
+#endif //LXOBJ_STATENUMBERS
+	17, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_502<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	{
+		{ u'-', u'.', (vTyStateProtoChar16*)( & stateUTF16_496<t_TyTraits> ) },
+		{ u'0', u':', (vTyStateProtoChar16*)( & stateUTF16_496<t_TyTraits> ) },
+		{ u'A', u'Z', (vTyStateProtoChar16*)( & stateUTF16_496<t_TyTraits> ) },
+		{ u'_', u'_', (vTyStateProtoChar16*)( & stateUTF16_496<t_TyTraits> ) },
+		{ u'a', u'z', (vTyStateProtoChar16*)( & stateUTF16_496<t_TyTraits> ) },
+		{ 0x0b7, 0x0b7, (vTyStateProtoChar16*)( & stateUTF16_496<t_TyTraits> ) },
+		{ 0x0c0, 0x0d6, (vTyStateProtoChar16*)( & stateUTF16_496<t_TyTraits> ) },
+		{ 0x0d8, 0x0f6, (vTyStateProtoChar16*)( & stateUTF16_496<t_TyTraits> ) },
+		{ 0x0f8, 0x037d, (vTyStateProtoChar16*)( & stateUTF16_496<t_TyTraits> ) },
+		{ 0x037f, 0x01fff, (vTyStateProtoChar16*)( & stateUTF16_496<t_TyTraits> ) },
+		{ 0x0200c, 0x0200d, (vTyStateProtoChar16*)( & stateUTF16_496<t_TyTraits> ) },
+		{ 0x0203f, 0x02040, (vTyStateProtoChar16*)( & stateUTF16_496<t_TyTraits> ) },
+		{ 0x02070, 0x0218f, (vTyStateProtoChar16*)( & stateUTF16_496<t_TyTraits> ) },
+		{ 0x02c00, 0x02fef, (vTyStateProtoChar16*)( & stateUTF16_496<t_TyTraits> ) },
+		{ 0x03001, 0x0dfff, (vTyStateProtoChar16*)( & stateUTF16_496<t_TyTraits> ) },
+		{ 0x0f900, 0x0fdcf, (vTyStateProtoChar16*)( & stateUTF16_496<t_TyTraits> ) },
+		{ 0x0fdf0, 0x0fffd, (vTyStateProtoChar16*)( & stateUTF16_496<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16497;
+template < class t_TyTraits > inline
+_TystateUTF16497 stateUTF16_497 = {
+#ifdef LXOBJ_STATENUMBERS
+	497,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'0', u'9', (vTyStateProtoChar16*)( & stateUTF16_503<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16498;
+template < class t_TyTraits > inline
+_TystateUTF16498 stateUTF16_498 = {
+#ifdef LXOBJ_STATENUMBERS
+	498,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_504<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16498, m_rgpmfnTriggers ), 15,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger15 )
+	} };
+typedef _l_state< char16_t, 4, false, false, 0, 0 > _TystateUTF16499;
+template < class t_TyTraits > inline
+_TystateUTF16499 stateUTF16_499 = {
+#ifdef LXOBJ_STATENUMBERS
+	499,
+#endif //LXOBJ_STATENUMBERS
+	4, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ 0x01, u'!', (vTyStateProtoChar16*)( & stateUTF16_505<t_TyTraits> ) },
+		{ u'#', u'%', (vTyStateProtoChar16*)( & stateUTF16_505<t_TyTraits> ) },
+		{ 0x027, u';', (vTyStateProtoChar16*)( & stateUTF16_505<t_TyTraits> ) },
+		{ u'=', 0x0ffff, (vTyStateProtoChar16*)( & stateUTF16_505<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16500;
+template < class t_TyTraits > inline
+_TystateUTF16500 stateUTF16_500 = {
+#ifdef LXOBJ_STATENUMBERS
+	500,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_506<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16500, m_rgpmfnTriggers ), 11,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger11 )
+	} };
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16501;
+template < class t_TyTraits > inline
+_TystateUTF16501 stateUTF16_501 = {
+#ifdef LXOBJ_STATENUMBERS
+	501,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_507<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	{
+		{ u'x', u'x', (vTyStateProtoChar16*)( & stateUTF16_508<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16502;
+template < class t_TyTraits > inline
+_TystateUTF16502 stateUTF16_502 = {
+#ifdef LXOBJ_STATENUMBERS
+	502,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_509<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16502, m_rgpmfnTriggers ), 12,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger12 )
+	} };
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16503;
+template < class t_TyTraits > inline
+_TystateUTF16503 stateUTF16_503 = {
+#ifdef LXOBJ_STATENUMBERS
+	503,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_510<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	{
+		{ u'0', u'9', (vTyStateProtoChar16*)( & stateUTF16_503<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 3, false, false, 0, 0 > _TystateUTF16504;
+template < class t_TyTraits > inline
+_TystateUTF16504 stateUTF16_504 = {
+#ifdef LXOBJ_STATENUMBERS
+	504,
+#endif //LXOBJ_STATENUMBERS
+	3, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'0', u'9', (vTyStateProtoChar16*)( & stateUTF16_511<t_TyTraits> ) },
+		{ u'A', u'F', (vTyStateProtoChar16*)( & stateUTF16_511<t_TyTraits> ) },
+		{ u'a', u'f', (vTyStateProtoChar16*)( & stateUTF16_511<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 4, false, false, 0, 0 > _TystateUTF16505;
+template < class t_TyTraits > inline
+_TystateUTF16505 stateUTF16_505 = {
+#ifdef LXOBJ_STATENUMBERS
+	505,
+#endif //LXOBJ_STATENUMBERS
+	4, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_512<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	{
+		{ 0x01, u'!', (vTyStateProtoChar16*)( & stateUTF16_505<t_TyTraits> ) },
+		{ u'#', u'%', (vTyStateProtoChar16*)( & stateUTF16_505<t_TyTraits> ) },
+		{ 0x027, u';', (vTyStateProtoChar16*)( & stateUTF16_505<t_TyTraits> ) },
+		{ u'=', 0x0ffff, (vTyStateProtoChar16*)( & stateUTF16_505<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 15, false, false, 0, 0 > _TystateUTF16506;
+template < class t_TyTraits > inline
+_TystateUTF16506 stateUTF16_506 = {
+#ifdef LXOBJ_STATENUMBERS
+	506,
+#endif //LXOBJ_STATENUMBERS
+	15, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u':', u':', (vTyStateProtoChar16*)( & stateUTF16_513<t_TyTraits> ) },
+		{ u'A', u'Z', (vTyStateProtoChar16*)( & stateUTF16_513<t_TyTraits> ) },
+		{ u'_', u'_', (vTyStateProtoChar16*)( & stateUTF16_513<t_TyTraits> ) },
+		{ u'a', u'z', (vTyStateProtoChar16*)( & stateUTF16_513<t_TyTraits> ) },
+		{ 0x0c0, 0x0d6, (vTyStateProtoChar16*)( & stateUTF16_513<t_TyTraits> ) },
+		{ 0x0d8, 0x0f6, (vTyStateProtoChar16*)( & stateUTF16_513<t_TyTraits> ) },
+		{ 0x0f8, 0x02ff, (vTyStateProtoChar16*)( & stateUTF16_513<t_TyTraits> ) },
+		{ 0x0370, 0x037d, (vTyStateProtoChar16*)( & stateUTF16_513<t_TyTraits> ) },
+		{ 0x037f, 0x01fff, (vTyStateProtoChar16*)( & stateUTF16_513<t_TyTraits> ) },
+		{ 0x0200c, 0x0200d, (vTyStateProtoChar16*)( & stateUTF16_513<t_TyTraits> ) },
+		{ 0x02070, 0x0218f, (vTyStateProtoChar16*)( & stateUTF16_513<t_TyTraits> ) },
+		{ 0x02c00, 0x02fef, (vTyStateProtoChar16*)( & stateUTF16_513<t_TyTraits> ) },
+		{ 0x03001, 0x0dfff, (vTyStateProtoChar16*)( & stateUTF16_513<t_TyTraits> ) },
+		{ 0x0f900, 0x0fdcf, (vTyStateProtoChar16*)( & stateUTF16_513<t_TyTraits> ) },
+		{ 0x0fdf0, 0x0fffd, (vTyStateProtoChar16*)( & stateUTF16_513<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16507;
+template < class t_TyTraits > inline
+_TystateUTF16507 stateUTF16_507 = {
+#ifdef LXOBJ_STATENUMBERS
+	507,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_514<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16507, m_rgpmfnTriggers ), 13,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger13 )
+	} };
+typedef _l_state< char16_t, 0, false, false, 0, 0 > _TystateUTF16508;
+template < class t_TyTraits > inline
+_TystateUTF16508 stateUTF16_508 = {
+#ifdef LXOBJ_STATENUMBERS
+	508,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_515<t_TyTraits> ), 0, 0, vktidInvalidIdToken };
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16509;
+template < class t_TyTraits > inline
+_TystateUTF16509 stateUTF16_509 = {
+#ifdef LXOBJ_STATENUMBERS
+	509,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u';', u';', (vTyStateProtoChar16*)( & stateUTF16_479<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16510;
+template < class t_TyTraits > inline
+_TystateUTF16510 stateUTF16_510 = {
+#ifdef LXOBJ_STATENUMBERS
+	510,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_509<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16510, m_rgpmfnTriggers ), 14,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger14 )
+	} };
+typedef _l_state< char16_t, 3, false, false, 0, 0 > _TystateUTF16511;
+template < class t_TyTraits > inline
+_TystateUTF16511 stateUTF16_511 = {
+#ifdef LXOBJ_STATENUMBERS
+	511,
+#endif //LXOBJ_STATENUMBERS
+	3, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_516<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	{
+		{ u'0', u'9', (vTyStateProtoChar16*)( & stateUTF16_511<t_TyTraits> ) },
+		{ u'A', u'F', (vTyStateProtoChar16*)( & stateUTF16_511<t_TyTraits> ) },
+		{ u'a', u'f', (vTyStateProtoChar16*)( & stateUTF16_511<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16512;
+template < class t_TyTraits > inline
+_TystateUTF16512 stateUTF16_512 = {
+#ifdef LXOBJ_STATENUMBERS
+	512,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_488<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16512, m_rgpmfnTriggers ), 8,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger8 )
+	} };
+typedef _l_state< char16_t, 17, false, false, 0, 0 > _TystateUTF16513;
+template < class t_TyTraits > inline
+_TystateUTF16513 stateUTF16_513 = {
+#ifdef LXOBJ_STATENUMBERS
+	513,
+#endif //LXOBJ_STATENUMBERS
+	17, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_517<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	{
+		{ u'-', u'.', (vTyStateProtoChar16*)( & stateUTF16_513<t_TyTraits> ) },
+		{ u'0', u':', (vTyStateProtoChar16*)( & stateUTF16_513<t_TyTraits> ) },
+		{ u'A', u'Z', (vTyStateProtoChar16*)( & stateUTF16_513<t_TyTraits> ) },
+		{ u'_', u'_', (vTyStateProtoChar16*)( & stateUTF16_513<t_TyTraits> ) },
+		{ u'a', u'z', (vTyStateProtoChar16*)( & stateUTF16_513<t_TyTraits> ) },
+		{ 0x0b7, 0x0b7, (vTyStateProtoChar16*)( & stateUTF16_513<t_TyTraits> ) },
+		{ 0x0c0, 0x0d6, (vTyStateProtoChar16*)( & stateUTF16_513<t_TyTraits> ) },
+		{ 0x0d8, 0x0f6, (vTyStateProtoChar16*)( & stateUTF16_513<t_TyTraits> ) },
+		{ 0x0f8, 0x037d, (vTyStateProtoChar16*)( & stateUTF16_513<t_TyTraits> ) },
+		{ 0x037f, 0x01fff, (vTyStateProtoChar16*)( & stateUTF16_513<t_TyTraits> ) },
+		{ 0x0200c, 0x0200d, (vTyStateProtoChar16*)( & stateUTF16_513<t_TyTraits> ) },
+		{ 0x0203f, 0x02040, (vTyStateProtoChar16*)( & stateUTF16_513<t_TyTraits> ) },
+		{ 0x02070, 0x0218f, (vTyStateProtoChar16*)( & stateUTF16_513<t_TyTraits> ) },
+		{ 0x02c00, 0x02fef, (vTyStateProtoChar16*)( & stateUTF16_513<t_TyTraits> ) },
+		{ 0x03001, 0x0dfff, (vTyStateProtoChar16*)( & stateUTF16_513<t_TyTraits> ) },
+		{ 0x0f900, 0x0fdcf, (vTyStateProtoChar16*)( & stateUTF16_513<t_TyTraits> ) },
+		{ 0x0fdf0, 0x0fffd, (vTyStateProtoChar16*)( & stateUTF16_513<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16514;
+template < class t_TyTraits > inline
+_TystateUTF16514 stateUTF16_514 = {
+#ifdef LXOBJ_STATENUMBERS
+	514,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'0', u'9', (vTyStateProtoChar16*)( & stateUTF16_518<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16515;
+template < class t_TyTraits > inline
+_TystateUTF16515 stateUTF16_515 = {
+#ifdef LXOBJ_STATENUMBERS
+	515,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_519<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16515, m_rgpmfnTriggers ), 15,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger15 )
+	} };
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16516;
+template < class t_TyTraits > inline
+_TystateUTF16516 stateUTF16_516 = {
+#ifdef LXOBJ_STATENUMBERS
+	516,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_509<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16516, m_rgpmfnTriggers ), 16,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger16 )
+	} };
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16517;
+template < class t_TyTraits > inline
+_TystateUTF16517 stateUTF16_517 = {
+#ifdef LXOBJ_STATENUMBERS
+	517,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_520<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16517, m_rgpmfnTriggers ), 12,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger12 )
+	} };
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16518;
+template < class t_TyTraits > inline
+_TystateUTF16518 stateUTF16_518 = {
+#ifdef LXOBJ_STATENUMBERS
+	518,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_521<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	{
+		{ u'0', u'9', (vTyStateProtoChar16*)( & stateUTF16_518<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 3, false, false, 0, 0 > _TystateUTF16519;
+template < class t_TyTraits > inline
+_TystateUTF16519 stateUTF16_519 = {
+#ifdef LXOBJ_STATENUMBERS
+	519,
+#endif //LXOBJ_STATENUMBERS
+	3, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'0', u'9', (vTyStateProtoChar16*)( & stateUTF16_522<t_TyTraits> ) },
+		{ u'A', u'F', (vTyStateProtoChar16*)( & stateUTF16_522<t_TyTraits> ) },
+		{ u'a', u'f', (vTyStateProtoChar16*)( & stateUTF16_522<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16520;
+template < class t_TyTraits > inline
+_TystateUTF16520 stateUTF16_520 = {
+#ifdef LXOBJ_STATENUMBERS
+	520,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u';', u';', (vTyStateProtoChar16*)( & stateUTF16_488<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16521;
+template < class t_TyTraits > inline
+_TystateUTF16521 stateUTF16_521 = {
+#ifdef LXOBJ_STATENUMBERS
+	521,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_520<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16521, m_rgpmfnTriggers ), 14,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger14 )
+	} };
+typedef _l_state< char16_t, 3, false, false, 0, 0 > _TystateUTF16522;
+template < class t_TyTraits > inline
+_TystateUTF16522 stateUTF16_522 = {
+#ifdef LXOBJ_STATENUMBERS
+	522,
+#endif //LXOBJ_STATENUMBERS
+	3, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_523<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	{
+		{ u'0', u'9', (vTyStateProtoChar16*)( & stateUTF16_522<t_TyTraits> ) },
+		{ u'A', u'F', (vTyStateProtoChar16*)( & stateUTF16_522<t_TyTraits> ) },
+		{ u'a', u'f', (vTyStateProtoChar16*)( & stateUTF16_522<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16523;
+template < class t_TyTraits > inline
+_TystateUTF16523 stateUTF16_523 = {
+#ifdef LXOBJ_STATENUMBERS
+	523,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_520<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16523, m_rgpmfnTriggers ), 16,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger16 )
+	} };
+
+typedef _l_state< char16_t, 2, false, false, 0, 0 > _TystateUTF16524;
+template < class t_TyTraits > inline
+_TystateUTF16524 startUTF16DtdSystemLiteral = {
+#ifdef LXOBJ_STATENUMBERS
+	524,
+#endif //LXOBJ_STATENUMBERS
+	2, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'"', u'"', (vTyStateProtoChar16*)( & stateUTF16_526<t_TyTraits> ) },
+		{ 0x027, 0x027, (vTyStateProtoChar16*)( & stateUTF16_525<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 0 > _TystateUTF16525;
+template < class t_TyTraits > inline
+_TystateUTF16525 stateUTF16_525 = {
+#ifdef LXOBJ_STATENUMBERS
+	525,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_527<t_TyTraits> ), 0, 0, vktidInvalidIdToken };
+typedef _l_state< char16_t, 0, false, false, 0, 0 > _TystateUTF16526;
+template < class t_TyTraits > inline
+_TystateUTF16526 stateUTF16_526 = {
+#ifdef LXOBJ_STATENUMBERS
+	526,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_528<t_TyTraits> ), 0, 0, vktidInvalidIdToken };
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16527;
+template < class t_TyTraits > inline
+_TystateUTF16527 stateUTF16_527 = {
+#ifdef LXOBJ_STATENUMBERS
+	527,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_529<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16527, m_rgpmfnTriggers ), 37,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger37 )
+	} };
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16528;
+template < class t_TyTraits > inline
+_TystateUTF16528 stateUTF16_528 = {
+#ifdef LXOBJ_STATENUMBERS
+	528,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_530<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16528, m_rgpmfnTriggers ), 37,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger37 )
+	} };
+typedef _l_state< char16_t, 2, false, false, 0, 0 > _TystateUTF16529;
+template < class t_TyTraits > inline
+_TystateUTF16529 stateUTF16_529 = {
+#ifdef LXOBJ_STATENUMBERS
+	529,
+#endif //LXOBJ_STATENUMBERS
+	2, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_531<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	{
+		{ 0x01, u'&', (vTyStateProtoChar16*)( & stateUTF16_529<t_TyTraits> ) },
+		{ u'(', 0x0ffff, (vTyStateProtoChar16*)( & stateUTF16_529<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 2, false, false, 0, 0 > _TystateUTF16530;
+template < class t_TyTraits > inline
+_TystateUTF16530 stateUTF16_530 = {
+#ifdef LXOBJ_STATENUMBERS
+	530,
+#endif //LXOBJ_STATENUMBERS
+	2, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_532<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	{
+		{ 0x01, u'!', (vTyStateProtoChar16*)( & stateUTF16_530<t_TyTraits> ) },
+		{ u'#', 0x0ffff, (vTyStateProtoChar16*)( & stateUTF16_530<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16531;
+template < class t_TyTraits > inline
+_TystateUTF16531 stateUTF16_531 = {
+#ifdef LXOBJ_STATENUMBERS
+	531,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_533<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16531, m_rgpmfnTriggers ), 39,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger39 )
+	} };
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16532;
+template < class t_TyTraits > inline
+_TystateUTF16532 stateUTF16_532 = {
+#ifdef LXOBJ_STATENUMBERS
+	532,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_534<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16532, m_rgpmfnTriggers ), 38,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger38 )
+	} };
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16533;
+template < class t_TyTraits > inline
+_TystateUTF16533 stateUTF16_533 = {
+#ifdef LXOBJ_STATENUMBERS
+	533,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ 0x027, 0x027, (vTyStateProtoChar16*)( & stateUTF16_535<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16534;
+template < class t_TyTraits > inline
+_TystateUTF16534 stateUTF16_534 = {
+#ifdef LXOBJ_STATENUMBERS
+	534,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'"', u'"', (vTyStateProtoChar16*)( & stateUTF16_535<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, true, false, 0, 0 > _TystateUTF16535;
+template < class t_TyTraits > inline
+_TystateUTF16535 stateUTF16_535 = {
+#ifdef LXOBJ_STATENUMBERS
+	535,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16535, m_pmfnAccept ),  0, 4039, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4039 ) };
+
+typedef _l_state< char16_t, 2, false, false, 0, 0 > _TystateUTF16536;
+template < class t_TyTraits > inline
+_TystateUTF16536 startUTF16DtdPubidLiteral = {
+#ifdef LXOBJ_STATENUMBERS
+	536,
+#endif //LXOBJ_STATENUMBERS
+	2, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'"', u'"', (vTyStateProtoChar16*)( & stateUTF16_538<t_TyTraits> ) },
+		{ 0x027, 0x027, (vTyStateProtoChar16*)( & stateUTF16_537<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 0 > _TystateUTF16537;
+template < class t_TyTraits > inline
+_TystateUTF16537 stateUTF16_537 = {
+#ifdef LXOBJ_STATENUMBERS
+	537,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_539<t_TyTraits> ), 0, 0, vktidInvalidIdToken };
+typedef _l_state< char16_t, 0, false, false, 0, 0 > _TystateUTF16538;
+template < class t_TyTraits > inline
+_TystateUTF16538 stateUTF16_538 = {
+#ifdef LXOBJ_STATENUMBERS
+	538,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_540<t_TyTraits> ), 0, 0, vktidInvalidIdToken };
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16539;
+template < class t_TyTraits > inline
+_TystateUTF16539 stateUTF16_539 = {
+#ifdef LXOBJ_STATENUMBERS
+	539,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_541<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16539, m_rgpmfnTriggers ), 40,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger40 )
+	} };
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16540;
+template < class t_TyTraits > inline
+_TystateUTF16540 stateUTF16_540 = {
+#ifdef LXOBJ_STATENUMBERS
+	540,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_542<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16540, m_rgpmfnTriggers ), 40,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger40 )
+	} };
+typedef _l_state< char16_t, 9, false, false, 0, 0 > _TystateUTF16541;
+template < class t_TyTraits > inline
+_TystateUTF16541 stateUTF16_541 = {
+#ifdef LXOBJ_STATENUMBERS
+	541,
+#endif //LXOBJ_STATENUMBERS
+	9, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_543<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	{
+		{ 0x0a, 0x0a, (vTyStateProtoChar16*)( & stateUTF16_541<t_TyTraits> ) },
+		{ 0x0d, 0x0d, (vTyStateProtoChar16*)( & stateUTF16_541<t_TyTraits> ) },
+		{ u' ', u'!', (vTyStateProtoChar16*)( & stateUTF16_541<t_TyTraits> ) },
+		{ u'#', u'%', (vTyStateProtoChar16*)( & stateUTF16_541<t_TyTraits> ) },
+		{ u'(', u';', (vTyStateProtoChar16*)( & stateUTF16_541<t_TyTraits> ) },
+		{ u'=', u'=', (vTyStateProtoChar16*)( & stateUTF16_541<t_TyTraits> ) },
+		{ u'?', u'Z', (vTyStateProtoChar16*)( & stateUTF16_541<t_TyTraits> ) },
+		{ u'_', u'_', (vTyStateProtoChar16*)( & stateUTF16_541<t_TyTraits> ) },
+		{ u'a', u'z', (vTyStateProtoChar16*)( & stateUTF16_541<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 9, false, false, 0, 0 > _TystateUTF16542;
+template < class t_TyTraits > inline
+_TystateUTF16542 stateUTF16_542 = {
+#ifdef LXOBJ_STATENUMBERS
+	542,
+#endif //LXOBJ_STATENUMBERS
+	9, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_544<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	{
+		{ 0x0a, 0x0a, (vTyStateProtoChar16*)( & stateUTF16_542<t_TyTraits> ) },
+		{ 0x0d, 0x0d, (vTyStateProtoChar16*)( & stateUTF16_542<t_TyTraits> ) },
+		{ u' ', u'!', (vTyStateProtoChar16*)( & stateUTF16_542<t_TyTraits> ) },
+		{ u'#', u'%', (vTyStateProtoChar16*)( & stateUTF16_542<t_TyTraits> ) },
+		{ 0x027, u';', (vTyStateProtoChar16*)( & stateUTF16_542<t_TyTraits> ) },
+		{ u'=', u'=', (vTyStateProtoChar16*)( & stateUTF16_542<t_TyTraits> ) },
+		{ u'?', u'Z', (vTyStateProtoChar16*)( & stateUTF16_542<t_TyTraits> ) },
+		{ u'_', u'_', (vTyStateProtoChar16*)( & stateUTF16_542<t_TyTraits> ) },
+		{ u'a', u'z', (vTyStateProtoChar16*)( & stateUTF16_542<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16543;
+template < class t_TyTraits > inline
+_TystateUTF16543 stateUTF16_543 = {
+#ifdef LXOBJ_STATENUMBERS
+	543,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_545<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16543, m_rgpmfnTriggers ), 42,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger42 )
+	} };
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16544;
+template < class t_TyTraits > inline
+_TystateUTF16544 stateUTF16_544 = {
+#ifdef LXOBJ_STATENUMBERS
+	544,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_546<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16544, m_rgpmfnTriggers ), 41,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger41 )
+	} };
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16545;
+template < class t_TyTraits > inline
+_TystateUTF16545 stateUTF16_545 = {
+#ifdef LXOBJ_STATENUMBERS
+	545,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ 0x027, 0x027, (vTyStateProtoChar16*)( & stateUTF16_547<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16546;
+template < class t_TyTraits > inline
+_TystateUTF16546 stateUTF16_546 = {
+#ifdef LXOBJ_STATENUMBERS
+	546,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'"', u'"', (vTyStateProtoChar16*)( & stateUTF16_547<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, true, false, 0, 0 > _TystateUTF16547;
+template < class t_TyTraits > inline
+_TystateUTF16547 stateUTF16_547 = {
+#ifdef LXOBJ_STATENUMBERS
+	547,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16547, m_pmfnAccept ),  0, 4040, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4040 ) };
+
+typedef _l_state< char16_t, 31, false, false, 0, 0 > _TystateUTF16548;
+template < class t_TyTraits > inline
+_TystateUTF16548 startUTF16Dtd = {
+#ifdef LXOBJ_STATENUMBERS
+	548,
+#endif //LXOBJ_STATENUMBERS
+	31, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ 0x09, 0x0a, (vTyStateProtoChar16*)( & stateUTF16_563<t_TyTraits> ) },
+		{ 0x0d, 0x0d, (vTyStateProtoChar16*)( & stateUTF16_563<t_TyTraits> ) },
+		{ u' ', u' ', (vTyStateProtoChar16*)( & stateUTF16_563<t_TyTraits> ) },
+		{ u'#', u'#', (vTyStateProtoChar16*)( & stateUTF16_562<t_TyTraits> ) },
+		{ u'%', u'%', (vTyStateProtoChar16*)( & stateUTF16_561<t_TyTraits> ) },
+		{ u'(', u'(', (vTyStateProtoChar16*)( & stateUTF16_560<t_TyTraits> ) },
+		{ u')', u')', (vTyStateProtoChar16*)( & stateUTF16_559<t_TyTraits> ) },
+		{ u'*', u'*', (vTyStateProtoChar16*)( & stateUTF16_558<t_TyTraits> ) },
+		{ u'+', u'+', (vTyStateProtoChar16*)( & stateUTF16_557<t_TyTraits> ) },
+		{ u',', u',', (vTyStateProtoChar16*)( & stateUTF16_556<t_TyTraits> ) },
+		{ u':', u':', (vTyStateProtoChar16*)( & stateUTF16_549<t_TyTraits> ) },
+		{ u'<', u'<', (vTyStateProtoChar16*)( & stateUTF16_555<t_TyTraits> ) },
+		{ u'>', u'>', (vTyStateProtoChar16*)( & stateUTF16_554<t_TyTraits> ) },
+		{ u'?', u'?', (vTyStateProtoChar16*)( & stateUTF16_553<t_TyTraits> ) },
+		{ u'A', u'Z', (vTyStateProtoChar16*)( & stateUTF16_549<t_TyTraits> ) },
+		{ u'[', u'[', (vTyStateProtoChar16*)( & stateUTF16_552<t_TyTraits> ) },
+		{ u']', u']', (vTyStateProtoChar16*)( & stateUTF16_551<t_TyTraits> ) },
+		{ u'_', u'_', (vTyStateProtoChar16*)( & stateUTF16_549<t_TyTraits> ) },
+		{ u'a', u'z', (vTyStateProtoChar16*)( & stateUTF16_549<t_TyTraits> ) },
+		{ u'|', u'|', (vTyStateProtoChar16*)( & stateUTF16_550<t_TyTraits> ) },
+		{ 0x0c0, 0x0d6, (vTyStateProtoChar16*)( & stateUTF16_549<t_TyTraits> ) },
+		{ 0x0d8, 0x0f6, (vTyStateProtoChar16*)( & stateUTF16_549<t_TyTraits> ) },
+		{ 0x0f8, 0x02ff, (vTyStateProtoChar16*)( & stateUTF16_549<t_TyTraits> ) },
+		{ 0x0370, 0x037d, (vTyStateProtoChar16*)( & stateUTF16_549<t_TyTraits> ) },
+		{ 0x037f, 0x01fff, (vTyStateProtoChar16*)( & stateUTF16_549<t_TyTraits> ) },
+		{ 0x0200c, 0x0200d, (vTyStateProtoChar16*)( & stateUTF16_549<t_TyTraits> ) },
+		{ 0x02070, 0x0218f, (vTyStateProtoChar16*)( & stateUTF16_549<t_TyTraits> ) },
+		{ 0x02c00, 0x02fef, (vTyStateProtoChar16*)( & stateUTF16_549<t_TyTraits> ) },
+		{ 0x03001, 0x0dfff, (vTyStateProtoChar16*)( & stateUTF16_549<t_TyTraits> ) },
+		{ 0x0f900, 0x0fdcf, (vTyStateProtoChar16*)( & stateUTF16_549<t_TyTraits> ) },
+		{ 0x0fdf0, 0x0fffd, (vTyStateProtoChar16*)( & stateUTF16_549<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 17, true, false, 0, 0 > _TystateUTF16549;
+template < class t_TyTraits > inline
+_TystateUTF16549 stateUTF16_549 = {
+#ifdef LXOBJ_STATENUMBERS
+	549,
+#endif //LXOBJ_STATENUMBERS
+	17, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16549, m_pmfnAccept ),  0, 4001,
+	{
+		{ u'-', u'.', (vTyStateProtoChar16*)( & stateUTF16_549<t_TyTraits> ) },
+		{ u'0', u':', (vTyStateProtoChar16*)( & stateUTF16_549<t_TyTraits> ) },
+		{ u'A', u'Z', (vTyStateProtoChar16*)( & stateUTF16_549<t_TyTraits> ) },
+		{ u'_', u'_', (vTyStateProtoChar16*)( & stateUTF16_549<t_TyTraits> ) },
+		{ u'a', u'z', (vTyStateProtoChar16*)( & stateUTF16_549<t_TyTraits> ) },
+		{ 0x0b7, 0x0b7, (vTyStateProtoChar16*)( & stateUTF16_549<t_TyTraits> ) },
+		{ 0x0c0, 0x0d6, (vTyStateProtoChar16*)( & stateUTF16_549<t_TyTraits> ) },
+		{ 0x0d8, 0x0f6, (vTyStateProtoChar16*)( & stateUTF16_549<t_TyTraits> ) },
+		{ 0x0f8, 0x037d, (vTyStateProtoChar16*)( & stateUTF16_549<t_TyTraits> ) },
+		{ 0x037f, 0x01fff, (vTyStateProtoChar16*)( & stateUTF16_549<t_TyTraits> ) },
+		{ 0x0200c, 0x0200d, (vTyStateProtoChar16*)( & stateUTF16_549<t_TyTraits> ) },
+		{ 0x0203f, 0x02040, (vTyStateProtoChar16*)( & stateUTF16_549<t_TyTraits> ) },
+		{ 0x02070, 0x0218f, (vTyStateProtoChar16*)( & stateUTF16_549<t_TyTraits> ) },
+		{ 0x02c00, 0x02fef, (vTyStateProtoChar16*)( & stateUTF16_549<t_TyTraits> ) },
+		{ 0x03001, 0x0dfff, (vTyStateProtoChar16*)( & stateUTF16_549<t_TyTraits> ) },
+		{ 0x0f900, 0x0fdcf, (vTyStateProtoChar16*)( & stateUTF16_549<t_TyTraits> ) },
+		{ 0x0fdf0, 0x0fffd, (vTyStateProtoChar16*)( & stateUTF16_549<t_TyTraits> ) }
+	}, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4001 ) };
+typedef _l_state< char16_t, 0, true, false, 0, 0 > _TystateUTF16550;
+template < class t_TyTraits > inline
+_TystateUTF16550 stateUTF16_550 = {
+#ifdef LXOBJ_STATENUMBERS
+	550,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16550, m_pmfnAccept ),  0, 4013, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4013 ) };
+typedef _l_state< char16_t, 1, true, false, 0, 0 > _TystateUTF16551;
+template < class t_TyTraits > inline
+_TystateUTF16551 stateUTF16_551 = {
+#ifdef LXOBJ_STATENUMBERS
+	551,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16551, m_pmfnAccept ),  0, 4009,
+	{
+		{ u']', u']', (vTyStateProtoChar16*)( & stateUTF16_564<t_TyTraits> ) }
+	}, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4009 ) };
+typedef _l_state< char16_t, 0, true, false, 0, 0 > _TystateUTF16552;
+template < class t_TyTraits > inline
+_TystateUTF16552 stateUTF16_552 = {
+#ifdef LXOBJ_STATENUMBERS
+	552,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16552, m_pmfnAccept ),  0, 4008, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4008 ) };
+typedef _l_state< char16_t, 0, true, false, 0, 0 > _TystateUTF16553;
+template < class t_TyTraits > inline
+_TystateUTF16553 stateUTF16_553 = {
+#ifdef LXOBJ_STATENUMBERS
+	553,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16553, m_pmfnAccept ),  0, 4015, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4015 ) };
+typedef _l_state< char16_t, 0, true, false, 0, 0 > _TystateUTF16554;
+template < class t_TyTraits > inline
+_TystateUTF16554 stateUTF16_554 = {
+#ifdef LXOBJ_STATENUMBERS
+	554,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16554, m_pmfnAccept ),  0, 4010, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4010 ) };
+typedef _l_state< char16_t, 2, false, false, 0, 0 > _TystateUTF16555;
+template < class t_TyTraits > inline
+_TystateUTF16555 stateUTF16_555 = {
+#ifdef LXOBJ_STATENUMBERS
+	555,
+#endif //LXOBJ_STATENUMBERS
+	2, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'!', u'!', (vTyStateProtoChar16*)( & stateUTF16_566<t_TyTraits> ) },
+		{ u'?', u'?', (vTyStateProtoChar16*)( & stateUTF16_565<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, true, false, 0, 0 > _TystateUTF16556;
+template < class t_TyTraits > inline
+_TystateUTF16556 stateUTF16_556 = {
+#ifdef LXOBJ_STATENUMBERS
+	556,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16556, m_pmfnAccept ),  0, 4014, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4014 ) };
+typedef _l_state< char16_t, 0, true, false, 0, 0 > _TystateUTF16557;
+template < class t_TyTraits > inline
+_TystateUTF16557 stateUTF16_557 = {
+#ifdef LXOBJ_STATENUMBERS
+	557,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16557, m_pmfnAccept ),  0, 4017, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4017 ) };
+typedef _l_state< char16_t, 0, true, false, 0, 0 > _TystateUTF16558;
+template < class t_TyTraits > inline
+_TystateUTF16558 stateUTF16_558 = {
+#ifdef LXOBJ_STATENUMBERS
+	558,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16558, m_pmfnAccept ),  0, 4016, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4016 ) };
+typedef _l_state< char16_t, 0, true, false, 0, 0 > _TystateUTF16559;
+template < class t_TyTraits > inline
+_TystateUTF16559 stateUTF16_559 = {
+#ifdef LXOBJ_STATENUMBERS
+	559,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16559, m_pmfnAccept ),  0, 4012, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4012 ) };
+typedef _l_state< char16_t, 0, true, false, 0, 0 > _TystateUTF16560;
+template < class t_TyTraits > inline
+_TystateUTF16560 stateUTF16_560 = {
+#ifdef LXOBJ_STATENUMBERS
+	560,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16560, m_pmfnAccept ),  0, 4011, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4011 ) };
+typedef _l_state< char16_t, 15, true, false, 0, 0 > _TystateUTF16561;
+template < class t_TyTraits > inline
+_TystateUTF16561 stateUTF16_561 = {
+#ifdef LXOBJ_STATENUMBERS
+	561,
+#endif //LXOBJ_STATENUMBERS
+	15, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16561, m_pmfnAccept ),  0, 4018,
+	{
+		{ u':', u':', (vTyStateProtoChar16*)( & stateUTF16_567<t_TyTraits> ) },
+		{ u'A', u'Z', (vTyStateProtoChar16*)( & stateUTF16_567<t_TyTraits> ) },
+		{ u'_', u'_', (vTyStateProtoChar16*)( & stateUTF16_567<t_TyTraits> ) },
+		{ u'a', u'z', (vTyStateProtoChar16*)( & stateUTF16_567<t_TyTraits> ) },
+		{ 0x0c0, 0x0d6, (vTyStateProtoChar16*)( & stateUTF16_567<t_TyTraits> ) },
+		{ 0x0d8, 0x0f6, (vTyStateProtoChar16*)( & stateUTF16_567<t_TyTraits> ) },
+		{ 0x0f8, 0x02ff, (vTyStateProtoChar16*)( & stateUTF16_567<t_TyTraits> ) },
+		{ 0x0370, 0x037d, (vTyStateProtoChar16*)( & stateUTF16_567<t_TyTraits> ) },
+		{ 0x037f, 0x01fff, (vTyStateProtoChar16*)( & stateUTF16_567<t_TyTraits> ) },
+		{ 0x0200c, 0x0200d, (vTyStateProtoChar16*)( & stateUTF16_567<t_TyTraits> ) },
+		{ 0x02070, 0x0218f, (vTyStateProtoChar16*)( & stateUTF16_567<t_TyTraits> ) },
+		{ 0x02c00, 0x02fef, (vTyStateProtoChar16*)( & stateUTF16_567<t_TyTraits> ) },
+		{ 0x03001, 0x0dfff, (vTyStateProtoChar16*)( & stateUTF16_567<t_TyTraits> ) },
+		{ 0x0f900, 0x0fdcf, (vTyStateProtoChar16*)( & stateUTF16_567<t_TyTraits> ) },
+		{ 0x0fdf0, 0x0fffd, (vTyStateProtoChar16*)( & stateUTF16_567<t_TyTraits> ) }
+	}, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4018 ) };
+typedef _l_state< char16_t, 4, false, false, 0, 0 > _TystateUTF16562;
+template < class t_TyTraits > inline
+_TystateUTF16562 stateUTF16_562 = {
+#ifdef LXOBJ_STATENUMBERS
+	562,
+#endif //LXOBJ_STATENUMBERS
+	4, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'F', u'F', (vTyStateProtoChar16*)( & stateUTF16_571<t_TyTraits> ) },
+		{ u'I', u'I', (vTyStateProtoChar16*)( & stateUTF16_570<t_TyTraits> ) },
+		{ u'P', u'P', (vTyStateProtoChar16*)( & stateUTF16_569<t_TyTraits> ) },
+		{ u'R', u'R', (vTyStateProtoChar16*)( & stateUTF16_568<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 3, true, false, 0, 0 > _TystateUTF16563;
+template < class t_TyTraits > inline
+_TystateUTF16563 stateUTF16_563 = {
+#ifdef LXOBJ_STATENUMBERS
+	563,
+#endif //LXOBJ_STATENUMBERS
+	3, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16563, m_pmfnAccept ),  0, 4000,
+	{
+		{ 0x09, 0x0a, (vTyStateProtoChar16*)( & stateUTF16_563<t_TyTraits> ) },
+		{ 0x0d, 0x0d, (vTyStateProtoChar16*)( & stateUTF16_563<t_TyTraits> ) },
+		{ u' ', u' ', (vTyStateProtoChar16*)( & stateUTF16_563<t_TyTraits> ) }
+	}, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4000 ) };
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16564;
+template < class t_TyTraits > inline
+_TystateUTF16564 stateUTF16_564 = {
+#ifdef LXOBJ_STATENUMBERS
+	564,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'>', u'>', (vTyStateProtoChar16*)( & stateUTF16_572<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 0 > _TystateUTF16565;
+template < class t_TyTraits > inline
+_TystateUTF16565 stateUTF16_565 = {
+#ifdef LXOBJ_STATENUMBERS
+	565,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_573<t_TyTraits> ), 0, 0, vktidInvalidIdToken };
+typedef _l_state< char16_t, 6, false, false, 0, 0 > _TystateUTF16566;
+template < class t_TyTraits > inline
+_TystateUTF16566 stateUTF16_566 = {
+#ifdef LXOBJ_STATENUMBERS
+	566,
+#endif //LXOBJ_STATENUMBERS
+	6, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'-', u'-', (vTyStateProtoChar16*)( & stateUTF16_579<t_TyTraits> ) },
+		{ u'A', u'A', (vTyStateProtoChar16*)( & stateUTF16_578<t_TyTraits> ) },
+		{ u'D', u'D', (vTyStateProtoChar16*)( & stateUTF16_577<t_TyTraits> ) },
+		{ u'E', u'E', (vTyStateProtoChar16*)( & stateUTF16_576<t_TyTraits> ) },
+		{ u'N', u'N', (vTyStateProtoChar16*)( & stateUTF16_575<t_TyTraits> ) },
+		{ u'[', u'[', (vTyStateProtoChar16*)( & stateUTF16_574<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 18, false, false, 0, 0 > _TystateUTF16567;
+template < class t_TyTraits > inline
+_TystateUTF16567 stateUTF16_567 = {
+#ifdef LXOBJ_STATENUMBERS
+	567,
+#endif //LXOBJ_STATENUMBERS
+	18, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'-', u'.', (vTyStateProtoChar16*)( & stateUTF16_567<t_TyTraits> ) },
+		{ u'0', u':', (vTyStateProtoChar16*)( & stateUTF16_567<t_TyTraits> ) },
+		{ u';', u';', (vTyStateProtoChar16*)( & stateUTF16_580<t_TyTraits> ) },
+		{ u'A', u'Z', (vTyStateProtoChar16*)( & stateUTF16_567<t_TyTraits> ) },
+		{ u'_', u'_', (vTyStateProtoChar16*)( & stateUTF16_567<t_TyTraits> ) },
+		{ u'a', u'z', (vTyStateProtoChar16*)( & stateUTF16_567<t_TyTraits> ) },
+		{ 0x0b7, 0x0b7, (vTyStateProtoChar16*)( & stateUTF16_567<t_TyTraits> ) },
+		{ 0x0c0, 0x0d6, (vTyStateProtoChar16*)( & stateUTF16_567<t_TyTraits> ) },
+		{ 0x0d8, 0x0f6, (vTyStateProtoChar16*)( & stateUTF16_567<t_TyTraits> ) },
+		{ 0x0f8, 0x037d, (vTyStateProtoChar16*)( & stateUTF16_567<t_TyTraits> ) },
+		{ 0x037f, 0x01fff, (vTyStateProtoChar16*)( & stateUTF16_567<t_TyTraits> ) },
+		{ 0x0200c, 0x0200d, (vTyStateProtoChar16*)( & stateUTF16_567<t_TyTraits> ) },
+		{ 0x0203f, 0x02040, (vTyStateProtoChar16*)( & stateUTF16_567<t_TyTraits> ) },
+		{ 0x02070, 0x0218f, (vTyStateProtoChar16*)( & stateUTF16_567<t_TyTraits> ) },
+		{ 0x02c00, 0x02fef, (vTyStateProtoChar16*)( & stateUTF16_567<t_TyTraits> ) },
+		{ 0x03001, 0x0dfff, (vTyStateProtoChar16*)( & stateUTF16_567<t_TyTraits> ) },
+		{ 0x0f900, 0x0fdcf, (vTyStateProtoChar16*)( & stateUTF16_567<t_TyTraits> ) },
+		{ 0x0fdf0, 0x0fffd, (vTyStateProtoChar16*)( & stateUTF16_567<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16568;
+template < class t_TyTraits > inline
+_TystateUTF16568 stateUTF16_568 = {
+#ifdef LXOBJ_STATENUMBERS
+	568,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'E', u'E', (vTyStateProtoChar16*)( & stateUTF16_581<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16569;
+template < class t_TyTraits > inline
+_TystateUTF16569 stateUTF16_569 = {
+#ifdef LXOBJ_STATENUMBERS
+	569,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'C', u'C', (vTyStateProtoChar16*)( & stateUTF16_582<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16570;
+template < class t_TyTraits > inline
+_TystateUTF16570 stateUTF16_570 = {
+#ifdef LXOBJ_STATENUMBERS
+	570,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'M', u'M', (vTyStateProtoChar16*)( & stateUTF16_583<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16571;
+template < class t_TyTraits > inline
+_TystateUTF16571 stateUTF16_571 = {
+#ifdef LXOBJ_STATENUMBERS
+	571,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'I', u'I', (vTyStateProtoChar16*)( & stateUTF16_584<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, true, false, 0, 0 > _TystateUTF16572;
+template < class t_TyTraits > inline
+_TystateUTF16572 stateUTF16_572 = {
+#ifdef LXOBJ_STATENUMBERS
+	572,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16572, m_pmfnAccept ),  0, 4043, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4043 ) };
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16573;
+template < class t_TyTraits > inline
+_TystateUTF16573 stateUTF16_573 = {
+#ifdef LXOBJ_STATENUMBERS
+	573,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_585<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16573, m_rgpmfnTriggers ), 1,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger1 )
+	} };
+typedef _l_state< char16_t, 0, true, false, 0, 0 > _TystateUTF16574;
+template < class t_TyTraits > inline
+_TystateUTF16574 stateUTF16_574 = {
+#ifdef LXOBJ_STATENUMBERS
+	574,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16574, m_pmfnAccept ),  0, 4042, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4042 ) };
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16575;
+template < class t_TyTraits > inline
+_TystateUTF16575 stateUTF16_575 = {
+#ifdef LXOBJ_STATENUMBERS
+	575,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'O', u'O', (vTyStateProtoChar16*)( & stateUTF16_586<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 2, false, false, 0, 0 > _TystateUTF16576;
+template < class t_TyTraits > inline
+_TystateUTF16576 stateUTF16_576 = {
+#ifdef LXOBJ_STATENUMBERS
+	576,
+#endif //LXOBJ_STATENUMBERS
+	2, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'L', u'L', (vTyStateProtoChar16*)( & stateUTF16_588<t_TyTraits> ) },
+		{ u'N', u'N', (vTyStateProtoChar16*)( & stateUTF16_587<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16577;
+template < class t_TyTraits > inline
+_TystateUTF16577 stateUTF16_577 = {
+#ifdef LXOBJ_STATENUMBERS
+	577,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'O', u'O', (vTyStateProtoChar16*)( & stateUTF16_589<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16578;
+template < class t_TyTraits > inline
+_TystateUTF16578 stateUTF16_578 = {
+#ifdef LXOBJ_STATENUMBERS
+	578,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'T', u'T', (vTyStateProtoChar16*)( & stateUTF16_590<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16579;
+template < class t_TyTraits > inline
+_TystateUTF16579 stateUTF16_579 = {
+#ifdef LXOBJ_STATENUMBERS
+	579,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'-', u'-', (vTyStateProtoChar16*)( & stateUTF16_591<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, true, false, 0, 0 > _TystateUTF16580;
+template < class t_TyTraits > inline
+_TystateUTF16580 stateUTF16_580 = {
+#ifdef LXOBJ_STATENUMBERS
+	580,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16580, m_pmfnAccept ),  0, 4041, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4041 ) };
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16581;
+template < class t_TyTraits > inline
+_TystateUTF16581 stateUTF16_581 = {
+#ifdef LXOBJ_STATENUMBERS
+	581,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'Q', u'Q', (vTyStateProtoChar16*)( & stateUTF16_592<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16582;
+template < class t_TyTraits > inline
+_TystateUTF16582 stateUTF16_582 = {
+#ifdef LXOBJ_STATENUMBERS
+	582,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'D', u'D', (vTyStateProtoChar16*)( & stateUTF16_593<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16583;
+template < class t_TyTraits > inline
+_TystateUTF16583 stateUTF16_583 = {
+#ifdef LXOBJ_STATENUMBERS
+	583,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'P', u'P', (vTyStateProtoChar16*)( & stateUTF16_594<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16584;
+template < class t_TyTraits > inline
+_TystateUTF16584 stateUTF16_584 = {
+#ifdef LXOBJ_STATENUMBERS
+	584,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'X', u'X', (vTyStateProtoChar16*)( & stateUTF16_595<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 19, false, false, 0, 0 > _TystateUTF16585;
+template < class t_TyTraits > inline
+_TystateUTF16585 stateUTF16_585 = {
+#ifdef LXOBJ_STATENUMBERS
+	585,
+#endif //LXOBJ_STATENUMBERS
+	19, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u':', u':', (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ u'A', u'W', (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ u'X', u'X', (vTyStateProtoChar16*)( & stateUTF16_597<t_TyTraits> ) },
+		{ u'Y', u'Z', (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ u'_', u'_', (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ u'a', u'w', (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ u'x', u'x', (vTyStateProtoChar16*)( & stateUTF16_597<t_TyTraits> ) },
+		{ u'y', u'z', (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x0c0, 0x0d6, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x0d8, 0x0f6, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x0f8, 0x02ff, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x0370, 0x037d, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x037f, 0x01fff, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x0200c, 0x0200d, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x02070, 0x0218f, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x02c00, 0x02fef, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x03001, 0x0dfff, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x0f900, 0x0fdcf, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x0fdf0, 0x0fffd, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16586;
+template < class t_TyTraits > inline
+_TystateUTF16586 stateUTF16_586 = {
+#ifdef LXOBJ_STATENUMBERS
+	586,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'T', u'T', (vTyStateProtoChar16*)( & stateUTF16_598<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16587;
+template < class t_TyTraits > inline
+_TystateUTF16587 stateUTF16_587 = {
+#ifdef LXOBJ_STATENUMBERS
+	587,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'T', u'T', (vTyStateProtoChar16*)( & stateUTF16_599<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16588;
+template < class t_TyTraits > inline
+_TystateUTF16588 stateUTF16_588 = {
+#ifdef LXOBJ_STATENUMBERS
+	588,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'E', u'E', (vTyStateProtoChar16*)( & stateUTF16_600<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16589;
+template < class t_TyTraits > inline
+_TystateUTF16589 stateUTF16_589 = {
+#ifdef LXOBJ_STATENUMBERS
+	589,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'C', u'C', (vTyStateProtoChar16*)( & stateUTF16_601<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16590;
+template < class t_TyTraits > inline
+_TystateUTF16590 stateUTF16_590 = {
+#ifdef LXOBJ_STATENUMBERS
+	590,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'T', u'T', (vTyStateProtoChar16*)( & stateUTF16_602<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 5, false, false, 0, 0 > _TystateUTF16591;
+template < class t_TyTraits > inline
+_TystateUTF16591 stateUTF16_591 = {
+#ifdef LXOBJ_STATENUMBERS
+	591,
+#endif //LXOBJ_STATENUMBERS
+	5, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ 0x09, 0x0a, (vTyStateProtoChar16*)( & stateUTF16_591<t_TyTraits> ) },
+		{ 0x0d, 0x0d, (vTyStateProtoChar16*)( & stateUTF16_591<t_TyTraits> ) },
+		{ u' ', u',', (vTyStateProtoChar16*)( & stateUTF16_591<t_TyTraits> ) },
+		{ u'-', u'-', (vTyStateProtoChar16*)( & stateUTF16_603<t_TyTraits> ) },
+		{ u'.', 0x0fffd, (vTyStateProtoChar16*)( & stateUTF16_591<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16592;
+template < class t_TyTraits > inline
+_TystateUTF16592 stateUTF16_592 = {
+#ifdef LXOBJ_STATENUMBERS
+	592,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'U', u'U', (vTyStateProtoChar16*)( & stateUTF16_604<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16593;
+template < class t_TyTraits > inline
+_TystateUTF16593 stateUTF16_593 = {
+#ifdef LXOBJ_STATENUMBERS
+	593,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'A', u'A', (vTyStateProtoChar16*)( & stateUTF16_605<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16594;
+template < class t_TyTraits > inline
+_TystateUTF16594 stateUTF16_594 = {
+#ifdef LXOBJ_STATENUMBERS
+	594,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'L', u'L', (vTyStateProtoChar16*)( & stateUTF16_606<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16595;
+template < class t_TyTraits > inline
+_TystateUTF16595 stateUTF16_595 = {
+#ifdef LXOBJ_STATENUMBERS
+	595,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'E', u'E', (vTyStateProtoChar16*)( & stateUTF16_607<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 17, false, false, 0, 0 > _TystateUTF16596;
+template < class t_TyTraits > inline
+_TystateUTF16596 stateUTF16_596 = {
+#ifdef LXOBJ_STATENUMBERS
+	596,
+#endif //LXOBJ_STATENUMBERS
+	17, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_608<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	{
+		{ u'-', u'.', (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ u'0', u':', (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ u'A', u'Z', (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ u'_', u'_', (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ u'a', u'z', (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x0b7, 0x0b7, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x0c0, 0x0d6, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x0d8, 0x0f6, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x0f8, 0x037d, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x037f, 0x01fff, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x0200c, 0x0200d, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x0203f, 0x02040, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x02070, 0x0218f, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x02c00, 0x02fef, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x03001, 0x0dfff, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x0f900, 0x0fdcf, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x0fdf0, 0x0fffd, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 21, false, false, 0, 0 > _TystateUTF16597;
+template < class t_TyTraits > inline
+_TystateUTF16597 stateUTF16_597 = {
+#ifdef LXOBJ_STATENUMBERS
+	597,
+#endif //LXOBJ_STATENUMBERS
+	21, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_608<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	{
+		{ u'-', u'.', (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ u'0', u':', (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ u'A', u'L', (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ u'M', u'M', (vTyStateProtoChar16*)( & stateUTF16_609<t_TyTraits> ) },
+		{ u'N', u'Z', (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ u'_', u'_', (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ u'a', u'l', (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ u'm', u'm', (vTyStateProtoChar16*)( & stateUTF16_609<t_TyTraits> ) },
+		{ u'n', u'z', (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x0b7, 0x0b7, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x0c0, 0x0d6, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x0d8, 0x0f6, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x0f8, 0x037d, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x037f, 0x01fff, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x0200c, 0x0200d, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x0203f, 0x02040, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x02070, 0x0218f, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x02c00, 0x02fef, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x03001, 0x0dfff, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x0f900, 0x0fdcf, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x0fdf0, 0x0fffd, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16598;
+template < class t_TyTraits > inline
+_TystateUTF16598 stateUTF16_598 = {
+#ifdef LXOBJ_STATENUMBERS
+	598,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'A', u'A', (vTyStateProtoChar16*)( & stateUTF16_610<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16599;
+template < class t_TyTraits > inline
+_TystateUTF16599 stateUTF16_599 = {
+#ifdef LXOBJ_STATENUMBERS
+	599,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'I', u'I', (vTyStateProtoChar16*)( & stateUTF16_611<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16600;
+template < class t_TyTraits > inline
+_TystateUTF16600 stateUTF16_600 = {
+#ifdef LXOBJ_STATENUMBERS
+	600,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'M', u'M', (vTyStateProtoChar16*)( & stateUTF16_612<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16601;
+template < class t_TyTraits > inline
+_TystateUTF16601 stateUTF16_601 = {
+#ifdef LXOBJ_STATENUMBERS
+	601,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'T', u'T', (vTyStateProtoChar16*)( & stateUTF16_613<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16602;
+template < class t_TyTraits > inline
+_TystateUTF16602 stateUTF16_602 = {
+#ifdef LXOBJ_STATENUMBERS
+	602,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'L', u'L', (vTyStateProtoChar16*)( & stateUTF16_614<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 5, false, false, 0, 0 > _TystateUTF16603;
+template < class t_TyTraits > inline
+_TystateUTF16603 stateUTF16_603 = {
+#ifdef LXOBJ_STATENUMBERS
+	603,
+#endif //LXOBJ_STATENUMBERS
+	5, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ 0x09, 0x0a, (vTyStateProtoChar16*)( & stateUTF16_591<t_TyTraits> ) },
+		{ 0x0d, 0x0d, (vTyStateProtoChar16*)( & stateUTF16_591<t_TyTraits> ) },
+		{ u' ', u',', (vTyStateProtoChar16*)( & stateUTF16_591<t_TyTraits> ) },
+		{ u'-', u'-', (vTyStateProtoChar16*)( & stateUTF16_615<t_TyTraits> ) },
+		{ u'.', 0x0fffd, (vTyStateProtoChar16*)( & stateUTF16_591<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16604;
+template < class t_TyTraits > inline
+_TystateUTF16604 stateUTF16_604 = {
+#ifdef LXOBJ_STATENUMBERS
+	604,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'I', u'I', (vTyStateProtoChar16*)( & stateUTF16_616<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16605;
+template < class t_TyTraits > inline
+_TystateUTF16605 stateUTF16_605 = {
+#ifdef LXOBJ_STATENUMBERS
+	605,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'T', u'T', (vTyStateProtoChar16*)( & stateUTF16_617<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16606;
+template < class t_TyTraits > inline
+_TystateUTF16606 stateUTF16_606 = {
+#ifdef LXOBJ_STATENUMBERS
+	606,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'I', u'I', (vTyStateProtoChar16*)( & stateUTF16_618<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16607;
+template < class t_TyTraits > inline
+_TystateUTF16607 stateUTF16_607 = {
+#ifdef LXOBJ_STATENUMBERS
+	607,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'D', u'D', (vTyStateProtoChar16*)( & stateUTF16_619<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16608;
+template < class t_TyTraits > inline
+_TystateUTF16608 stateUTF16_608 = {
+#ifdef LXOBJ_STATENUMBERS
+	608,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_620<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16608, m_rgpmfnTriggers ), 2,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger2 )
+	} };
+typedef _l_state< char16_t, 21, false, false, 0, 0 > _TystateUTF16609;
+template < class t_TyTraits > inline
+_TystateUTF16609 stateUTF16_609 = {
+#ifdef LXOBJ_STATENUMBERS
+	609,
+#endif //LXOBJ_STATENUMBERS
+	21, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_608<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	{
+		{ u'-', u'.', (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ u'0', u':', (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ u'A', u'K', (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ u'L', u'L', (vTyStateProtoChar16*)( & stateUTF16_621<t_TyTraits> ) },
+		{ u'M', u'Z', (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ u'_', u'_', (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ u'a', u'k', (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ u'l', u'l', (vTyStateProtoChar16*)( & stateUTF16_621<t_TyTraits> ) },
+		{ u'm', u'z', (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x0b7, 0x0b7, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x0c0, 0x0d6, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x0d8, 0x0f6, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x0f8, 0x037d, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x037f, 0x01fff, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x0200c, 0x0200d, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x0203f, 0x02040, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x02070, 0x0218f, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x02c00, 0x02fef, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x03001, 0x0dfff, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x0f900, 0x0fdcf, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x0fdf0, 0x0fffd, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16610;
+template < class t_TyTraits > inline
+_TystateUTF16610 stateUTF16_610 = {
+#ifdef LXOBJ_STATENUMBERS
+	610,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'T', u'T', (vTyStateProtoChar16*)( & stateUTF16_622<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16611;
+template < class t_TyTraits > inline
+_TystateUTF16611 stateUTF16_611 = {
+#ifdef LXOBJ_STATENUMBERS
+	611,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'T', u'T', (vTyStateProtoChar16*)( & stateUTF16_623<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16612;
+template < class t_TyTraits > inline
+_TystateUTF16612 stateUTF16_612 = {
+#ifdef LXOBJ_STATENUMBERS
+	612,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'E', u'E', (vTyStateProtoChar16*)( & stateUTF16_624<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16613;
+template < class t_TyTraits > inline
+_TystateUTF16613 stateUTF16_613 = {
+#ifdef LXOBJ_STATENUMBERS
+	613,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'Y', u'Y', (vTyStateProtoChar16*)( & stateUTF16_625<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16614;
+template < class t_TyTraits > inline
+_TystateUTF16614 stateUTF16_614 = {
+#ifdef LXOBJ_STATENUMBERS
+	614,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'I', u'I', (vTyStateProtoChar16*)( & stateUTF16_626<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16615;
+template < class t_TyTraits > inline
+_TystateUTF16615 stateUTF16_615 = {
+#ifdef LXOBJ_STATENUMBERS
+	615,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'>', u'>', (vTyStateProtoChar16*)( & stateUTF16_627<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16616;
+template < class t_TyTraits > inline
+_TystateUTF16616 stateUTF16_616 = {
+#ifdef LXOBJ_STATENUMBERS
+	616,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'R', u'R', (vTyStateProtoChar16*)( & stateUTF16_628<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16617;
+template < class t_TyTraits > inline
+_TystateUTF16617 stateUTF16_617 = {
+#ifdef LXOBJ_STATENUMBERS
+	617,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'A', u'A', (vTyStateProtoChar16*)( & stateUTF16_629<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16618;
+template < class t_TyTraits > inline
+_TystateUTF16618 stateUTF16_618 = {
+#ifdef LXOBJ_STATENUMBERS
+	618,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'E', u'E', (vTyStateProtoChar16*)( & stateUTF16_630<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, true, false, 0, 0 > _TystateUTF16619;
+template < class t_TyTraits > inline
+_TystateUTF16619 stateUTF16_619 = {
+#ifdef LXOBJ_STATENUMBERS
+	619,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16619, m_pmfnAccept ),  0, 4033, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4033 ) };
+typedef _l_state< char16_t, 4, false, false, 0, 0 > _TystateUTF16620;
+template < class t_TyTraits > inline
+_TystateUTF16620 stateUTF16_620 = {
+#ifdef LXOBJ_STATENUMBERS
+	620,
+#endif //LXOBJ_STATENUMBERS
+	4, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ 0x09, 0x0a, (vTyStateProtoChar16*)( & stateUTF16_632<t_TyTraits> ) },
+		{ 0x0d, 0x0d, (vTyStateProtoChar16*)( & stateUTF16_632<t_TyTraits> ) },
+		{ u' ', u' ', (vTyStateProtoChar16*)( & stateUTF16_632<t_TyTraits> ) },
+		{ u'?', u'?', (vTyStateProtoChar16*)( & stateUTF16_631<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 17, false, false, 0, 0 > _TystateUTF16621;
+template < class t_TyTraits > inline
+_TystateUTF16621 stateUTF16_621 = {
+#ifdef LXOBJ_STATENUMBERS
+	621,
+#endif //LXOBJ_STATENUMBERS
+	17, 0, kucAntiAccepting, 0, 
+	0,  0, 0,
+	{
+		{ u'-', u'.', (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ u'0', u':', (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ u'A', u'Z', (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ u'_', u'_', (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ u'a', u'z', (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x0b7, 0x0b7, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x0c0, 0x0d6, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x0d8, 0x0f6, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x0f8, 0x037d, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x037f, 0x01fff, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x0200c, 0x0200d, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x0203f, 0x02040, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x02070, 0x0218f, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x02c00, 0x02fef, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x03001, 0x0dfff, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x0f900, 0x0fdcf, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) },
+		{ 0x0fdf0, 0x0fffd, (vTyStateProtoChar16*)( & stateUTF16_596<t_TyTraits> ) }
+	} };
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16622;
+template < class t_TyTraits > inline
+_TystateUTF16622 stateUTF16_622 = {
+#ifdef LXOBJ_STATENUMBERS
+	622,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'I', u'I', (vTyStateProtoChar16*)( & stateUTF16_633<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16623;
+template < class t_TyTraits > inline
+_TystateUTF16623 stateUTF16_623 = {
+#ifdef LXOBJ_STATENUMBERS
+	623,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'Y', u'Y', (vTyStateProtoChar16*)( & stateUTF16_634<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16624;
+template < class t_TyTraits > inline
+_TystateUTF16624 stateUTF16_624 = {
+#ifdef LXOBJ_STATENUMBERS
+	624,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'N', u'N', (vTyStateProtoChar16*)( & stateUTF16_635<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16625;
+template < class t_TyTraits > inline
+_TystateUTF16625 stateUTF16_625 = {
+#ifdef LXOBJ_STATENUMBERS
+	625,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'P', u'P', (vTyStateProtoChar16*)( & stateUTF16_636<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16626;
+template < class t_TyTraits > inline
+_TystateUTF16626 stateUTF16_626 = {
+#ifdef LXOBJ_STATENUMBERS
+	626,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'S', u'S', (vTyStateProtoChar16*)( & stateUTF16_637<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, true, false, 0, 0 > _TystateUTF16627;
+template < class t_TyTraits > inline
+_TystateUTF16627 stateUTF16_627 = {
+#ifdef LXOBJ_STATENUMBERS
+	627,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16627, m_pmfnAccept ),  0, 1003, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken1003 ) };
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16628;
+template < class t_TyTraits > inline
+_TystateUTF16628 stateUTF16_628 = {
+#ifdef LXOBJ_STATENUMBERS
+	628,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'E', u'E', (vTyStateProtoChar16*)( & stateUTF16_638<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, true, false, 0, 0 > _TystateUTF16629;
+template < class t_TyTraits > inline
+_TystateUTF16629 stateUTF16_629 = {
+#ifdef LXOBJ_STATENUMBERS
+	629,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16629, m_pmfnAccept ),  0, 4019, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4019 ) };
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16630;
+template < class t_TyTraits > inline
+_TystateUTF16630 stateUTF16_630 = {
+#ifdef LXOBJ_STATENUMBERS
+	630,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'D', u'D', (vTyStateProtoChar16*)( & stateUTF16_639<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16631;
+template < class t_TyTraits > inline
+_TystateUTF16631 stateUTF16_631 = {
+#ifdef LXOBJ_STATENUMBERS
+	631,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'>', u'>', (vTyStateProtoChar16*)( & stateUTF16_640<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 3, false, false, 0, 0 > _TystateUTF16632;
+template < class t_TyTraits > inline
+_TystateUTF16632 stateUTF16_632 = {
+#ifdef LXOBJ_STATENUMBERS
+	632,
+#endif //LXOBJ_STATENUMBERS
+	3, 0, 0, (vTyStateProtoChar16*)( & stateUTF16_641<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	{
+		{ 0x09, 0x0a, (vTyStateProtoChar16*)( & stateUTF16_632<t_TyTraits> ) },
+		{ 0x0d, 0x0d, (vTyStateProtoChar16*)( & stateUTF16_632<t_TyTraits> ) },
+		{ u' ', u' ', (vTyStateProtoChar16*)( & stateUTF16_632<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16633;
+template < class t_TyTraits > inline
+_TystateUTF16633 stateUTF16_633 = {
+#ifdef LXOBJ_STATENUMBERS
+	633,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'O', u'O', (vTyStateProtoChar16*)( & stateUTF16_642<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, true, false, 0, 0 > _TystateUTF16634;
+template < class t_TyTraits > inline
+_TystateUTF16634 stateUTF16_634 = {
+#ifdef LXOBJ_STATENUMBERS
+	634,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16634, m_pmfnAccept ),  0, 4006, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4006 ) };
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16635;
+template < class t_TyTraits > inline
+_TystateUTF16635 stateUTF16_635 = {
+#ifdef LXOBJ_STATENUMBERS
+	635,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'T', u'T', (vTyStateProtoChar16*)( & stateUTF16_643<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16636;
+template < class t_TyTraits > inline
+_TystateUTF16636 stateUTF16_636 = {
+#ifdef LXOBJ_STATENUMBERS
+	636,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'E', u'E', (vTyStateProtoChar16*)( & stateUTF16_644<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16637;
+template < class t_TyTraits > inline
+_TystateUTF16637 stateUTF16_637 = {
+#ifdef LXOBJ_STATENUMBERS
+	637,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'T', u'T', (vTyStateProtoChar16*)( & stateUTF16_645<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16638;
+template < class t_TyTraits > inline
+_TystateUTF16638 stateUTF16_638 = {
+#ifdef LXOBJ_STATENUMBERS
+	638,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'D', u'D', (vTyStateProtoChar16*)( & stateUTF16_646<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, true, false, 0, 0 > _TystateUTF16639;
+template < class t_TyTraits > inline
+_TystateUTF16639 stateUTF16_639 = {
+#ifdef LXOBJ_STATENUMBERS
+	639,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16639, m_pmfnAccept ),  0, 4032, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4032 ) };
+typedef _l_state< char16_t, 0, true, false, 0, 0 > _TystateUTF16640;
+template < class t_TyTraits > inline
+_TystateUTF16640 stateUTF16_640 = {
+#ifdef LXOBJ_STATENUMBERS
+	640,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16640, m_pmfnAccept ),  0, 1007, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken1007 ) };
+typedef _l_state< char16_t, 0, false, false, 0, 1 > _TystateUTF16641;
+template < class t_TyTraits > inline
+_TystateUTF16641 stateUTF16_641 = {
+#ifdef LXOBJ_STATENUMBERS
+	641,
+#endif //LXOBJ_STATENUMBERS
+	0, 1, 0, (vTyStateProtoChar16*)( & stateUTF16_647<t_TyTraits> ), 
+	0, 
+	offsetof( _TystateUTF16641, m_rgpmfnTriggers ), 3,
+	{
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger3 )
+	} };
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16642;
+template < class t_TyTraits > inline
+_TystateUTF16642 stateUTF16_642 = {
+#ifdef LXOBJ_STATENUMBERS
+	642,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'N', u'N', (vTyStateProtoChar16*)( & stateUTF16_648<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, true, false, 0, 0 > _TystateUTF16643;
+template < class t_TyTraits > inline
+_TystateUTF16643 stateUTF16_643 = {
+#ifdef LXOBJ_STATENUMBERS
+	643,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16643, m_pmfnAccept ),  0, 4004, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4004 ) };
+typedef _l_state< char16_t, 0, true, false, 0, 0 > _TystateUTF16644;
+template < class t_TyTraits > inline
+_TystateUTF16644 stateUTF16_644 = {
+#ifdef LXOBJ_STATENUMBERS
+	644,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16644, m_pmfnAccept ),  0, 4003, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4003 ) };
+typedef _l_state< char16_t, 0, true, false, 0, 0 > _TystateUTF16645;
+template < class t_TyTraits > inline
+_TystateUTF16645 stateUTF16_645 = {
+#ifdef LXOBJ_STATENUMBERS
+	645,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16645, m_pmfnAccept ),  0, 4005, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4005 ) };
+typedef _l_state< char16_t, 0, true, false, 0, 0 > _TystateUTF16646;
+template < class t_TyTraits > inline
+_TystateUTF16646 stateUTF16_646 = {
+#ifdef LXOBJ_STATENUMBERS
+	646,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16646, m_pmfnAccept ),  0, 4031, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4031 ) };
+typedef _l_state< char16_t, 5, false, false, 0, 0 > _TystateUTF16647;
+template < class t_TyTraits > inline
+_TystateUTF16647 stateUTF16_647 = {
+#ifdef LXOBJ_STATENUMBERS
+	647,
+#endif //LXOBJ_STATENUMBERS
+	5, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ 0x09, 0x0a, (vTyStateProtoChar16*)( & stateUTF16_647<t_TyTraits> ) },
+		{ 0x0d, 0x0d, (vTyStateProtoChar16*)( & stateUTF16_647<t_TyTraits> ) },
+		{ u' ', u'>', (vTyStateProtoChar16*)( & stateUTF16_647<t_TyTraits> ) },
+		{ u'?', u'?', (vTyStateProtoChar16*)( & stateUTF16_649<t_TyTraits> ) },
+		{ u'@', 0x0fffd, (vTyStateProtoChar16*)( & stateUTF16_647<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, true, false, 0, 0 > _TystateUTF16648;
+template < class t_TyTraits > inline
+_TystateUTF16648 stateUTF16_648 = {
+#ifdef LXOBJ_STATENUMBERS
+	648,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16648, m_pmfnAccept ),  0, 4007, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4007 ) };
+typedef _l_state< char16_t, 6, false, false, 0, 0 > _TystateUTF16649;
+template < class t_TyTraits > inline
+_TystateUTF16649 stateUTF16_649 = {
+#ifdef LXOBJ_STATENUMBERS
+	649,
+#endif //LXOBJ_STATENUMBERS
+	6, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ 0x09, 0x0a, (vTyStateProtoChar16*)( & stateUTF16_647<t_TyTraits> ) },
+		{ 0x0d, 0x0d, (vTyStateProtoChar16*)( & stateUTF16_647<t_TyTraits> ) },
+		{ u' ', u'=', (vTyStateProtoChar16*)( & stateUTF16_647<t_TyTraits> ) },
+		{ u'>', u'>', (vTyStateProtoChar16*)( & stateUTF16_640<t_TyTraits> ) },
+		{ u'?', u'?', (vTyStateProtoChar16*)( & stateUTF16_649<t_TyTraits> ) },
+		{ u'@', 0x0fffd, (vTyStateProtoChar16*)( & stateUTF16_647<t_TyTraits> ) }
+	}	};
+
+typedef _l_state< char16_t, 5, false, false, 0, 0 > _TystateUTF16650;
+template < class t_TyTraits > inline
+_TystateUTF16650 startUTF16DtdIgnore = {
+#ifdef LXOBJ_STATENUMBERS
+	650,
+#endif //LXOBJ_STATENUMBERS
+	5, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ 0x01, u';', (vTyStateProtoChar16*)( & stateUTF16_651<t_TyTraits> ) },
+		{ u'<', u'<', (vTyStateProtoChar16*)( & stateUTF16_653<t_TyTraits> ) },
+		{ u'=', 0x05c, (vTyStateProtoChar16*)( & stateUTF16_651<t_TyTraits> ) },
+		{ u']', u']', (vTyStateProtoChar16*)( & stateUTF16_652<t_TyTraits> ) },
+		{ u'^', 0x0ffff, (vTyStateProtoChar16*)( & stateUTF16_651<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 3, true, false, 0, 0 > _TystateUTF16651;
+template < class t_TyTraits > inline
+_TystateUTF16651 stateUTF16_651 = {
+#ifdef LXOBJ_STATENUMBERS
+	651,
+#endif //LXOBJ_STATENUMBERS
+	3, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16651, m_pmfnAccept ),  0, 4046,
+	{
+		{ 0x01, u';', (vTyStateProtoChar16*)( & stateUTF16_651<t_TyTraits> ) },
+		{ u'=', 0x05c, (vTyStateProtoChar16*)( & stateUTF16_651<t_TyTraits> ) },
+		{ u'^', 0x0ffff, (vTyStateProtoChar16*)( & stateUTF16_651<t_TyTraits> ) }
+	}, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4046 ) };
+typedef _l_state< char16_t, 1, true, false, 0, 0 > _TystateUTF16652;
+template < class t_TyTraits > inline
+_TystateUTF16652 stateUTF16_652 = {
+#ifdef LXOBJ_STATENUMBERS
+	652,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16652, m_pmfnAccept ),  0, 4046,
+	{
+		{ u']', u']', (vTyStateProtoChar16*)( & stateUTF16_654<t_TyTraits> ) }
+	}, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4046 ) };
+typedef _l_state< char16_t, 1, true, false, 0, 0 > _TystateUTF16653;
+template < class t_TyTraits > inline
+_TystateUTF16653 stateUTF16_653 = {
+#ifdef LXOBJ_STATENUMBERS
+	653,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16653, m_pmfnAccept ),  0, 4046,
+	{
+		{ u'!', u'!', (vTyStateProtoChar16*)( & stateUTF16_655<t_TyTraits> ) }
+	}, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4046 ) };
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16654;
+template < class t_TyTraits > inline
+_TystateUTF16654 stateUTF16_654 = {
+#ifdef LXOBJ_STATENUMBERS
+	654,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'>', u'>', (vTyStateProtoChar16*)( & stateUTF16_656<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 1, false, false, 0, 0 > _TystateUTF16655;
+template < class t_TyTraits > inline
+_TystateUTF16655 stateUTF16_655 = {
+#ifdef LXOBJ_STATENUMBERS
+	655,
+#endif //LXOBJ_STATENUMBERS
+	1, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	{
+		{ u'[', u'[', (vTyStateProtoChar16*)( & stateUTF16_657<t_TyTraits> ) }
+	}	};
+typedef _l_state< char16_t, 0, true, false, 0, 0 > _TystateUTF16656;
+template < class t_TyTraits > inline
+_TystateUTF16656 stateUTF16_656 = {
+#ifdef LXOBJ_STATENUMBERS
+	656,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16656, m_pmfnAccept ),  0, 4043, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4043 ) };
+typedef _l_state< char16_t, 0, true, false, 0, 0 > _TystateUTF16657;
+template < class t_TyTraits > inline
+_TystateUTF16657 stateUTF16_657 = {
+#ifdef LXOBJ_STATENUMBERS
+	657,
+#endif //LXOBJ_STATENUMBERS
+	0, 0, kucAccept, 0, 
+	offsetof( _TystateUTF16657, m_pmfnAccept ),  0, 4042, 
+	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4042 ) };
 
 __XMLPLEX_END_NAMESPACE
 
