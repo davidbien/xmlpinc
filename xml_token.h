@@ -114,6 +114,9 @@ public:
       case s_knTokenProcessingInstruction:
         _AssertValidProcessingInstruction();
       break;
+      case s_knTokenDoctypeDecl:
+        Assert( GetValue().FHasTypedData() || GetValue().FIsString() ); // The text of the declaration.
+      break;
     }
 #endif //ASSERTSENABLED
   }
@@ -174,6 +177,11 @@ public:
   bool FIsProcessingInstruction() const
   {
     return s_knTokenProcessingInstruction == m_tokToken.GetTokenId();
+  }
+  // The document type declaration - see s_knTokenDoctypeDecl.
+  bool FIsDoctypeDecl() const
+  {
+    return s_knTokenDoctypeDecl == m_tokToken.GetTokenId();
   }
   template< class t_TyStrView >
   void KGetStringView( _TyLexValue const & _rval, t_TyStrView & _rsv ) const

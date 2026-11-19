@@ -803,15 +803,18 @@ protected:
     {
       // The document type declaration is not a token of the DFA of the document: where it is that DFA finds no token.
       // That is in the prolog - after the XML declaration and before the first tag - and there may be only one.
-      if ( !fGotToken && ( m_pspStartAll == _pspStart ) && !m_fGotFirstTag && !m_lContexts.empty() && !m_optDtd.has_value() && _FReadDoctypeDecl() )
-        fGotToken = m_pXp->GetLexicalAnalyzer().FGetToken( _rpltok, &*m_rgSkipTokensCur.begin(), &*m_rgSkipTokensCur.begin() + m_nSkip, _pspStart, false );
+      // We read it and what we return for it is a token whose value is its text: s_knTokenDoctypeDecl - which is then
+      //  one of the tokens of the prolog as a comment there is.
+      if ( !fGotToken && ( m_pspStartAll == _pspStart ) && !m_fGotFirstTag && !m_lContexts.empty() && !m_optDtd.has_value() )
+        fGotToken = _FReadDoctypeDecl( _rpltok );
     }
     return fGotToken;
   }
   // Read the document type declaration [28] if that is what is here. Return false if nothing of the DTD is here - the
   //  end of the input for instance: then nothing was read.
   // The lexical analyzer is left after the '>' of the declaration.
-  bool _FReadDoctypeDecl()
+  // _rpltok: the token which we make of the declaration - s_knTokenDoctypeDecl.
+  bool _FReadDoctypeDecl( unique_ptr< _TyLexToken > & _rpltok )
   {
     typedef typename _TyXmlParser::_TyLexicalAnalyzer _TyLexicalAnalyzer;
     _TyLexicalAnalyzer & rAnalyzer = m_pXp->GetLexicalAnalyzer();
@@ -827,16 +830,23 @@ protected:
     if ( s_knTokenDtdDoctypeBegin != pltokDoctype->GetTokenId() )
       THROWXMLPARSEEXCEPTION( "Found markup in the prolog which is neither a document type declaration nor the document's element." );
     m_optDtd.emplace();
+    _TyStdStr strDoctypeText;
     xml_dtd_parser< _TyChar > dtdParser( *m_optDtd );
     dtdParser.SetStandalone( m_XMLDeclProperties.m_fStandalone );
+    dtdParser.SetKeepDoctypeText( &strDoctypeText );
     dtdParser.ParseDoctypeDecl( rAnalyzer, std::move( pltokDoctype ) );
     // The entities of the document are those which the DTD declares - with the predefined ones, which are there already.
     m_optDtd->AddGeneralEntitiesTo( m_pXp->GetUserObj().GetEntityMap() );
+    // The token of the declaration. It was read as many tokens of the DTD so its text is not a piece of the document
+    //  which a token of ours refers to: the value is a string.
+    _rpltok = make_unique< _TyLexToken >( m_pXp->GetUserObj(), s_knTokenDoctypeDecl );
+    _rpltok->template emplaceValue< _TyStdStr >( std::move( strDoctypeText ) );
     return true;
   }
   bool _FIsContentToken( vtyTokenIdent _tid ) const
   {
-    return ( s_knTokenComment == _tid ) || ( s_knTokenCDataSection == _tid ) || ( s_knTokenCharData == _tid ) || ( s_knTokenProcessingInstruction == _tid );
+    return ( s_knTokenComment == _tid ) || ( s_knTokenCDataSection == _tid ) || ( s_knTokenCharData == _tid ) || ( s_knTokenProcessingInstruction == _tid ) ||
+           ( s_knTokenDoctypeDecl == _tid ); // The document type declaration is among the tokens of the prolog - see _FReadDoctypeDecl().
   }
   void _ReadTokenContent()
   {
@@ -968,6 +978,9 @@ protected:
       break;
       case s_knTokenProcessingInstruction:
         _ProcessProcessingInstruction( *_rpltok );
+      break;
+      case s_knTokenDoctypeDecl:
+        _AppendContextContent( *_rpltok ); // It is as _FReadDoctypeDecl() made it.
       break;
     }
   }

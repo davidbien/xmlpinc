@@ -490,6 +490,13 @@ static const vtyActionIdent s_knTokenProcessingInstruction = 1007;
 template < class t_TyLexTraits, bool t_fInLexGen = true >
 using TyGetTokenProcessingInstruction = _l_action_token< _l_action_save_data_single< s_knTokenProcessingInstruction, TyGetTriggerPITargetEnd<t_TyLexTraits,t_fInLexGen>, TyGetTriggerPITargetMeatBegin<t_TyLexTraits,t_fInLexGen> > >;
 
+// The document type declaration [28] - with XML traits which support the DTD. This token is not one of the lexical
+//  analyzer: the declaration is read by the parser of the DTD into an xml_dtd - see xml_read_cursor<>::GetDtd() - and
+//  then the read cursor makes this token of it, which is among the tokens of the prolog where the declaration was.
+// Its value is the text of the declaration from "<!DOCTYPE" through its '>' just as it was: a string, in the character
+//  type of the parser. It is what a writer writes for the declaration.
+static const vtyActionIdent s_knTokenDoctypeDecl = 1008;
+
 // Write-validation tokens. These are used during writing to:
 // 1) Validate written tokens of various types.
 // 2) Determine the production of CharRefs withing Attribute Values and CharData and CDataSections.

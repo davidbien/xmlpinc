@@ -605,6 +605,14 @@ public:
   {
     m_fStandalone = _fStandalone;
   }
+  // Keep the text of the document type declaration as it is read by ParseDoctypeDecl(): each of its tokens - white space,
+  //  comments and all - is added to *_pstrText as the parser takes it, so afterwards that is the declaration from its
+  //  "<!DOCTYPE" through its '>' just as it was. ( Not what is read within it from elsewhere: the replacement text of
+  //  a parameter entity. ) nullptr: don't.
+  void SetKeepDoctypeText( _TyStdStr * _pstrText )
+  {
+    m_pstrDoctypeText = _pstrText;
+  }
 
   // Parse the document type declaration [28] of a document. The lexical analyzer is at its "<!DOCTYPE" and is left after
   //  its '>': nothing of the document after it is read.
@@ -637,6 +645,8 @@ public:
   template < class t_TyLexToken >
   _TyValue OnShift( unique_ptr< t_TyLexToken > && _rrupToken, PGENOBJ_NAMESPACE vtyParseTerminal )
   {
+    if ( !!m_pstrDoctypeText && !m_fExternal && !m_nParameterEntityDepth )
+      *m_pstrDoctypeText += _SvTokenText( *_rrupToken ); // See SetKeepDoctypeText().
     _TyValueToken vtok;
     vtok.m_tid = _rrupToken->GetTokenId();
     switch( vtok.m_tid )
@@ -1203,6 +1213,7 @@ protected:
   bool m_fStandalone{ false }; // The document is declared to be standalone.
   bool m_fExternal{ false }; // Parsing the external subset or an external parameter entity.
   size_t m_nParameterEntityDepth{ 0 }; // Within the replacement text of this many parameter entities.
+  _TyStdStr * m_pstrDoctypeText{ nullptr }; // See SetKeepDoctypeText().
   set< _TyStdStr, less<> > m_setParameterEntitiesActive; // Those whose replacement text is being parsed.
 };
 

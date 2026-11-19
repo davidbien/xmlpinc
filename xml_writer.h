@@ -388,17 +388,37 @@ public:
   {
     return m_fWriteBOM;
   }
+  // Whether to write the document type declaration when its token is written - s_knTokenDoctypeDecl, as when a document
+  //  is written from a read cursor which has one. If not then the token is passed over.
+  void SetWriteDoctypeDecl( bool _fWriteDoctypeDecl )
+  {
+    m_fWriteDoctypeDecl = _fWriteDoctypeDecl;
+  }
+  bool FGetWriteDoctypeDecl() const
+  {
+    return m_fWriteDoctypeDecl;
+  }
+  // Whether a document type declaration has been written to the output.
+  bool FWroteDoctypeDecl() const
+  {
+    return m_fWroteDoctypeDecl;
+  }
   // Whether to write the attributes which a tag didn't have and which the DTD gave it when it was read - those whose
-  //  value is an xml_attr_default_value. If the document is written with the document type declaration it was read
-  //  with then whoever reads it adds them again, and without them the tags are written as they were read. Otherwise
-  //  they are what the document means and they should be written - and that is the default.
+  //  value is an xml_attr_default_value.
+  // By default this follows the document type declaration: if it has been written then they are not - whoever reads
+  //  what we write adds them again, and without them the tags are written as they were read. If it hasn't been written
+  //  then they are what the document means and they are written.
   void SetWriteDefaultedAttributes( bool _fWriteDefaultedAttributes )
   {
-    m_fWriteDefaultedAttributes = _fWriteDefaultedAttributes;
+    m_optfWriteDefaultedAttributes = _fWriteDefaultedAttributes;
+  }
+  void ClearWriteDefaultedAttributes() // Back to the default.
+  {
+    m_optfWriteDefaultedAttributes.reset();
   }
   bool FWriteDefaultedAttributes() const
   {
-    return m_fWriteDefaultedAttributes;
+    return m_optfWriteDefaultedAttributes.has_value() ? *m_optfWriteDefaultedAttributes : !m_fWroteDoctypeDecl;
   }
   void SetWriteXMLDecl( bool _fWriteXMLDecl )
   {
@@ -848,6 +868,9 @@ public:
       case s_knTokenProcessingInstruction:
         _WriteProcessingInstruction( _rtok );
       break;
+      case s_knTokenDoctypeDecl:
+        _WriteDoctypeDecl( _rtok );
+      break;
     }
   }
   template < class... t_TysArgs >
@@ -867,6 +890,7 @@ protected:
     m_xdcxtDocumentContext.Init( _fKeepEncoding ? efceFileCharacterEncodingCount : _TyXmlTransportOut::GetEncoding(), m_fUseNamespaces, &_rXmlDeclProperties, &prFormatContext );
     m_lContexts.clear();
     m_fWroteFirstTag = false;
+    m_fWroteDoctypeDecl = false;
     m_fHaveUnendedTag = false;
     if ( m_fWriteXMLDecl )
       _WriteXmlDecl();
@@ -919,6 +943,9 @@ protected:
     CheckDuplicateTokenAttrs( true, _rtok.GetLexToken(), true );
     _WriteTransportRaw( _TyMarkupTraits::s_kszTagBegin, StaticStringLen( _TyMarkupTraits::s_kszTagBegin ) );
     m_fHaveUnendedTag = true;
+    // We are no longer in the prolog: a string which is written from here - the value of an attribute of this very tag
+    //  for one - is validated as what it is and not as the white space which is all that the prolog may have.
+    m_fWroteFirstTag = true;
     const _TyLexValue & rvalRoot = _rtok.GetValue();
     _WriteName( _rtok, rvalRoot[vknTagNameIdx] );
     // Move through all attributes writing each.
@@ -931,7 +958,7 @@ protected:
         {
           // An attribute which the tag didn't have and which the DTD gave it - see SetWriteDefaultedAttributes().
           const bool kfAttrDefaultValue = FIsAttrDefaultValue( (*pvCur)[vknAttr_ValueIdx] );
-          if ( kfAttrDefaultValue && !m_fWriteDefaultedAttributes )
+          if ( kfAttrDefaultValue && !FWriteDefaultedAttributes() )
             continue;
           _WriteTransportRaw( _TyMarkupTraits::s_kszSpace, StaticStringLen( _TyMarkupTraits::s_kszSpace ) );
           const _TyLexValue & rvCur = *pvCur;
@@ -945,15 +972,50 @@ protected:
             _WriteAttrDefaultValue( rvCur[vknAttr_ValueIdx].template GetVal< xml_attr_default_value< typename t_TyXmlToken::_TyChar > >().SvValue(), fUseDoubleQuote );
           else
           if ( fUseDoubleQuote )
-            _WriteCharAndAttrData< TGetAttCharDataNoSingleQuoteStart >( _rtok, rvCur[vknAttr_ValueIdx], _edrDetectReferences );
-          else
             _WriteCharAndAttrData< TGetAttCharDataNoDoubleQuoteStart >( _rtok, rvCur[vknAttr_ValueIdx], _edrDetectReferences );
+          else
+            _WriteCharAndAttrData< TGetAttCharDataNoSingleQuoteStart >( _rtok, rvCur[vknAttr_ValueIdx], _edrDetectReferences );
           _WriteTransportRaw( fUseDoubleQuote ? _TyMarkupTraits::s_kszDoubleQuote : _TyMarkupTraits::s_kszSingleQuote, StaticStringLen( _TyMarkupTraits::s_kszSingleQuote ) );
         }
       }
     );
     // we don't write any ending since we don't know yet which ending we should write. This also lets us
     //  know what we need to do when we are ending a tag.
+  }
+  // Write characters of the value of an attribute which may be written as they are. But a tab or an end of line would be
+  //  a space to whoever reads it ( 3.3.3 ): those are written as references to them so that the value which is read is
+  //  the value which we were given.
+  template < class t_TyCharValue >
+  void _WriteAttrValueRun( const t_TyCharValue * _pcBegin, const t_TyCharValue * const _pcEnd )
+  {
+    static constexpr _TyChar s_kszTab[] = { _TyChar('9'), 0 };
+    static constexpr _TyChar s_kszLineFeed[] = { _TyChar('1'), _TyChar('0'), 0 };
+    static constexpr _TyChar s_kszCarriageReturn[] = { _TyChar('1'), _TyChar('3'), 0 };
+    const t_TyCharValue * pcRun = _pcBegin;
+    for ( const t_TyCharValue * pcCur = _pcBegin; _pcEnd != pcCur; ++pcCur )
+    {
+      const _TyChar * pszCharRef;
+      switch( *pcCur )
+      {
+        case t_TyCharValue(0x9):
+          pszCharRef = s_kszTab;
+        break;
+        case t_TyCharValue(0xA):
+          pszCharRef = s_kszLineFeed;
+        break;
+        case t_TyCharValue(0xD):
+          pszCharRef = s_kszCarriageReturn;
+        break;
+        default:
+          continue;
+      }
+      _WriteTransportRaw( pcRun, pcCur );
+      pcRun = pcCur + 1;
+      _WriteTransportRaw( _TyMarkupTraits::s_kszCharDecRefBegin, StaticStringLen( _TyMarkupTraits::s_kszCharDecRefBegin ) );
+      _WriteTransportRaw( pszCharRef, StrNLen( pszCharRef ) );
+      _WriteTransportRaw( _TyMarkupTraits::s_kszReferenceEnd, StaticStringLen( _TyMarkupTraits::s_kszReferenceEnd ) );
+    }
+    _WriteTransportRaw( pcRun, _pcEnd );
   }
   // Write the value of an attribute which the DTD gave the tag - see xml_attr_default_value.
   // It is the value itself: the references of the default were replaced and it was found to be well formed when the DTD
@@ -1122,6 +1184,39 @@ protected:
     }
     _WriteTransportRaw( _TyMarkupTraits::s_kszCommentEnd, StaticStringLen( _TyMarkupTraits::s_kszCommentEnd ) );
   }
+  // Write the document type declaration: the token's value is its text from "<!DOCTYPE" through its '>' - see
+  //  s_knTokenDoctypeDecl. It may be written once and only in the prolog.
+  // The text is written as it is. That of a token which a read cursor made was read by the parser of the DTD. A string
+  //  which comes from elsewhere is not parsed here: we check only that it begins and ends as a declaration does.
+  template < class t_TyXmlToken >
+  void _WriteDoctypeDecl( t_TyXmlToken const & _rtok )
+  {
+    typedef typename t_TyXmlToken::_TyLexValue _TyLexValue;
+    if ( !m_fWriteDoctypeDecl )
+      return;
+    VerifyThrowSz( FInProlog(), "The document type declaration may only be written before the first tag." );
+    VerifyThrowSz( !m_fWroteDoctypeDecl, "A document type declaration has already been written - there may be only one." );
+    const _TyLexValue & rval = _rtok.GetValue();
+    VerifyThrow( rval.FHasTypedData() || rval.FIsString() );
+    if ( rval.FHasTypedData() )
+      _WriteTypedData( _rtok, rval );
+    else
+    {
+      rval.ApplyString(
+        [this]< typename t_TyChar >( const t_TyChar * _pcBegin, const t_TyChar * const _pcEnd )
+        {
+          static constexpr char s_kszDoctypeBegin[] = "<!DOCTYPE";
+          const size_t knLenBegin = StaticStringLen( s_kszDoctypeBegin );
+          bool fLooksLikeOne = ( size_t( _pcEnd - _pcBegin ) > knLenBegin ) && ( t_TyChar( '>' ) == _pcEnd[-1] );
+          for ( size_t n = 0; fLooksLikeOne && ( n < knLenBegin ); ++n )
+            fLooksLikeOne = ( t_TyChar( s_kszDoctypeBegin[n] ) == _pcBegin[n] );
+          VerifyThrowSz( fLooksLikeOne, "The text of a document type declaration must be all of it: from its \"<!DOCTYPE\" through its '>'." );
+          _WriteTransportRaw( _pcBegin, _pcEnd );
+        }
+      );
+    }
+    m_fWroteDoctypeDecl = true;
+  }
   template < template < class t_TyChar > class t_tempGetStartToken, class t_TyXmlToken >
   void _WritePIPortion( t_TyXmlToken const & _rtok, typename t_TyXmlToken::_TyLexValue const & _rval )
   {
@@ -1252,132 +1347,118 @@ protected:
         {
           typedef _l_state_proto< t_TyCharApplyString > _TyStateProto;
           const _TyStateProto * const kpspValidateTokenStart = t_tempGetStartToken< t_TyCharApplyString >::s_kpspStart;
-          if ( !m_fWroteFirstTag )
+          const bool kfIsCharData = ( kpspValidateTokenStart == PspGetCharDataStart< t_TyCharApplyString >() );
+          if ( kfIsCharData && !FInsideDocumentTag() )
           {
-            Assert( kpspValidateTokenStart == PspGetCharDataStart< t_TyCharApplyString >() ); // Shouldn't see any attribute values before the first tag.
-            // CharData before the first tag should match the S production.
+            // CharData before the first tag - and after the last - should match the S production.
             const t_TyCharApplyString * pcMatchSpace = _l_match< t_TyCharApplyString >::PszMatch( PspGetSpacesStart< t_TyCharApplyString >(), _pcBegin, _pcEnd - _pcBegin );
-            VerifyThrowSz( pcMatchSpace == _pcEnd, "CharData before the first tag much be composed entirely of spaces." );
+            VerifyThrowSz( pcMatchSpace == _pcEnd, "CharData outside of the document's tag must be composed entirely of spaces." );
             _WriteTransportRaw( _pcBegin, _pcEnd );
             return;
           }
+          Assert( m_fWroteFirstTag ); // The value of an attribute is written when its tag is - see _CommitTag().
           const _TyStateProto * const kpspAllReferences = PspGetAllReferencesStart< t_TyCharApplyString >();
-          // Move through and validate as we have described above.
-          // Since we are using an anti-accepting state in the CharData production we need to examine the returned state for anti-accepting.
+          // Move through and validate as we have described above: each time around we write the characters which may be
+          //  written as they are and then deal with the one at which they end.
           for ( const t_TyCharApplyString * pcCur = _pcBegin; _pcEnd != pcCur;  )
           {
-#if ASSERTSENABLED
-            const t_TyCharApplyString * dbg_pcAtBlockStart = pcCur;
-#endif //ASSERTSENABLED
             const _TyStateProto * pspAccept;
             const t_TyCharApplyString * pcMatch = _l_match< t_TyCharApplyString >::PszMatch( kpspValidateTokenStart, pcCur, _pcEnd - pcCur, &pspAccept );
-            // If we find an accepting state that doesn't complete the entire remainder of characters then we:
-            // 1) Might be at the start of a reference.
-            // 2) Might be at a single or double quote.
-            // However if we find an anti-accepting state then that means we have encountered an embedded "]]>" and we can appropriately escape.
-            if ( !pspAccept->FIsAntiAcceptingState() ) // Most common thing to happen is this.
+            // Since we are using an anti-accepting state in the CharData production we need to examine the returned state for anti-accepting:
+            //  that means we have encountered an embedded "]]>" - pcMatch is just beyond it - and we can appropriately escape.
+            if ( !!pspAccept && pspAccept->FIsAntiAcceptingState() )
             {
+              Assert( kfIsCharData && ( pcMatch - pcCur >= 3 ) );
               Assert( ( pcMatch[-3] == t_TyCharApplyString(']') ) && ( pcMatch[-2] == t_TyCharApplyString(']') ) && ( pcMatch[-1] == t_TyCharApplyString('>') ) );
               _WriteTransportRaw( pcCur, pcMatch-1 );
-              pcCur = pcMatch - 1;
               _WriteTransportRaw( _TyMarkupTraits::s_kszEntityGreaterThan, StaticStringLen( _TyMarkupTraits::s_kszEntityGreaterThan ) );
+              pcCur = pcMatch; // The '>' is written.
+              continue;
             }
-            else
-            {
-              // In this case we should be pointing at an invalid character:
-              Assert( ( *pcMatch == t_TyCharApplyString('\'') ) || ( *pcMatch == t_TyCharApplyString('"') ) || ( *pcMatch == t_TyCharApplyString('<') ) );
+            // Otherwise the characters up to pcMatch may be written as they are - which is the most common thing to happen - and
+            //  they may be all that there is. If no state accepted then there are none of them: we are at a character which may not be.
+            if ( !pspAccept )
+              pcMatch = pcCur;
+            if ( kfIsCharData )
               _WriteTransportRaw( pcCur, pcMatch );
-              pcCur = pcMatch;
-              switch( *pcCur++ )
+            else
+              _WriteAttrValueRun( pcCur, pcMatch );
+            pcCur = pcMatch;
+            if ( _pcEnd == pcCur )
+              break;
+            // In this case we should be pointing at a character which can't be written as itself:
+            // 1) Might be at the start of a reference.
+            // 2) Might be at a '<', or at the quote which is in use for the value of an attribute.
+            switch( *pcCur++ )
+            {
+              default:
+                VerifyThrowSz( false, "A character which may not be written was found in character data or in the value of an attribute." );
+              break;
+              case t_TyCharApplyString('<'):
+                _WriteTransportRaw( _TyMarkupTraits::s_kszEntityLessThan, StaticStringLen( _TyMarkupTraits::s_kszEntityLessThan ) );
+              break;
+              case t_TyCharApplyString('\''):
+                _WriteTransportRaw( _TyMarkupTraits::s_kszEntityApostrophe, StaticStringLen( _TyMarkupTraits::s_kszEntityApostrophe ) );
+              break;
+              case t_TyCharApplyString('\"'):
+                _WriteTransportRaw( _TyMarkupTraits::s_kszEntityDoubleQuote, StaticStringLen( _TyMarkupTraits::s_kszEntityDoubleQuote ) );
+              break;
+              case t_TyCharApplyString('&'):
               {
-                default:
-                  Assert( false ); // no reason to throw because if things are correct we cannot get here.
-                break;
-                case t_TyCharApplyString('\''):
-                  _WriteTransportRaw( _TyMarkupTraits::s_kszEntityApostrophe, StaticStringLen( _TyMarkupTraits::s_kszEntityApostrophe ) );
-                break;
-                case t_TyCharApplyString('\"'):
-                  _WriteTransportRaw( _TyMarkupTraits::s_kszEntityDoubleQuote, StaticStringLen( _TyMarkupTraits::s_kszEntityDoubleQuote ) );
-                break;
-                case t_TyCharApplyString('&'):
+                // Reference. _edrDetectReferences now comes into play:
+                if ( edrNoReferences == _edrDetectReferences )
                 {
-                  // Reference. _edrDetectReferences now comes into play:
-                  if ( edrNoReferences == _edrDetectReferences )
-                  {
-                    _WriteTransportRaw( _TyMarkupTraits::s_kszEntityAmpersand, StaticStringLen( _TyMarkupTraits::s_kszEntityAmpersand ) );
-                  }
-                  else
-                  {
-                    // We might have a reference (at least) in this case - figure out what we have:
-                    const t_TyCharApplyString * pcMatchReference = _l_match< t_TyCharApplyString >::PszMatch( kpspAllReferences, pcCur-1, _pcEnd - ( pcCur - 1 ), &pspAccept );
-                    VerifyThrowSz( pspAccept || ( edrAlwaysReference != _edrDetectReferences ), "Found a & that didn't match the Reference production." );
-                    if ( !pspAccept )
-                    {
-                      Assert( ( edrAutoReference == _edrDetectReferences ) || ( edrAutoReferenceNoError == _edrDetectReferences ) );
-                      // Then this doesn't match the Reference production and we are on "auto" - just replace with an amp:
-                      _WriteTransportRaw( _TyMarkupTraits::s_kszEntityAmpersand, StaticStringLen( _TyMarkupTraits::s_kszEntityAmpersand ) );
-                    }
-                    else
-                    {
-                      typedef basic_string_view< t_TyCharApplyString > _TyStrViewApply;
-                      typedef basic_string< t_TyCharApplyString > _TyStringApply;
-                      typedef basic_string< _TyChar > _TyStrOutput;
-                      typedef basic_string_view< _TyChar > _TyStrViewOutput;
-                      switch( pspAccept->m_tidAccept )
-                      {
-                        case s_knTokenEntityRef:
-                        {
-                          // Must be a valid reference:
-                          _TyStrViewApply svRef( pcCur, ( pcMatchReference - 1 ) - pcCur );
-                          _TyStrViewOutput svEntity = m_xdcxtDocumentContext.GetUserObj().SvLookupEntity( svRef );
-                          bool fFoundEntityReference = !svEntity.empty();
-                          VerifyThrowSz( fFoundEntityReference || ( edrAutoReferenceNoError == _edrDetectReferences ), "Entity reference to [%s] not found.", StrConvertString<char>( svRef ).c_str() );
-                          if ( fFoundEntityReference )
-                          { // write it out.
-                            _WriteTransportRaw( &svEntity[0], svEntity.length() );
-                          }
-                          else
-                          {
-                            // escape the bogus entity reference:
-                            _WriteTransportRaw( _TyMarkupTraits::s_kszEntityAmpersand, StaticStringLen( _TyMarkupTraits::s_kszEntityAmpersand ) );
-                            _WriteTransportRaw( pcCur, pcMatchReference );
-                          }
-                          pcCur = pcMatchReference;
-                        }
-                        break;
-                        case s_knTokenCharRefDec:
-                        case s_knTokenCharRefHex:
-                        {
-                          // The production ensures we have a valid set of characters, we must validate overflow.
-                          // Character references are always in UTF32.
-                          const t_TyCharApplyString * pcBegin = pcCur + ( pspAccept->m_tidAccept == s_knTokenCharRefDec ? 1 : 2 );
-                          _TyStrViewApply svRef( pcBegin, ( pcMatchReference - 1 ) - pcBegin );
-                          char32_t utf32;
-                          int iResult = IReadPositiveNum( s_knTokenCharRefDec == pspAccept->m_tidAccept ? 10 : 16, &svRef[0], svRef.length(), utf32, _l_char_type_map<char32_t>::ms_kcMax, false );
-                          if ( !!iResult && ( edrAutoReferenceNoError != _edrDetectReferences ) ) // error - should be overflow since the production validates content.
-                          {
-                            Assert( vkerrOverflow == GetLastErrNo() );
-                            THROWXMLPARSEEXCEPTIONERRNO( GetLastErrNo(), "Error processing character reference [%s] - very likely overflow." );
-                          }
-                          if ( !iResult )
-                            _WriteTransportRaw( pcCur - 1, pcMatchReference );
-                          else
-                          {
-                            // escape the bogus character reference:
-                            _WriteTransportRaw( _TyMarkupTraits::s_kszEntityAmpersand, StaticStringLen( _TyMarkupTraits::s_kszEntityAmpersand ) );
-                            _WriteTransportRaw( pcCur, pcMatchReference );
-                          }
-                          pcCur = pcMatchReference;
-                        }
-                        break;
-                      }
-                    }
-                  }
+                  _WriteTransportRaw( _TyMarkupTraits::s_kszEntityAmpersand, StaticStringLen( _TyMarkupTraits::s_kszEntityAmpersand ) );
+                  break;
                 }
-                break;
+                // We might have a reference (at least) in this case - figure out what we have:
+                const _TyStateProto * pspReference;
+                const t_TyCharApplyString * pcMatchReference = _l_match< t_TyCharApplyString >::PszMatch( kpspAllReferences, pcCur-1, _pcEnd - ( pcCur - 1 ), &pspReference );
+                const bool kfIsReference = !!pspReference && !pspReference->FIsAntiAcceptingState();
+                VerifyThrowSz( kfIsReference || ( edrAlwaysReference != _edrDetectReferences ), "Found a & that didn't match the Reference production." );
+                if ( !kfIsReference )
+                {
+                  Assert( ( edrAutoReference == _edrDetectReferences ) || ( edrAutoReferenceNoError == _edrDetectReferences ) );
+                  // Then this doesn't match the Reference production and we are on "auto" - just replace with an amp:
+                  _WriteTransportRaw( _TyMarkupTraits::s_kszEntityAmpersand, StaticStringLen( _TyMarkupTraits::s_kszEntityAmpersand ) );
+                  break;
+                }
+                // It reads as a reference: it is written as one - as it is - if it is good, and otherwise ( unless that
+                //  is an error ) its '&' is escaped so that what is written is the characters which we were given.
+                typedef basic_string_view< t_TyCharApplyString > _TyStrViewApply;
+                typedef basic_string_view< _TyChar > _TyStrViewOutput;
+                bool fGoodReference;
+                if ( s_knTokenEntityRef == pspReference->m_tidAccept )
+                {
+                  // Must be a reference to an entity which is known:
+                  _TyStrViewApply svRef( pcCur, ( pcMatchReference - 1 ) - pcCur );
+                  _TyStrViewOutput svEntity = m_xdcxtDocumentContext.GetUserObj().SvLookupEntity( svRef );
+                  fGoodReference = !svEntity.empty();
+                  VerifyThrowSz( fGoodReference || ( edrAutoReferenceNoError == _edrDetectReferences ), "Entity reference to [%s] not found.", StrConvertString<char>( svRef ).c_str() );
+                }
+                else
+                {
+                  Assert( ( s_knTokenCharRefDec == pspReference->m_tidAccept ) || ( s_knTokenCharRefHex == pspReference->m_tidAccept ) );
+                  // The production ensures we have a valid set of characters, we must validate overflow - and that it is a character.
+                  // Character references are always in UTF32.
+                  const t_TyCharApplyString * pcDigits = pcCur + ( pspReference->m_tidAccept == s_knTokenCharRefDec ? 1 : 2 );
+                  _TyStrViewApply svRef( pcDigits, ( pcMatchReference - 1 ) - pcDigits );
+                  char32_t utf32 = 0;
+                  int iResult = IReadPositiveNum( s_knTokenCharRefDec == pspReference->m_tidAccept ? 10 : 16, &svRef[0], svRef.length(), utf32, _l_char_type_map<char32_t>::ms_kcMax, false );
+                  fGoodReference = !iResult && ( ( 0x9 == utf32 ) || ( 0xA == utf32 ) || ( 0xD == utf32 ) || ( ( utf32 >= 0x20 ) && ( utf32 <= 0xD7FF ) ) ||
+                                                  ( ( utf32 >= 0xE000 ) && ( utf32 <= 0xFFFD ) ) || ( ( utf32 >= 0x10000 ) && ( utf32 <= 0x10FFFF ) ) );
+                  VerifyThrowSz( fGoodReference || ( edrAutoReferenceNoError == _edrDetectReferences ),
+                    "The character reference [%s] is not to a character - very likely overflow.", StrConvertString<char>( svRef ).c_str() );
+                }
+                if ( !fGoodReference )
+                  _WriteTransportRaw( _TyMarkupTraits::s_kszEntityAmpersand, StaticStringLen( _TyMarkupTraits::s_kszEntityAmpersand ) ); // escape the bogus reference.
+                else
+                  _WriteTransportRaw( pcCur - 1, pcCur ); // The '&' itself - and then the rest of it.
+                _WriteTransportRaw( pcCur, pcMatchReference );
+                pcCur = pcMatchReference;
               }
+              break;
             }
-            Assert( pcCur != dbg_pcAtBlockStart ); // Must advance pcCur during this loop.
           }
         }
       );
@@ -1458,9 +1539,11 @@ protected:
   bool m_fWriteBOM{true}; // Write a BOM because that's just a nice thing to do.
   bool m_fWriteXMLDecl{true}; // Whether to write an XMLDecl. This is honored in all scenarios.
   bool m_fUseNamespaces{true}; // Using namespaces?
-  bool m_fWriteDefaultedAttributes{true}; // Write the attributes which the DTD gave a tag - see SetWriteDefaultedAttributes().
+  bool m_fWriteDoctypeDecl{true}; // Write the document type declaration when its token is written.
+  optional< bool > m_optfWriteDefaultedAttributes; // Write the attributes which the DTD gave a tag - see SetWriteDefaultedAttributes().
 // state:
   bool m_fWroteFirstTag{false};
+  bool m_fWroteDoctypeDecl{false};
   bool m_fHaveUnendedTag{false};
 };
 
