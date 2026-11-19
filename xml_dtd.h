@@ -34,13 +34,24 @@
 //    the same name twice in mixed content - are recorded and don't throw: see RgValidityErrors().
 // What isn't done yet: reading the external subset and external parameter entities from where they are, references to
 //  parameter entities within declarations ( external subset only ), and validating a document.
+//
+// The cursor ( xml_cursor.h ) reads the document type declaration of a document when the XML traits support the DTD
+//  ( xml_traits< ..., true, ... > ): the xml_dtd is then the cursor's - GetDtd() - and the general entities which it
+//  declares are those of the document: see xml_dtd<>::AddGeneralEntitiesTo().
 
 #include <map>
 #include <optional>
 #include <set>
 #include <variant>
 #include <vector>
-#include "xml_inc.h"
+#include "xml_ns.h"
+#include "xml_types.h"
+#include "xml_exc.h"
+#include "xml_traits.h"
+// The generated lexical analyzers - as xml_parse.h includes them.
+#include <_xmlplex_utf32.h>
+#include <_xmlplex_utf16.h>
+#include <_xmlplex_utf8.h>
 #include "_p_lexang.h"
 #include <_xmlpdtd.h> // As the generated lexical analyzers are included in xml_parse.h: the one which the build generated is found before the copy which is beside this file.
 
@@ -231,6 +242,118 @@ public:
   {
     typename _TyMapNotations::const_iterator cit = m_mapNotations.find( _sv );
     return ( m_mapNotations.end() == cit ) ? nullptr : &cit->second;
+  }
+
+  // The text which a reference to the general entity stands for - when it stands for text alone.
+  // A reference to an internal entity is replaced by its replacement text, which is then itself read as content ( 4.4.2 ):
+  //  the character references and the references to entities within it are replaced in turn. We do that here, once,
+  //  for an entity whose replacement text - and that of the entities it refers to - has no markup: no '<'. Such an entity
+  //  is text wherever it is referenced.
+  // Return false if it isn't: the entity is not declared, is external or unparsed, has markup in its replacement text,
+  //  refers to itself or its replacement text isn't well formed as content.
+  bool FGetGeneralEntityText( _TyStrView _svName, _TyStdStr & _rstrText ) const
+  {
+    _rstrText.clear();
+    vector< _TyStrView > rgsvActive;
+    return _FExpandGeneralEntityText( _svName, _rstrText, rgsvActive );
+  }
+  // Add the general entities which stand for text alone to the map of entity name to text - that of the lexical
+  //  analyzer's user object ( xml_user_obj<>::GetEntityMap() ), with which references in character data and in the
+  //  values of attributes are replaced. An entity which is in the map already is left as it is - so the predefined
+  //  entities are what they are whatever is declared ( 4.6 ).
+  // Those which don't stand for text alone are not added: a reference to one is then to an unknown entity.
+  template < class t_TyEntityMap >
+  void AddGeneralEntitiesTo( t_TyEntityMap & _rmap ) const
+  {
+    _TyStdStr strText;
+    for ( typename _TyMapEntities::value_type const & rvt : m_mapGeneralEntities )
+    {
+      if ( ( _rmap.end() == _rmap.find( rvt.first ) ) && FGetGeneralEntityText( rvt.first, strText ) )
+        _rmap.emplace( rvt.first, strText );
+    }
+  }
+protected:
+  static bool _FIsName( _TyStrView _sv, const char * _psz )
+  {
+    for ( _TyChar ch : _sv )
+    {
+      if ( !*_psz || ( ch != _TyChar( *_psz++ ) ) )
+        return false;
+    }
+    return !*_psz;
+  }
+  bool _FExpandGeneralEntityText( _TyStrView _svName, _TyStdStr & _rstrText, vector< _TyStrView > & _rrgsvActive ) const
+  {
+    // The predefined entities ( 4.6 ): as text they are their characters.
+    static const struct { const char * m_pszName; char m_ch; } s_rgPredefined[] = { { "lt", '<' }, { "gt", '>' }, { "amp", '&' }, { "apos", '\'' }, { "quot", '"' } };
+    for ( auto const & rPredefined : s_rgPredefined )
+    {
+      if ( _FIsName( _svName, rPredefined.m_pszName ) )
+      {
+        _rstrText += _TyChar( rPredefined.m_ch );
+        return true;
+      }
+    }
+    const _TyEntity * pentity = PGetGeneralEntity( _svName );
+    if ( !pentity || !pentity->m_fInternal )
+      return false;
+    if ( _rrgsvActive.end() != std::find( _rrgsvActive.begin(), _rrgsvActive.end(), _svName ) )
+      return false; // WFC: No Recursion - an error only if it is referenced.
+    _rrgsvActive.push_back( _svName );
+    const _TyStrView svValue( pentity->m_strValue );
+    for ( size_t n = 0; n < svValue.length(); ++n )
+    {
+      const _TyChar ch = svValue[ n ];
+      if ( _TyChar( '<' ) == ch )
+        return false; // Markup.
+      if ( _TyChar( '&' ) != ch )
+      {
+        _rstrText += ch;
+        continue;
+      }
+      const size_t nEnd = svValue.find( _TyChar( ';' ), n );
+      if ( ( _TyStrView::npos == nEnd ) || ( nEnd == n + 1 ) )
+        return false; // An '&' which isn't a reference.
+      _TyStrView svReference = svValue.substr( n + 1, nEnd - n - 1 );
+      n = nEnd;
+      if ( _TyChar( '#' ) != svReference[0] )
+      {
+        if ( !_FExpandGeneralEntityText( svReference, _rstrText, _rrgsvActive ) )
+          return false;
+        continue;
+      }
+      // A character reference: "#" digits or "#x" hex digits.
+      const bool fHex = ( svReference.length() > 1 ) && ( _TyChar( 'x' ) == svReference[1] );
+      svReference.remove_prefix( fHex ? 2 : 1 );
+      char32_t ch32 = 0;
+      if ( svReference.empty() )
+        return false;
+      for ( _TyChar chDigit : svReference )
+      {
+        uint32_t nDigit;
+        if ( ( chDigit >= _TyChar( '0' ) ) && ( chDigit <= _TyChar( '9' ) ) )
+          nDigit = uint32_t( chDigit - _TyChar( '0' ) );
+        else
+        if ( fHex && ( chDigit >= _TyChar( 'a' ) ) && ( chDigit <= _TyChar( 'f' ) ) )
+          nDigit = 10 + uint32_t( chDigit - _TyChar( 'a' ) );
+        else
+        if ( fHex && ( chDigit >= _TyChar( 'A' ) ) && ( chDigit <= _TyChar( 'F' ) ) )
+          nDigit = 10 + uint32_t( chDigit - _TyChar( 'A' ) );
+        else
+          return false;
+        ch32 = ch32 * ( fHex ? 16 : 10 ) + nDigit;
+        if ( ch32 > 0x10FFFF )
+          return false;
+      }
+      // [2] Char.
+      if ( !( ( 0x9 == ch32 ) || ( 0xA == ch32 ) || ( 0xD == ch32 ) || ( ( ch32 >= 0x20 ) && ( ch32 <= 0xD7FF ) ) || ( ( ch32 >= 0xE000 ) && ( ch32 <= 0xFFFD ) ) || ( ch32 >= 0x10000 ) ) )
+        return false;
+      _TyStdStr strChar;
+      ConvertString( strChar, &ch32, 1 );
+      _rstrText += strChar;
+    }
+    _rrgsvActive.pop_back();
+    return true;
   }
 };
 
@@ -432,7 +555,16 @@ public:
   void ParseDoctypeDecl( t_TyAnalyzer & _rAnalyzer )
   {
     m_fExternal = false;
-    _Parse( _rAnalyzer, ns_xmlpdtd::s_knEntry_doctypedecl );
+    _Parse( _rAnalyzer, ns_xmlpdtd::s_knEntry_doctypedecl, unique_ptr< typename t_TyAnalyzer::_TyToken >() );
+  }
+  // The same when the "<!DOCTYPE" has been read already: _rrupTokenDoctype is its token - the lexical analyzer is after it.
+  // ( The cursor finds a document type declaration by reading that token. )
+  template < class t_TyAnalyzer >
+  void ParseDoctypeDecl( t_TyAnalyzer & _rAnalyzer, unique_ptr< typename t_TyAnalyzer::_TyToken > && _rrupTokenDoctype )
+  {
+    VerifyThrowSz( !!_rrupTokenDoctype && ( s_knTokenDtdDoctypeBegin == _rrupTokenDoctype->GetTokenId() ), "Not the token which begins a document type declaration." );
+    m_fExternal = false;
+    _Parse( _rAnalyzer, ns_xmlpdtd::s_knEntry_doctypedecl, std::move( _rrupTokenDoctype ) );
   }
   // Parse an external subset [30] - or an external parameter entity [79] - which is in memory.
   void ParseExternalSubset( _TyStrView _svText )
@@ -769,13 +901,32 @@ public:
   }
 
 protected:
+  // The lexical analyzer as the source of the tokens of the parser - with a first token which was read already, if there is one.
   template < class t_TyAnalyzer >
-  void _Parse( t_TyAnalyzer & _rAnalyzer, uint32_t _nEntry )
+  struct _TyTokenSource : public PGENOBJ_NAMESPACE _p_lexang_token_source< t_TyAnalyzer >
+  {
+    typedef PGENOBJ_NAMESPACE _p_lexang_token_source< t_TyAnalyzer > _TyBase;
+    typedef typename _TyBase::_TyToken _TyToken;
+    _TyToken m_upTokenFirst;
+    using _TyBase::_TyBase;
+    bool FGetNextToken( std::optional< _TyToken > & _roptToken, std::span< const uint32_t > _spLexerModes )
+    {
+      if ( !!m_upTokenFirst )
+      {
+        _roptToken.emplace( std::move( m_upTokenFirst ) );
+        return true;
+      }
+      return _TyBase::FGetNextToken( _roptToken, _spLexerModes );
+    }
+  };
+  template < class t_TyAnalyzer >
+  void _Parse( t_TyAnalyzer & _rAnalyzer, uint32_t _nEntry, unique_ptr< typename t_TyAnalyzer::_TyToken > && _rrupTokenFirst )
   {
     typedef typename t_TyAnalyzer::_TyTraits _TyLexTraits;
     typedef typename t_TyAnalyzer::_TyStateProto _TyStateProto;
     static_assert( is_same_v< typename _TyLexTraits::_TyChar, _TyChar > );
-    PGENOBJ_NAMESPACE _p_lexang_token_source< t_TyAnalyzer > source( _rAnalyzer );
+    _TyTokenSource< t_TyAnalyzer > source( _rAnalyzer );
+    source.m_upTokenFirst = std::move( _rrupTokenFirst );
     source.SetModeStartStates( _xml_dtd_start_states< _TyChar >::template Get< _TyLexTraits, _TyStateProto >() );
     ns_xmlpdtd::_parser< _TyParseTraits< t_TyAnalyzer > > parser;
     _TyValue valueResult;
@@ -786,7 +937,7 @@ protected:
   {
     _TyAnalyzerMemory analyzer;
     analyzer.emplaceTransport( _svText.data(), _svText.length() );
-    _Parse( analyzer, _nEntry );
+    _Parse( analyzer, _nEntry, unique_ptr< typename _TyAnalyzerMemory::_TyToken >() );
   }
   // The text which the token matched.
   template < class t_TyLexToken >

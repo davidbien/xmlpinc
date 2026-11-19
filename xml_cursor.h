@@ -27,6 +27,7 @@
 #include "xml_types.h"
 #include "xml_traits.h"
 #include "xml_parse.h"
+#include "xml_dtd.h"
 #include "xml_context.h"
 #include "xml_util.h"
 
@@ -307,6 +308,7 @@ public:
   typedef list< _TyXmlReadContext > _TyListReadContexts;
   typedef XMLDeclProperties< _TyChar > _TyXMLDeclProperties;
   typedef _xml_document_context_transport< _TyXmlTraits > _TyXmlDocumentContext;
+  typedef xml_dtd< _TyChar > _TyDtd;
 
   ~xml_read_cursor() = default;
   xml_read_cursor() = default;
@@ -320,6 +322,22 @@ public:
   {
     Assert( m_pXp );
     return *m_pXp;
+  }
+
+// The DTD - only when the XML traits support the DTD ( _TyXmlTraits::s_kfSupportDTD ): otherwise a document type
+//  declaration is not read - a document which has one is an error as it was before there was any of this.
+  // The document type declaration is in the prolog: it has been read ( or there isn't one ) by the time the first tag is.
+  // The cursor doesn't have a token for it: what it declares is the xml_dtd. The general entities which it declares - those
+  //  which stand for text alone - are in the entity map of the parser's user object from then on, so references to them
+  //  in character data and in the values of attributes are replaced as references to the predefined entities are.
+  bool FHasDtd() const
+  {
+    return m_optDtd.has_value();
+  }
+  const _TyDtd & GetDtd() const
+  {
+    VerifyThrowSz( m_optDtd.has_value(), "The document has no document type declaration - or it hasn't been read yet." );
+    return *m_optDtd;
   }
 
 // State querying:
@@ -767,6 +785,7 @@ protected:
     // Must clear all namespaces, prefixes, URIs, entities and parameter entities.
     m_XMLDeclProperties.clear();
     m_mapNamespaces.clear();
+    m_optDtd.reset();
   }
   bool _FGetToken( unique_ptr< _TyLexToken > & _rpltok, const _TyStateProto * _pspStart = nullptr )
   {
@@ -775,7 +794,41 @@ protected:
       _UpdateSkip();
     if ( !_pspStart )
       _pspStart = m_pspStartAll;
-    return m_pXp->GetLexicalAnalyzer().FGetToken( _rpltok, &*m_rgSkipTokensCur.begin(), &*m_rgSkipTokensCur.begin() + m_nSkip, _pspStart, false );
+    bool fGotToken = m_pXp->GetLexicalAnalyzer().FGetToken( _rpltok, &*m_rgSkipTokensCur.begin(), &*m_rgSkipTokensCur.begin() + m_nSkip, _pspStart, false );
+    if constexpr ( _TyXmlTraits::s_kfSupportDTD )
+    {
+      // The document type declaration is not a token of the DFA of the document: where it is that DFA finds no token.
+      // That is in the prolog - after the XML declaration and before the first tag - and there may be only one.
+      if ( !fGotToken && ( m_pspStartAll == _pspStart ) && !m_fGotFirstTag && !m_lContexts.empty() && !m_optDtd.has_value() && _FReadDoctypeDecl() )
+        fGotToken = m_pXp->GetLexicalAnalyzer().FGetToken( _rpltok, &*m_rgSkipTokensCur.begin(), &*m_rgSkipTokensCur.begin() + m_nSkip, _pspStart, false );
+    }
+    return fGotToken;
+  }
+  // Read the document type declaration [28] if that is what is here. Return false if nothing of the DTD is here - the
+  //  end of the input for instance: then nothing was read.
+  // The lexical analyzer is left after the '>' of the declaration.
+  bool _FReadDoctypeDecl()
+  {
+    typedef typename _TyXmlParser::_TyLexicalAnalyzer _TyLexicalAnalyzer;
+    _TyLexicalAnalyzer & rAnalyzer = m_pXp->GetLexicalAnalyzer();
+    m_pXp->GetStream().ResetToTokenStart(); // The DFA of the document found no token: we try another DFA from where it began.
+    // The DFA of the DTD which has "<!DOCTYPE": the mode "Dtd" of the parser of the DTD.
+    const _TyStateProto * const pspStartDtd = *( _xml_dtd_start_states< _TyChar >::template Get< _TyLexTraits, _TyStateProto >().begin() + ns_xmlpdtd::s_knLexerMode_Dtd );
+    unique_ptr< _TyLexToken > pltokDoctype;
+    if ( !rAnalyzer.FGetToken( pltokDoctype, nullptr, nullptr, pspStartDtd, false ) )
+    {
+      m_pXp->GetStream().ResetToTokenStart();
+      return false;
+    }
+    if ( s_knTokenDtdDoctypeBegin != pltokDoctype->GetTokenId() )
+      THROWXMLPARSEEXCEPTION( "Found markup in the prolog which is neither a document type declaration nor the document's element." );
+    m_optDtd.emplace();
+    xml_dtd_parser< _TyChar > dtdParser( *m_optDtd );
+    dtdParser.SetStandalone( m_XMLDeclProperties.m_fStandalone );
+    dtdParser.ParseDoctypeDecl( rAnalyzer, std::move( pltokDoctype ) );
+    // The entities of the document are those which the DTD declares - with the predefined ones, which are there already.
+    m_optDtd->AddGeneralEntitiesTo( m_pXp->GetUserObj().GetEntityMap() );
+    return true;
   }
   bool _FIsContentToken( vtyTokenIdent _tid ) const
   {
@@ -1190,6 +1243,8 @@ protected:
   bool m_fSkipComments{false};
   bool m_fSkipPI{false};
   _TyXMLDeclProperties m_XMLDeclProperties;
+  // What the document type declaration declares - if the XML traits support the DTD and the document has one.
+  optional< _TyDtd > m_optDtd;
 };
 
 // xml_read_cursor_var:
