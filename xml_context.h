@@ -11,6 +11,7 @@
 // 26FEB2021
 
 #include "xml_types.h"
+#include "xml_attr_default.h"
 
 __XMLP_BEGIN_NAMESPACE
 
@@ -193,7 +194,7 @@ class _xml_token_copy_context
 public:
   typedef t_TyChar _TyChar;
   typedef xml_namespace_value_wrap< _TyChar > _TyXmlNamespaceValueWrap;
-  typedef tuple< _TyXmlNamespaceValueWrap > _TyTpValueTraitsPack;
+  typedef xml_value_traits_pack< _TyChar > _TyTpValueTraitsPack;
   typedef _l_value< _TyChar, _TyTpValueTraitsPack > _TyLexValue;
 
   ~_xml_token_copy_context() = default;
@@ -428,6 +429,16 @@ public:
       Assert( rxnvwInValue.FIsNamespaceReference() );
       _ptccCopyCtxt->m_rgReferences.push_back( _ptccCopyCtxt->m_plvalContainerCur );
     }
+  }
+  // The default value which the DTD of the source gave an attribute - see xml_attr_default_value. That of the source may
+  //  refer to its DTD: ours has a copy of the value of its own, in our character type - and it is still known for what it is.
+  template < class t_TyCharOther >
+  void TranslateUserType( _TyTokenCopyContext * /* _ptccCopyCtxt */, xml_attr_default_value< t_TyCharOther > const & _rxadvOther, _TyLexValue & _rvalValue  )
+  {
+    Assert( _rvalValue.FIsNull() );
+    _TyStdStr strValue;
+    ConvertString( strValue, _rxadvOther.SvValue() );
+    _rvalValue.emplaceVal( xml_attr_default_value< _TyChar >( std::move( strValue ) ) );
   }
 
   unique_ptr< _TyLexUserObj > m_upUserObj; // The user object. Contains all entity references.

@@ -30,6 +30,21 @@ static const vtyDataType s_kdtCharHexRef = 2;
 static const vtyDataType s_kdtFirstDTDRef = 3;
 static const vtyDataType s_kdtEntityRef = 3;
 static const vtyDataType s_kdtPEReference = 4;
+// A run of the white space characters which are not the space character - tabs and the ends of lines - within the literal
+//  value of an attribute. In the value of the attribute each is a space ( 3.3.3 ) - an end of line written as #xD #xA is
+//  one ( 2.11 ). The characters themselves are what is in the document: they are what is written when the token is written.
+static const vtyDataType s_kdtAttrWhitespace = 5;
+// A flag in the type of data of each of the pieces of a value: the value is that of an attribute whose declared type
+//  is not CDATA. Then the spaces at the ends of the value are not in it and a sequence of spaces within it is one
+//  space ( 3.3.3 ). The cursor sets this when it has the declaration of the attribute. As everything else about the
+//  value of an attribute this is so of the string which is had from the value - the pieces are still all of what is in
+//  the document.
+static const vtyDataType s_kdtfAttrTokenized = 0x80000000;
+// The type of data without the flags.
+inline constexpr vtyDataType DtGetType( vtyDataType _dt )
+{
+  return _dt & ~s_kdtfAttrTokenized;
+}
 
 // The string containing the values from the Production S.
 #define STR_XML_WHITESPACE_TOKEN "\n\r\x20\t"
@@ -310,6 +325,19 @@ using TyGetTriggerCharHexRefEnd = _l_trigger_string_typed_endpoint< s_kdtCharHex
 static const vtyActionIdent s_knTriggerAttValueDoubleQuote = 17;
 template < class t_TyLexTraits, bool t_fInLexGen = true >
 using TyGetTriggerAttValueDoubleQuote  = _l_trigger_bool< t_TyLexTraits, s_knTriggerAttValueDoubleQuote, t_fInLexGen >;
+
+// A run of tabs and ends of lines within an AttValue [10] is a piece of the value of its own type: s_kdtAttrWhitespace.
+// Such are rare so the triggers seldom fire - and a value without any is recorded just as it was without them.
+// Where such a run begins is where a run of other characters would: the trigger of the beginning is the same one - a
+//  state may have but one trigger leaving it - and which of the triggers of the end is reached says which kind the run was.
+static const vtyActionIdent s_knTriggerAttWhitespaceEnd = 48;
+static const vtyActionIdent s_knTriggerAttWhitespaceSingleQuoteEnd = 49;
+template < class t_TyLexTraits, bool t_fInLexGen = true >
+using TyGetTriggerAttWhitespaceEnd = _l_trigger_string_typed_range< s_kdtAttrWhitespace, TyGetTriggerCharDataEnd<t_TyLexTraits,t_fInLexGen>,
+                                                                    s_knTriggerAttWhitespaceEnd, s_knTriggerCharDataBegin >;
+template < class t_TyLexTraits, bool t_fInLexGen = true >
+using TyGetTriggerAttWhitespaceSingleQuoteEnd = _l_trigger_string_typed_range< s_kdtAttrWhitespace, TyGetTriggerCharDataEnd<t_TyLexTraits,t_fInLexGen>,
+                                                                    s_knTriggerAttWhitespaceSingleQuoteEnd, s_knTriggerCharDataSingleQuoteBegin >;
 
 static const vtyActionIdent s_knTriggerPrefixBegin = 18;
 static const vtyActionIdent s_knTriggerPrefixEnd = 19;

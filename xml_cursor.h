@@ -935,6 +935,7 @@ protected:
         m_fGotFirstTag = true;
         // The attributes which the tag doesn't have and which the DTD gives a default value: found before the names of
         //  the tag are processed below - and those which declare a namespace declare it now so that it is there for them.
+        // And the values of the attributes which the tag has and whose declared type is not CDATA are flagged as such.
         _TyRgDefaultAttrs rgDefaultAttrs;
         if constexpr ( _TyXmlTraits::s_kfSupportDTD )
         {
@@ -1231,7 +1232,9 @@ protected:
     _rltok.KGetStringView( sv, dr );
     return sv;
   }
-  // Find the attributes which the DTD declares for the tag's element type with a default value and which the tag doesn't have.
+  // What the DTD declares for the attributes of the tag's element type:
+  //  - Find the attributes which it declares with a default value and which the tag doesn't have.
+  //  - Flag the values of the attributes which the tag has and whose declared type is not CDATA.
   // This is called before the names of the token are processed.
   void _GetDefaultAttributes( _TyLexToken & _rltok, _TyRgDefaultAttrs & _rrgDefaultAttrs )
   {
@@ -1243,12 +1246,35 @@ protected:
     const size_t knAttrs = krrgAttrs.GetSize();
     for ( xml_dtd_attdef< _TyChar > const & rad : *prgAttDefs )
     {
-      if ( !rad.m_fHasDefaultValue )
+      // Only these declarations change anything about the tag: a default value, or a type which is not CDATA.
+      const bool kfTokenized = ( exdatCDATA != rad.m_eType );
+      if ( !rad.m_fHasDefaultValue && !kfTokenized )
         continue;
-      bool fHasAttr = false;
-      for ( size_t nAttr = 0; !fHasAttr && ( nAttr < knAttrs ); ++nAttr )
-        fHasAttr = ( _SvNameAsWritten( _rltok, krrgAttrs[nAttr] ) == _TyStrView( rad.m_strName ) );
-      if ( fHasAttr )
+      size_t nAttr = 0;
+      for ( ; ( nAttr < knAttrs ) && ( _SvNameAsWritten( _rltok, krrgAttrs[nAttr] ) != _TyStrView( rad.m_strName ) ); ++nAttr )
+        ;
+      if ( nAttr < knAttrs )
+      {
+        // The tag has the attribute. If its type is not CDATA then the value is without the spaces at its ends and
+        //  with one space for a sequence of them ( 3.3.3 ). The pieces of the value are flagged and it is so of the
+        //  string which is had from them - they remain all of what the tag has: see s_kdtfAttrTokenized.
+        if ( kfTokenized )
+        {
+          _TyLexValue & rvalValue = _rltok[vknAttributesIdx][nAttr][vknAttr_ValueIdx];
+          if ( rvalValue.FHasTypedData() && !rvalValue.template GetVal< _TyData >().FIsNull() )
+          {
+            rvalValue.template GetVal< _TyData >().Apply(
+              []( _l_data_typed_range * _pdtrBegin, _l_data_typed_range * const _pdtrEnd )
+              {
+                for ( ; _pdtrEnd != _pdtrBegin; ++_pdtrBegin )
+                  _pdtrBegin->m_nType |= s_kdtfAttrTokenized;
+              }
+            );
+          }
+        }
+        continue;
+      }
+      if ( !rad.m_fHasDefaultValue )
         continue;
       _TyDefaultAttr & rda = _rrgDefaultAttrs.emplace_back();
       rda.m_pAttDef = &rad;
@@ -1268,7 +1294,8 @@ protected:
     }
   }
   // Add the attributes to the tag. This is called after the names of the token have been processed: these are made as
-  //  those are left - but their names and values are strings since they are not in the text of the document.
+  //  those are left - but their names are strings since they are not in the text of the document, and their values are
+  //  those of the DTD: see xml_attr_default_value.
   void _AddDefaultAttributes( _TyLexToken & _rltok, _TyRgDefaultAttrs & _rrgDefaultAttrs )
   {
     _TyLexValue & rrgAttrs = _rltok[vknAttributesIdx];
@@ -1298,7 +1325,8 @@ protected:
       else
         rrgAttr[vknNamespaceIdx].emplaceVal( false ); // In no namespace.
       rrgAttr[vknNameIdx].emplaceVal( _TyStdStr( svName ) );
-      rrgAttr[vknAttr_ValueIdx].emplaceVal( _TyStdStr( rda.m_pAttDef->m_strDefaultValue ) );
+      // The value is the DTD's - nothing is copied - and it is known for what it is: see xml_attr_default_value.
+      rrgAttr[vknAttr_ValueIdx].emplaceVal( xml_attr_default_value< _TyChar >( _TyStrView( rda.m_pAttDef->m_strDefaultValue ) ) );
       rrgAttr[vknAttr_FDoubleQuoteIdx].emplaceVal( true );
     }
     if ( !!nNamespaceDecls )

@@ -20,6 +20,7 @@
 #include "xml_ns.h"
 #include "xml_types.h"
 #include "xml_namespace.h"
+#include "xml_attr_default.h"
 #include "xml_user.h"
 
 __XMLP_BEGIN_NAMESPACE
@@ -42,7 +43,7 @@ public:
 // Declare our lexical analyzer traits:
   typedef xml_user_obj< _TyChar, s_kfSupportDTD > _TyLexUserObj;
   typedef xml_namespace_value_wrap< _TyChar > _TyXmlNamespaceValueWrap;
-  typedef tuple< _TyXmlNamespaceValueWrap > _TyTpValueTraitsPack; // We are extending the types in _l_value by this one type currently.
+  typedef xml_value_traits_pack< _TyChar > _TyTpValueTraitsPack; // The types by which we extend those of _l_value: see xml_attr_default.h.
   typedef _l_traits< _TyTransport, _TyLexUserObj, _TyTpValueTraitsPack > _TyLexTraits;
   typedef xml_token< _TyTransportCtxt, _TyLexUserObj, _TyTpValueTraitsPack > _TyXmlToken;
 };

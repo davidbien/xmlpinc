@@ -301,13 +301,23 @@ public:
   size_t _NCharsDr( _l_data_typed_range const & _rdr, t_TyTransportCtxt const & _rcxt ) const
   {
     size_t nLen;
-    switch( _rdr.type() )
+    switch( DtGetType( _rdr.type() ) )
     {
       default:
         Assert( 0 );
         [[fallthrough]];
       case s_kdtPlainText:
         nLen = _rdr.length();
+      break;
+      case s_kdtAttrWhitespace:
+      {
+        // A space for each of the characters - but an end of line written as #xD #xA is one ( 2.11 ).
+        _TyStrView sv;
+        _rcxt.GetStringView( sv, _rdr );
+        nLen = sv.length();
+        for ( size_t n = 1; n < sv.length(); ++n )
+          nLen -= ( ( _TyChar( 0xD ) == sv[n-1] ) && ( _TyChar( 0xA ) == sv[n] ) );
+      }
       break;
       case s_kdtEntityRef:
       {
@@ -323,7 +333,7 @@ public:
         _TyStrView sv;
         _TyCharRefConvertBuffer crcb;
         _rcxt.GetStringView( sv, _rdr );
-        nLen = !_TchTranslateRef( _rdr.type(), sv, crcb ) ? sv.length() : 1;
+        nLen = !_TchTranslateRef( DtGetType( _rdr.type() ), sv, crcb ) ? sv.length() : 1;
       }
       break;
       case s_kdtPEReference:
@@ -389,7 +399,7 @@ public:
   _TyChar _TchGetStringViewDr( _TyStrView & _rsv, _l_data_typed_range const & _rdr, t_TyTransportCtxt const & _rcxt, _TyCharRefConvertBuffer & _rgcbBuffer ) const
   {
     _TyChar tchRtn = 0;
-    switch( _rdr.type() )
+    switch( DtGetType( _rdr.type() ) )
     {
       default:
         Assert( 0 );
@@ -400,7 +410,7 @@ public:
       case s_kdtCharHexRef:
       {
         _rcxt.GetStringView( _rsv , _rdr );
-        tchRtn = _TchTranslateRef( _rdr.type(), _rsv, _rgcbBuffer );
+        tchRtn = _TchTranslateRef( DtGetType( _rdr.type() ), _rsv, _rgcbBuffer );
       }
       break;
       case s_kdtEntityRef:
@@ -418,6 +428,101 @@ public:
       break;
     }
     return tchRtn;
+  }
+  // Copy a piece of a value as it is in the value - a reference is what it stands for, the white space of the value of
+  //  an attribute is spaces - to _rpcCur and move that along.
+  template < class t_TyTransportCtxt >
+  void _CopyDr( _TyChar *& _rpcCur, size_t & _rnCharsRemaining, _l_data_typed_range const & _rdtr, t_TyTransportCtxt const & _rcxt ) const
+  {
+    if ( s_kdtAttrWhitespace == DtGetType( _rdtr.type() ) )
+    {
+      size_t nSpaces = _NCharsDr( _rdtr, _rcxt );
+      Assert( _rnCharsRemaining >= nSpaces ); // should have reserved enough.
+      nSpaces = min( _rnCharsRemaining, nSpaces );
+      std::fill_n( _rpcCur, nSpaces, _TyChar( ' ' ) );
+      _rpcCur += nSpaces;
+      _rnCharsRemaining -= nSpaces;
+      return;
+    }
+    _TyStrView sv;
+    _TyCharRefConvertBuffer crcb;
+    _TyChar tch = _TchGetStringViewDr( sv, _rdtr, _rcxt, crcb );
+    if ( !tch )
+    {
+      Assert( _rnCharsRemaining >= sv.length() );
+      size_t nCharsCopy = min( _rnCharsRemaining, sv.length() );
+      Assert( nCharsCopy == sv.length() ); // should have reserved enough.
+      memcpy( _rpcCur, sv.data(), nCharsCopy * sizeof( _TyChar ) );
+      _rpcCur += nCharsCopy;
+      _rnCharsRemaining -= nCharsCopy;
+    }
+    else
+    if ( _rnCharsRemaining )
+    {
+      *_rpcCur++ = tch;
+      --_rnCharsRemaining;
+    }
+  }
+// The value of an attribute whose declared type is not CDATA - 3.3.3: see s_kdtfAttrTokenized.
+  // Whether the pieces are flagged so. All of the pieces of a value are flagged or none is.
+  static bool _FIsTokenized( _TyData const & _rdt )
+  {
+    if ( _rdt.FContainsSingleDataRange() )
+      return !!( s_kdtfAttrTokenized & _rdt.DataRangeGetSingle().type() );
+    return !!_rdt.GetSegArrayDataRanges().NElements() && !!( s_kdtfAttrTokenized & _rdt.GetSegArrayDataRanges().ElGet( 0 ).type() );
+  }
+  // Discard the spaces at the ends and leave one space of each sequence of spaces - in place. Returns the count of characters left.
+  static size_t _NNormalizeTokenized( _TyChar * _pc, size_t _nch )
+  {
+    _TyChar * pcOut = _pc;
+    bool fPendingSpace = false;
+    for ( const _TyChar * pcCur = _pc, * const pcEnd = _pc + _nch; pcEnd != pcCur; ++pcCur )
+    {
+      if ( _TyChar( ' ' ) == *pcCur )
+        fPendingSpace = ( pcOut != _pc ); // Those at the beginning are discarded.
+      else
+      {
+        if ( fPendingSpace )
+        {
+          *pcOut++ = _TyChar( ' ' );
+          fPendingSpace = false;
+        }
+        *pcOut++ = *pcCur;
+      }
+    }
+    return size_t( pcOut - _pc ); // Those at the end were still pending.
+  }
+  // The view of a value which is all in one piece of the document as it is in the document - if there is one:
+  //  1) The value is one piece of plain text.
+  //  2) The same for the value of a tokenized attribute: then the view is the piece without the spaces at its ends - and
+  //     there is none if there is a sequence of spaces within it.
+  template < class t_TyStringView, class t_TyTransportCtxt >
+  static bool _FGetViewOfData( t_TyStringView & _rsvDest, _TyData const & _rdt, t_TyTransportCtxt const & _rcxt )
+  {
+    if ( !_rdt.FContainsSingleDataRange() )
+      return false;
+    const vtyDataType kdt = _rdt.DataRangeGetSingle().type();
+    if ( s_kdtPlainText == kdt )
+    {
+      _rcxt.GetStringView( _rsvDest, _rdt.DataRangeGetSingle() );
+      return true;
+    }
+    if ( ( s_kdtPlainText | s_kdtfAttrTokenized ) != kdt )
+      return false;
+    typedef typename t_TyStringView::value_type _TyCharView;
+    t_TyStringView sv;
+    _rcxt.GetStringView( sv, _rdt.DataRangeGetSingle() );
+    while ( !sv.empty() && ( _TyCharView( ' ' ) == sv.front() ) )
+      sv.remove_prefix( 1 );
+    while ( !sv.empty() && ( _TyCharView( ' ' ) == sv.back() ) )
+      sv.remove_suffix( 1 );
+    for ( size_t n = 1; n < sv.length(); ++n )
+    {
+      if ( ( _TyCharView( ' ' ) == sv[n-1] ) && ( _TyCharView( ' ' ) == sv[n] ) )
+        return false;
+    }
+    _rsvDest = sv;
+    return true;
   }
   template < class t_TyTransportCtxt >
   const _TyStdStr & RStrLookupEntity( _l_data_typed_range const & _rdr, t_TyTransportCtxt const & _rcxt ) const
@@ -547,18 +652,17 @@ public:
     Assert( _rval.FHasTypedData() ); // We are converting the _TyData object that is in _rval.
     const _TyData kdtr = _rval.template GetVal< _TyData >();
     _rcxt.AssertValidDataRange( kdtr );
-    if ( !kdtr.FContainsSingleDataRange(s_kdtPlainText) ) // Is translation necessary?
+    if ( !_FGetViewOfData( _rsvDest, kdtr, _rcxt ) ) // Is translation necessary?
     {
       typedef typename t_TyToken::_TyValue::template get_string_type< _TyChar > _TyStringNorm;
       _TyStringNorm strBacking;
       GetString( strBacking, _rcxt, _rtok, _rval );
       _TyStringNorm & rstr = _rval.emplaceVal( std::move( strBacking ) );
-      _rsvDest = t_TyStringView( (const typename t_TyStringView::value_type*)&rstr[0], rstr.length() );
+      _rsvDest = t_TyStringView( (const typename t_TyStringView::value_type*)rstr.data(), rstr.length() );
     }
     else
     {
       // We could set the stringview into the object since it doesn't really hurt:
-      _rcxt.GetStringView( _rsvDest, kdtr.DataRangeGetSingle() );
       _rval.SetVal( std::as_const( _rsvDest ) ); // const so that the same-size converting SetVal() overloads are chosen (e.g. char->char8_t).
     }
   }
@@ -570,8 +674,7 @@ public:
     Assert( _rval.FHasTypedData() ); // We are converting the _TyData object that is in _rval.
     const _TyData kdtr = _rval.template GetVal< _TyData >();
     _rcxt.AssertValidDataRange( kdtr );
-    VerifyThrowSz( kdtr.FContainsSingleDataRange(s_kdtPlainText), "KGetStringView() is only valid for single data ranges." );
-    _rcxt.GetStringView( _rsvDest, kdtr.DataRangeGetSingle() );
+    VerifyThrowSz( _FGetViewOfData( _rsvDest, kdtr, _rcxt ), "KGetStringView() is only valid for single data ranges." );
   }
   template < class t_TyStringView, class t_TyToken, class t_TyTransportCtxt >
   void KGetStringView( t_TyStringView & _rsvDest, t_TyTransportCtxt & _rcxt, t_TyToken const & _rtok, _l_data_range const & _rdr ) const
@@ -591,17 +694,14 @@ public:
     Assert( _rval.FHasTypedData() ); // We are converting the _TyData object that is in _rval.
     const _TyData kdtr = _rval.template GetVal< _TyData >();
     _rcxt.AssertValidDataRange( kdtr );
-    if ( !kdtr.FContainsSingleDataRange(s_kdtPlainText) )
+    if ( !_FGetViewOfData( _rsvDest, kdtr, _rcxt ) )
     {
       GetString( _rstrDest, _rcxt, _rtok, _rval );
-      _rsvDest = t_TyStringView( (const typename t_TyStringView::value_type*)&_rstrDest[0], _rstrDest.length() );;
+      _rsvDest = t_TyStringView( (const typename t_TyStringView::value_type*)_rstrDest.data(), _rstrDest.length() );
       return false;
     }
     else
-    {
-      _rcxt.GetStringView( _rsvDest, kdtr.DataRangeGetSingle() );
       return true;
-    }
   }
   template < class t_TyString, class t_TyToken, class t_TyTransportCtxt >
   void GetString( t_TyString & _rstrDest, t_TyTransportCtxt & _rcxt, t_TyToken const & _rtok, const typename t_TyToken::_TyValue & _rval ) const
@@ -630,32 +730,17 @@ public:
         {
           const _l_data_typed_range * pdtrCur = _pdtrBegin;
           for ( ; nCharsRemaining && ( _pdtrEnd != pdtrCur ); ++pdtrCur )
-          {
-            _TyStrView sv;
-            _TyCharRefConvertBuffer crcb;
-            _TyChar tch = _TchGetStringViewDr( sv, *pdtrCur, _rcxt, crcb );
-            if ( !tch )
-            {
-              Assert( nCharsRemaining >= sv.length() );
-              size_t nCharsCopy = min( nCharsRemaining, sv.length() );
-              Assert( nCharsCopy == sv.length() ); // should have reserved enough.
-              memcpy( pcCur, &sv[0], nCharsCopy * sizeof( _TyChar ) );
-              pcCur += nCharsCopy;
-              nCharsRemaining -= nCharsCopy;
-            }
-            else
-            {
-              *pcCur++ = tch;
-              --nCharsRemaining;
-            }
-          }
+            _CopyDr( pcCur, nCharsRemaining, *pdtrCur, _rcxt );
         };
       // A single data range that isn't plain text is a lone reference - it is stored as a single range, not in the segmented array.
       // _l_data::Apply() handles both the single range and the segmented array cases.
       kdtr.Apply( lambdaTranslate );
       Assert( !nCharsRemaining ); // Should have eaten everything.
     }
-    strBacking.resize( nCharsCount - nCharsRemaining );
+    nCharsCount -= nCharsRemaining;
+    if ( _FIsTokenized( kdtr ) )
+      nCharsCount = _NNormalizeTokenized( (_TyChar*)&strBacking[0], nCharsCount );
+    strBacking.resize( nCharsCount );
     _rstrDest = std::move( strBacking );
   }
 
@@ -698,25 +783,7 @@ public:
         {
           const _l_data_typed_range * pdtrCur = _pdtrBegin;
           for ( ; nCharsRemaining && ( _pdtrEnd != pdtrCur ); ++pdtrCur )
-          {
-            _TyStrView sv;
-            _TyCharRefConvertBuffer crcb;
-            _TyChar tch = _TchGetStringViewDr( sv, *pdtrCur, _rcxt, crcb );
-            if ( !tch )
-            {
-              Assert( nCharsRemaining >= sv.length() );
-              size_t nCharsCopy = min( nCharsRemaining, sv.length() );
-              Assert( nCharsCopy == sv.length() ); // should have reserved enough.
-              memcpy( pcCur, &sv[0], nCharsCopy * sizeof( _TyChar ) );
-              pcCur += nCharsCopy;
-              nCharsRemaining -= nCharsCopy;
-            }
-            else
-            {
-              *pcCur++ = tch;
-              --nCharsRemaining;
-            }
-          }
+            _CopyDr( pcCur, nCharsRemaining, *pdtrCur, _rcxt );
         };
       // A single data range that isn't plain text is a lone reference - it is stored as a single range, not in the segmented array.
       // _l_data::Apply() handles both the single range and the segmented array cases.
@@ -725,6 +792,8 @@ public:
     }
     if ( nCharsRemaining )
       nCharsCount -= nCharsRemaining;
+    if ( _FIsTokenized( kdtr ) )
+      nCharsCount = _NNormalizeTokenized( pcBuf, nCharsCount );
     t_TyString strConverted;
     ConvertString( strConverted, pcBuf, nCharsCount );
     _rstrDest = std::move( strConverted );

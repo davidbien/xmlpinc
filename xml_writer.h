@@ -36,6 +36,7 @@
 //       We'll have to think about how to do this.         
 
 #include "xml_output_tokens.h"
+#include "xml_attr_default.h"
 #include "_l_match.h"
 
 __XMLP_BEGIN_NAMESPACE
@@ -66,7 +67,7 @@ public:
   //  any transport context can be converted into a backed context.
   typedef _l_transport_backed_ctxt< _TyChar > _TyTransportCtxt;
   typedef xml_user_obj< _TyChar, vkfSupportDTD > _TyLexUserObj;
-  typedef tuple< xml_namespace_value_wrap< _TyChar > > _TyTpValueTraitsPack;
+  typedef xml_value_traits_pack< _TyChar > _TyTpValueTraitsPack;
   typedef xml_token< _TyTransportCtxt, _TyLexUserObj, _TyTpValueTraitsPack > _TyXmlToken;
   typedef _l_action_object_base< _TyChar, false > _TyAxnObjBase;
 
@@ -386,6 +387,18 @@ public:
   bool FGetWriteBOM() const
   {
     return m_fWriteBOM;
+  }
+  // Whether to write the attributes which a tag didn't have and which the DTD gave it when it was read - those whose
+  //  value is an xml_attr_default_value. If the document is written with the document type declaration it was read
+  //  with then whoever reads it adds them again, and without them the tags are written as they were read. Otherwise
+  //  they are what the document means and they should be written - and that is the default.
+  void SetWriteDefaultedAttributes( bool _fWriteDefaultedAttributes )
+  {
+    m_fWriteDefaultedAttributes = _fWriteDefaultedAttributes;
+  }
+  bool FWriteDefaultedAttributes() const
+  {
+    return m_fWriteDefaultedAttributes;
   }
   void SetWriteXMLDecl( bool _fWriteXMLDecl )
   {
@@ -916,6 +929,10 @@ protected:
       {
         for ( const _TyLexValue * pvCur = _pvBegin; _pvEnd != pvCur; ++pvCur )
         {
+          // An attribute which the tag didn't have and which the DTD gave it - see SetWriteDefaultedAttributes().
+          const bool kfAttrDefaultValue = FIsAttrDefaultValue( (*pvCur)[vknAttr_ValueIdx] );
+          if ( kfAttrDefaultValue && !m_fWriteDefaultedAttributes )
+            continue;
           _WriteTransportRaw( _TyMarkupTraits::s_kszSpace, StaticStringLen( _TyMarkupTraits::s_kszSpace ) );
           const _TyLexValue & rvCur = *pvCur;
           _WriteName( _rtok, rvCur );
@@ -924,6 +941,9 @@ protected:
           bool fUseDoubleQuote = rvCur[vknAttr_FDoubleQuoteIdx].template GetVal< bool >();
           _WriteTransportRaw( fUseDoubleQuote ? _TyMarkupTraits::s_kszDoubleQuote : _TyMarkupTraits::s_kszSingleQuote, StaticStringLen( _TyMarkupTraits::s_kszSingleQuote ) );
           // Now write the value using the appropriate start token as the validator.
+          if ( kfAttrDefaultValue )
+            _WriteAttrDefaultValue( rvCur[vknAttr_ValueIdx].template GetVal< xml_attr_default_value< typename t_TyXmlToken::_TyChar > >().SvValue(), fUseDoubleQuote );
+          else
           if ( fUseDoubleQuote )
             _WriteCharAndAttrData< TGetAttCharDataNoSingleQuoteStart >( _rtok, rvCur[vknAttr_ValueIdx], _edrDetectReferences );
           else
@@ -935,8 +955,68 @@ protected:
     // we don't write any ending since we don't know yet which ending we should write. This also lets us
     //  know what we need to do when we are ending a tag.
   }
+  // Write the value of an attribute which the DTD gave the tag - see xml_attr_default_value.
+  // It is the value itself: the references of the default were replaced and it was found to be well formed when the DTD
+  //  was read. So there is nothing to validate and no reference to detect: every character which can't be written as
+  //  itself between the quotes is written as a reference to it. Those are the markup characters, the quote in use, and
+  //  the tab and the ends of lines - which would be spaces to whoever reads them as themselves ( 3.3.3 ).
+  template < class t_TyCharValue >
+  void _WriteAttrDefaultValue( basic_string_view< t_TyCharValue > _svValue, bool _fUseDoubleQuote )
+  {
+    static constexpr _TyChar s_kszTab[] = { _TyChar('9'), 0 };
+    static constexpr _TyChar s_kszLineFeed[] = { _TyChar('1'), _TyChar('0'), 0 };
+    static constexpr _TyChar s_kszCarriageReturn[] = { _TyChar('1'), _TyChar('3'), 0 };
+    const t_TyCharValue * pcRun = _svValue.data(); // The characters which are written as themselves, so far.
+    const t_TyCharValue * const pcEnd = pcRun + _svValue.length();
+    for ( const t_TyCharValue * pcCur = pcRun; pcEnd != pcCur; ++pcCur )
+    {
+      const _TyChar * pszReference = nullptr;
+      const _TyChar * pszCharRef = nullptr;
+      switch( *pcCur )
+      {
+        case t_TyCharValue('&'):
+          pszReference = _TyMarkupTraits::s_kszEntityAmpersand;
+        break;
+        case t_TyCharValue('<'):
+          pszReference = _TyMarkupTraits::s_kszEntityLessThan;
+        break;
+        case t_TyCharValue('"'):
+          if ( _fUseDoubleQuote )
+            pszReference = _TyMarkupTraits::s_kszEntityDoubleQuote;
+        break;
+        case t_TyCharValue('\''):
+          if ( !_fUseDoubleQuote )
+            pszReference = _TyMarkupTraits::s_kszEntityApostrophe;
+        break;
+        case t_TyCharValue(0x9):
+          pszCharRef = s_kszTab;
+        break;
+        case t_TyCharValue(0xA):
+          pszCharRef = s_kszLineFeed;
+        break;
+        case t_TyCharValue(0xD):
+          pszCharRef = s_kszCarriageReturn;
+        break;
+        default:
+        break;
+      }
+      if ( !pszReference && !pszCharRef )
+        continue;
+      _WriteTransportRaw( pcRun, pcCur );
+      pcRun = pcCur + 1;
+      if ( pszReference )
+        _WriteTransportRaw( pszReference, StrNLen( pszReference ) );
+      else
+      {
+        _WriteTransportRaw( _TyMarkupTraits::s_kszCharDecRefBegin, StaticStringLen( _TyMarkupTraits::s_kszCharDecRefBegin ) );
+        _WriteTransportRaw( pszCharRef, StrNLen( pszCharRef ) );
+        _WriteTransportRaw( _TyMarkupTraits::s_kszReferenceEnd, StaticStringLen( _TyMarkupTraits::s_kszReferenceEnd ) );
+      }
+    }
+    _WriteTransportRaw( pcRun, pcEnd );
+  }
   // Write the name - it will have already been validated.
-  // _rvalRgName is a value array containing at least (name,namespacewrap). 
+  // _rvalRgName is a value array containing at least (name,namespacewrap).
   // It may contains any number of things beyond that and they don't figure into this method.
   template < class t_TyXmlToken >
   void _WriteName( t_TyXmlToken const & _rtok, typename t_TyXmlToken::_TyLexValue const & _rvalRgName )
@@ -1318,9 +1398,12 @@ protected:
             for ( const _l_data_typed_range * pdtrCur = _pdtrBegin; _pdtrEnd != pdtrCur; ++pdtrCur )
             {
               // We could use type() or id() here - but the type is more flexible.
-              switch( pdtrCur->type() )
+              // What is written is what the document had: the white space of the value of an attribute as it was, and the
+              //  flags of the type - which are about the string of the value - don't matter here.
+              switch( DtGetType( pdtrCur->type() ) )
               {
                 case s_kdtPlainText:
+                case s_kdtAttrWhitespace:
                 {
                   _TyStrView svPlain;
                   _rtok.GetLexToken().KGetStringView( svPlain, pdtrCur->GetRangeBase() );
@@ -1375,6 +1458,7 @@ protected:
   bool m_fWriteBOM{true}; // Write a BOM because that's just a nice thing to do.
   bool m_fWriteXMLDecl{true}; // Whether to write an XMLDecl. This is honored in all scenarios.
   bool m_fUseNamespaces{true}; // Using namespaces?
+  bool m_fWriteDefaultedAttributes{true}; // Write the attributes which the DTD gave a tag - see SetWriteDefaultedAttributes().
 // state:
   bool m_fWroteFirstTag{false};
   bool m_fHaveUnendedTag{false};

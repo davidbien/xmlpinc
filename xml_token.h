@@ -13,6 +13,7 @@
 
 #include "xml_ns.h"
 #include "xml_types.h"
+#include "xml_attr_default.h"
 #include "_l_token.h"
 #include "_l_match.h"
 
@@ -706,7 +707,7 @@ protected:
                   Assert( !( !!pxnvw && pxnvw->FIsNamespaceDeclaration() ) || fIsAttrNamespaceDecl );
                   Assert( !_fUseNamespaces || !fIsAttrNamespaceDecl || ( !!pxnvw && !pxnvw->FIsNull() ) );
                   const _TyLexValue & rvValue = (*pvCur)[vknAttr_ValueIdx];
-                  Assert( rvValue.FHasTypedData() || rvValue.FIsString() ); // might be empty.
+                  Assert( rvValue.FHasTypedData() || rvValue.FIsString() || FIsAttrDefaultValue( rvValue ) ); // might be empty.
                   Assert( (*pvCur)[vknAttr_FDoubleQuoteIdx].FIsBool() );
                 }
               }
@@ -785,7 +786,7 @@ protected:
 template < class t_TyTransport >
 using TGetXmlTokenFromTransport = xml_token<  typename t_TyTransport::_TyTransportCtxt, 
                                               xml_user_obj< typename t_TyTransport::_TyChar, false >,
-                                              tuple< xml_namespace_value_wrap< typename t_TyTransport::_TyChar > > >;
+                                              xml_value_traits_pack< typename t_TyTransport::_TyChar > >;
 
 // As with all tokens: No default constructor, which translates to a variant: No monostate.
 template < class t_TyTpTransports >
