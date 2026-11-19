@@ -48,6 +48,7 @@
 #include <set>
 #include <variant>
 #include <vector>
+#include <functional>
 #include "xml_ns.h"
 #include "xml_types.h"
 #include "xml_exc.h"
@@ -104,6 +105,9 @@ struct xml_dtd_element
   EXmlDtdContent m_eContent{ exdcAny };
   vector< _TyStdStr > m_rgstrMixedNames; // exdcMixed: the element types which may occur among the character data.
   xml_dtd_content_particle< t_TyChar > m_cpChildren; // exdcChildren: the content model.
+  // Declared in the external subset or in a parameter entity - an "external markup declaration" ( 2.9 ): what such a
+  //  declaration does to a document which is declared standalone is not valid. The same of attributes and entities.
+  bool m_fDeclaredExternally{ false };
 };
 enum EXmlDtdAttType : uint8_t
 {
@@ -143,6 +147,7 @@ struct xml_dtd_attdef
   //  refers to an entity which isn't declared ( not valid - see xml_dtd<>::m_rgstrValidityErrors ): then there is no value to give.
   bool m_fHasDefaultValue{ false };
   _TyStdStr m_strDefaultValue;
+  bool m_fDeclaredExternally{ false }; // See xml_dtd_element<>::m_fDeclaredExternally.
 };
 // Why the text of an entity or the value of an attribute couldn't be made - see xml_dtd<>::EGetAttributeValueText().
 enum EXmlDtdExpand : uint8_t
@@ -174,6 +179,9 @@ struct xml_dtd_entity
   _TyStdStr m_strValue; // Internal: the replacement text.
   xml_dtd_external_id< t_TyChar > m_externalId; // External.
   _TyStdStr m_strNotation; // An unparsed entity: the notation of its NDATA [76].
+  // External: the location of the entity in which this was declared - what its system identifier is relative to ( 4.2.2 ).
+  // It is whatever the xml_external_entity_resolver says the locations are: it is given back to it. Empty if not known.
+  _TyStdStr m_strBase;
   bool m_fDeclaredExternally{ false }; // Declared in the external subset or in a parameter entity.
   bool FIsUnparsed() const
   {
@@ -223,6 +231,14 @@ public:
   // A reference to a parameter entity which wasn't read came before other declarations: the entity and attribute-list
   //  declarations after it were not processed ( 5.1 ).
   bool m_fStoppedProcessingDeclarations{ false };
+  // The external subset [30] was read - see xml_dtd_parser<>::SetExternalEntityResolver(): if the document type
+  //  declaration has an external identifier and this is false then not all of the declarations are known.
+  bool m_fExternalSubsetRead{ false };
+  // Whether every declaration of the DTD was read.
+  bool FAllDeclarationsRead() const
+  {
+    return ( !m_optExternalId.has_value() || m_fExternalSubsetRead ) && !m_fStoppedProcessingDeclarations;
+  }
 
   void Clear()
   {
@@ -564,6 +580,21 @@ protected:
   }
 };
 
+// xml_external_entity_resolver:
+// How the text of an external entity is had - 4.2.2: the external subset of the DTD [30], an external parameter entity.
+// The DTD is read without them unless there is one of these - a document says what is read by naming it, so whoever
+//  reads documents which are not their own decides whether anything is, and what.
+//  _rexternalId: the public identifier - if there is one - and the system identifier of the entity.
+//  _svBase: the location of the entity which declares it - what a relative system identifier is relative to. Empty if
+//    it isn't known. For the external subset this is the location of the document: see SetExternalEntityResolver().
+//  _rstrText: the text of the entity in the character type of the parser: all of it - with its text declaration [77].
+//  _rstrLocation: its location - which is the base for the entities which it declares.
+// Returns false if the entity is not to be had: then it is not read - which is not an error - and what it would have
+//  declared is not known.
+template < class t_TyChar >
+using xml_external_entity_resolver = std::function< bool( xml_dtd_external_id< t_TyChar > const & _rexternalId, basic_string_view< t_TyChar > _svBase,
+                                                          basic_string< t_TyChar > & _rstrText, basic_string< t_TyChar > & _rstrLocation ) >;
+
 // The start states of the DTD DFAs of the lexical analyzer of a character type: the modes of the lexical analyzer for the
 //  parser of the DTD, in the order in which the generators add them ( xmlpgen_utf8.cpp, etc. ) - which is the order in
 //  which _xmlpdtd.h has them.
@@ -733,7 +764,7 @@ public:
   typedef _l_transport_fixedmem< _TyChar > _TyTransportMemory;
   typedef xml_traits< _TyTransportMemory, false, false > _TyXmlTraitsMemory;
   typedef typename _TyXmlTraitsMemory::_TyLexTraits _TyLexTraitsMemory;
-  typedef _lexical_analyzer< _TyLexTraitsMemory > _TyAnalyzerMemory;
+  typedef __XMLPLEX_NAMESPACE::_lexical_analyzer< _TyLexTraitsMemory > _TyAnalyzerMemory;
   // The deepest that parameter entities between declarations may be within each other - a limit, not a constraint of the specification.
   static constexpr size_t s_knMaxParameterEntityDepth = 64;
 
@@ -762,6 +793,17 @@ public:
   {
     m_pstrDoctypeText = _pstrText;
   }
+  // Read the external entities of the DTD with _rresolver: after the document type declaration its external subset is
+  //  read - if it has one - and a reference to an external parameter entity is replaced by the text of the entity.
+  // Without this - or where the resolver doesn't give the text - they are not read: see xml_dtd<>::FAllDeclarationsRead().
+  // _svBase: the location of the document - the base for the external subset and the entities of the internal subset.
+  typedef xml_external_entity_resolver< _TyChar > _TyExternalEntityResolver;
+  void SetExternalEntityResolver( _TyExternalEntityResolver const & _rresolver, _TyStrView _svBase = _TyStrView() )
+  {
+    m_resolver = _rresolver;
+    m_rgstrBase.clear();
+    m_rgstrBase.emplace_back( _svBase );
+  }
 
   // Parse the document type declaration [28] of a document. The lexical analyzer is at its "<!DOCTYPE" and is left after
   //  its '>': nothing of the document after it is read.
@@ -771,6 +813,7 @@ public:
   {
     m_fExternal = false;
     _Parse( _rAnalyzer, ns_xmlpdtd::s_knEntry_doctypedecl, unique_ptr< typename t_TyAnalyzer::_TyToken >() );
+    _ReadExternalSubset();
     _EndOfDeclarations();
   }
   // The same when the "<!DOCTYPE" has been read already: _rrupTokenDoctype is its token - the lexical analyzer is after it.
@@ -781,6 +824,7 @@ public:
     VerifyThrowSz( !!_rrupTokenDoctype && ( s_knTokenDtdDoctypeBegin == _rrupTokenDoctype->GetTokenId() ), "Not the token which begins a document type declaration." );
     m_fExternal = false;
     _Parse( _rAnalyzer, ns_xmlpdtd::s_knEntry_doctypedecl, std::move( _rrupTokenDoctype ) );
+    _ReadExternalSubset();
     _EndOfDeclarations();
   }
   // Parse an external subset [30] - or an external parameter entity [79] - which is in memory.
@@ -894,6 +938,7 @@ public:
     else
       element.m_eContent = _rvContentSpec.FIsToken( s_knTokenDtdEMPTY ) ? exdcEmpty : exdcAny;
     element.m_strName = std::move( _rvName.StrToken() );
+    element.m_fDeclaredExternally = m_fExternal || !!m_nParameterEntityDepth;
     if ( m_rdtd.m_mapElements.contains( element.m_strName ) )
       _ValidityError( "Element type [%s] is declared more than once.", element.m_strName ); // VC: Unique Element Type Declaration.
     else
@@ -971,7 +1016,10 @@ public:
       for ( _TyAttDef const & radDeclared : rrgAttDefs )
         fDeclared = fDeclared || ( radDeclared.m_strName == rad.m_strName );
       if ( !fDeclared )
+      {
+        rad.m_fDeclaredExternally = m_fExternal || !!m_nParameterEntityDepth;
         rrgAttDefs.push_back( std::move( rad ) );
+      }
     }
     return _TyValue();
   }
@@ -1182,11 +1230,268 @@ protected:
     if ( !parser.FParse( source, *this, valueResult, _nEntry ) )
       THROWXMLPARSEEXCEPTION( "The DTD is not well formed: %s.", parser.StrError().c_str() );
   }
+  // Text of the DTD which is in memory as the source of the tokens of the parser: an external subset, an external
+  //  parameter entity or the replacement text of a parameter entity.
+  // In such text - and not in the internal subset - a reference to a parameter entity may be within a declaration
+  //  ( WFC: PEs in Internal Subset ): the reference is replaced by the replacement text of the entity with a space
+  //  before it and a space after it ( 4.4.8 ). We read the text of the entity as a text within the text: where the
+  //  parser finds no token and what is there is a reference to a parameter entity the tokens are those of its text
+  //  until that ends, and then again those which follow the reference.
+  // ( A reference between declarations is a token which the grammar has [28a]: the parser gives it to
+  //  DeclSep_PEReference(), which parses the text of the entity - all of which must then be declarations. )
+  struct _TyTextFrame
+  {
+    _TyStdStr m_strText; // The text if it is ours: that of an entity, with the spaces.
+    _TyStrView m_svText; // The text which is read.
+    _TyAnalyzerMemory m_analyzer;
+    _TyStdStr m_strEntity; // The parameter entity whose text this is - empty for the text which the parse began with.
+    bool m_fExternalEntity{ false };
+    bool m_fExternalSave{ false }; // What m_fExternal was.
+  };
+  class _TyTokenSourceText
+  {
+    typedef _TyTokenSourceText _TyThisSource;
+  public:
+    typedef unique_ptr< typename _TyAnalyzerMemory::_TyToken > _TyToken;
+    typedef typename _TyAnalyzerMemory::_TyStateProto _TyStateProto;
+
+    _TyTokenSourceText( _TyThis & _rparser, _TyStrView _svText )
+      : m_rparser( _rparser )
+    {
+      const std::initializer_list< const _TyStateProto * > ilModes = _xml_dtd_start_states< _TyChar >::template Get< _TyLexTraitsMemory, _TyStateProto >();
+      m_rgpspModes.assign( ilModes.begin(), ilModes.end() );
+      _TyTextFrame & rframe = *m_rgupFrames.emplace_back( make_unique< _TyTextFrame >() );
+      rframe.m_svText = _svText;
+      rframe.m_analyzer.emplaceTransport( _svText.data(), _svText.length() );
+    }
+    ~_TyTokenSourceText()
+    {
+      while ( m_rgupFrames.size() > 1 ) // The parse ended within the text of an entity - by an error: the parser is as it was before.
+        _PopFrame();
+    }
+    _TyTokenSourceText( _TyTokenSourceText const & ) = delete;
+    _TyTokenSourceText & operator =( _TyTokenSourceText const & ) = delete;
+
+    bool FGetNextToken( std::optional< _TyToken > & _roptToken, std::span< const uint32_t > _spLexerModes )
+    {
+      VerifyThrowSz( !_spLexerModes.empty(), "The parser of the DTD asks for a token without saying which tokens may be here." );
+      for ( ; ; )
+      {
+        _TyTextFrame & rframe = *m_rgupFrames.back();
+        if ( m_fFrameChanged )
+        {
+          m_fFrameChanged = false;
+          // White space at the end of one text and at the beginning of the next is one S [3] to the grammar, as it would
+          //  be if the text of the entity were in place of the reference: if the last token was S then S here is more of it.
+          // ( We look at the text before asking for the token: a token which is had is not put back. )
+          if ( ( s_knTokenDtdS == m_tidLast ) && _FIsWhiteSpace( _ChNext( rframe ) ) )
+          {
+            _TyToken upToken;
+            const bool kfGotToken = rframe.m_analyzer.FGetToken( upToken, nullptr, nullptr, m_rgpspModes[ ns_xmlpdtd::s_knLexerMode_Dtd ], false );
+            VerifyThrowSz( kfGotToken && ( s_knTokenDtdS == upToken->GetTokenId() ), "White space of the DTD wasn't found to be white space." );
+          }
+        }
+        bool fPushedFrame = false;
+        // Each of the modes which the parser gives for its state is tried in turn - as _p_lexang_token_source<> does.
+        for ( uint32_t nMode : _spLexerModes )
+        {
+          VerifyThrowSz( nMode < m_rgpspModes.size(), "The parser asks for mode [%u] of the lexical analyzer of the DTD and there are [%zu].", nMode, m_rgpspModes.size() );
+          _TyToken upToken;
+          if ( rframe.m_analyzer.FGetToken( upToken, nullptr, nullptr, m_rgpspModes[nMode], false ) )
+          {
+            const vtyTokenIdent tid = upToken->GetTokenId();
+            if ( ( s_knTokenDtdPEReference == tid ) && m_fInDeclaration )
+            {
+              // The DFA has a token for the reference - the grammar has one between declarations - and this one is
+              //  within a declaration, where the parser has none: its text is what is read from here.
+              const _TyStrView svReference = _SvTokenText( *upToken ); // '%' Name ';'
+              _PushFrame( svReference.substr( 1, svReference.length() - 2 ) );
+              fPushedFrame = true;
+              break;
+            }
+            // Whether we are within a declaration from here: from the token which begins one to its '>' - and for a
+            //  conditional section [61] from its "<![" to the '[' after its keyword.
+            // And the texts of parameter entities are to be properly nested with what is declared - which is a matter of
+            //  validity: what begins in the text of one ends in that text.
+            //  VC: Proper Declaration/PE Nesting [29]: a declaration.
+            //  VC: Proper Group/PE Nesting [49], [50], [51]: a parenthesized group.
+            //  VC: Proper Conditional Section/PE Nesting [62]: the "<![", the '[' and the "]]>" of a conditional section.
+            switch( tid )
+            {
+              case s_knTokenDtdElementBegin:
+              case s_knTokenDtdAttlistBegin:
+              case s_knTokenDtdEntityBegin:
+              case s_knTokenDtdNotationBegin:
+                m_fInDeclaration = true;
+                m_pframeDeclaration = &rframe;
+              break;
+              case s_knTokenDtdGreater:
+                m_fInDeclaration = false;
+                if ( !!m_pframeDeclaration && ( m_pframeDeclaration != &rframe ) )
+                  _NotProperlyNested( "A declaration begins in the text of one entity and ends in that of another" );
+                m_pframeDeclaration = nullptr;
+              break;
+              case s_knTokenDtdLParen:
+                m_rgpframeGroups.push_back( &rframe );
+              break;
+              case s_knTokenDtdRParen:
+                if ( !m_rgpframeGroups.empty() )
+                {
+                  if ( m_rgpframeGroups.back() != &rframe )
+                    _NotProperlyNested( "A parenthesized group of a content model begins in the text of one entity and ends in that of another" );
+                  m_rgpframeGroups.pop_back();
+                }
+              break;
+              case s_knTokenDtdCondSectBegin:
+                m_fInDeclaration = true;
+                m_rgpframeConditionalSections.push_back( &rframe );
+              break;
+              case s_knTokenDtdLBracket:
+                m_fInDeclaration = false;
+                if ( !m_rgpframeConditionalSections.empty() && ( m_rgpframeConditionalSections.back() != &rframe ) )
+                  _NotProperlyNested( "The \"<![\" and the '[' of a conditional section are in the texts of different entities" );
+              break;
+              case s_knTokenDtdCondSectEnd:
+                if ( !m_rgpframeConditionalSections.empty() )
+                {
+                  if ( m_rgpframeConditionalSections.back() != &rframe )
+                    _NotProperlyNested( "A conditional section begins in the text of one entity and ends in that of another" );
+                  m_rgpframeConditionalSections.pop_back();
+                }
+              break;
+              default:
+              break;
+            }
+            m_tidLast = tid;
+            _roptToken.emplace( std::move( upToken ) );
+            return true;
+          }
+          rframe.m_analyzer.GetStream().ResetToTokenStart();
+        }
+        if ( fPushedFrame )
+          continue;
+        // No token. The end of this text?
+        if ( size_t( rframe.m_analyzer.GetStream().PosTokenStart() ) >= rframe.m_svText.length() )
+        {
+          if ( 1 == m_rgupFrames.size() )
+            return false; // The end of the input.
+          _PopFrame(); // The end of the text of an entity: on with what follows the reference to it.
+          continue;
+        }
+        // A reference to a parameter entity where the parser has no token for one: within a declaration.
+        // ( Again we look at the text first: '%' and then a name and its ';'. )
+        if ( _TyChar( '%' ) == _ChNext( rframe ) )
+        {
+          const size_t knPos = size_t( rframe.m_analyzer.GetStream().PosTokenStart() );
+          const size_t knPosEnd = rframe.m_svText.find_first_of( str_array_cast< _TyChar >( "; \t\r\n" ), knPos );
+          if ( ( _TyStrView::npos != knPosEnd ) && ( _TyChar( ';' ) == rframe.m_svText[knPosEnd] ) && ( knPosEnd > knPos + 1 ) )
+          {
+            _TyToken upToken;
+            const bool kfGotToken = rframe.m_analyzer.FGetToken( upToken, nullptr, nullptr, m_rgpspModes[ ns_xmlpdtd::s_knLexerMode_Dtd ], false );
+            VerifyThrowSz( kfGotToken && ( s_knTokenDtdPEReference == upToken->GetTokenId() ), "The DTD is not well formed: a '%%' which doesn't begin a reference to a parameter entity." );
+            const _TyStrView svReference = _SvTokenText( *upToken ); // '%' Name ';'
+            _PushFrame( svReference.substr( 1, svReference.length() - 2 ) );
+            continue;
+          }
+        }
+        // What is here is no token which may be here: the lexical analyzer says so - it throws.
+        _TyToken upToken;
+        (void)rframe.m_analyzer.FGetToken( upToken, nullptr, nullptr, m_rgpspModes[ _spLexerModes.back() ], true );
+        return false;
+      }
+    }
+  protected:
+    void _NotProperlyNested( const char * _pszWhat )
+    {
+      m_rparser.m_rdtd.m_rgstrValidityErrors.push_back( string( _pszWhat ) + ": parameter entities are not properly nested with the declarations." );
+    }
+    // The character at which the next token of the text begins - 0 at its end.
+    static _TyChar _ChNext( _TyTextFrame const & _rframe )
+    {
+      const size_t knPos = size_t( _rframe.m_analyzer.GetStream().PosTokenStart() );
+      return ( knPos < _rframe.m_svText.length() ) ? _rframe.m_svText[knPos] : _TyChar( 0 );
+    }
+    static bool _FIsWhiteSpace( _TyChar _ch )
+    {
+      return ( _TyChar( 0x20 ) == _ch ) || ( _TyChar( 0x9 ) == _ch ) || ( _TyChar( 0xd ) == _ch ) || ( _TyChar( 0xa ) == _ch );
+    }
+    // The text of the parameter entity is what is read from here until it ends.
+    void _PushFrame( _TyStrView _svName )
+    {
+      const string strName = StrConvertString< char >( _svName );
+      const _TyEntity * pentity = m_rparser.m_rdtd.PGetParameterEntity( _svName );
+      // 4.1 Entity Declared: this is a matter of validity unless the document is standalone - but there is no reading
+      //  the declaration which the reference is within without the text of the entity.
+      if ( !pentity )
+        THROWXMLPARSEEXCEPTION( "The parameter entity [%s] is referenced within a declaration and is not declared: the declaration can't be read.", strName.c_str() );
+      // WFC: No Recursion.
+      if ( m_rparser.m_setParameterEntitiesActive.contains( _svName ) )
+        THROWXMLPARSEEXCEPTION( "The DTD is not well formed: the parameter entity [%s] contains a reference to itself.", strName.c_str() );
+      VerifyThrowSz( m_rparser.m_nParameterEntityDepth < s_knMaxParameterEntityDepth, "Parameter entities are within each other more than [%zu] deep.", s_knMaxParameterEntityDepth );
+      unique_ptr< _TyTextFrame > upFrame = make_unique< _TyTextFrame >();
+      _TyStdStr strLocation;
+      if ( pentity->m_fInternal )
+        upFrame->m_strText = pentity->m_strValue;
+      else
+      {
+        if ( !m_rparser._FGetExternalEntityText( *pentity, upFrame->m_strText, strLocation ) )
+          THROWXMLPARSEEXCEPTION( "The external parameter entity [%s] is referenced within a declaration and is not read: the declaration can't be read.", strName.c_str() );
+        _StripTextDecl( upFrame->m_strText );
+        upFrame->m_fExternalEntity = true;
+      }
+      upFrame->m_strText.insert( upFrame->m_strText.begin(), _TyChar( ' ' ) );
+      upFrame->m_strText += _TyChar( ' ' );
+      upFrame->m_svText = upFrame->m_strText;
+      upFrame->m_analyzer.emplaceTransport( upFrame->m_strText.data(), upFrame->m_strText.length() );
+      upFrame->m_strEntity = _svName;
+      upFrame->m_fExternalSave = m_rparser.m_fExternal;
+      // Nothing throws from here.
+      m_rparser.m_setParameterEntitiesActive.insert( upFrame->m_strEntity );
+      ++m_rparser.m_nParameterEntityDepth;
+      if ( upFrame->m_fExternalEntity )
+      {
+        m_rparser.m_rgstrBase.push_back( std::move( strLocation ) );
+        m_rparser.m_fExternal = true;
+      }
+      m_rgupFrames.push_back( std::move( upFrame ) );
+      m_fFrameChanged = true;
+    }
+    void _PopFrame()
+    {
+      Assert( m_rgupFrames.size() > 1 );
+      _TyTextFrame & rframe = *m_rgupFrames.back();
+      if ( rframe.m_fExternalEntity )
+      {
+        m_rparser.m_fExternal = rframe.m_fExternalSave;
+        m_rparser.m_rgstrBase.pop_back();
+      }
+      --m_rparser.m_nParameterEntityDepth;
+      m_rparser.m_setParameterEntitiesActive.erase( rframe.m_strEntity );
+      // The text remains until the parse is done: a token of it may yet be in the parser's hands.
+      m_rgupFramesDone.push_back( std::move( m_rgupFrames.back() ) );
+      m_rgupFrames.pop_back();
+      m_fFrameChanged = true;
+    }
+    _TyThis & m_rparser;
+    vector< unique_ptr< _TyTextFrame > > m_rgupFrames; // The texts which we are within: the last is the one being read.
+    vector< unique_ptr< _TyTextFrame > > m_rgupFramesDone;
+    bool m_fInDeclaration{ false }; // Between the token which begins a declaration and the one which ends it.
+    // For the proper nesting of the texts of parameter entities: the text in which the current declaration began, and
+    //  those in which the groups and the conditional sections which we are within began.
+    const _TyTextFrame * m_pframeDeclaration{ nullptr };
+    vector< const _TyTextFrame * > m_rgpframeGroups;
+    vector< const _TyTextFrame * > m_rgpframeConditionalSections;
+    vtyTokenIdent m_tidLast{ 0 }; // The last token which we gave the parser.
+    bool m_fFrameChanged{ false }; // The text which is being read is another than the one which that token was of.
+    vector< const _TyStateProto * > m_rgpspModes;
+  };
   void _ParseText( _TyStrView _svText, uint32_t _nEntry )
   {
-    _TyAnalyzerMemory analyzer;
-    analyzer.emplaceTransport( _svText.data(), _svText.length() );
-    _Parse( analyzer, _nEntry, unique_ptr< typename _TyAnalyzerMemory::_TyToken >() );
+    _TyTokenSourceText source( *this, _svText );
+    ns_xmlpdtd::_parser< _TyParseTraits< _TyAnalyzerMemory > > parser;
+    _TyValue valueResult;
+    if ( !parser.FParse( source, *this, valueResult, _nEntry ) )
+      THROWXMLPARSEEXCEPTION( "The DTD is not well formed: %s.", parser.StrError().c_str() );
   }
   // The text which the token matched.
   template < class t_TyLexToken >
@@ -1252,8 +1557,16 @@ protected:
                 break; // Nothing is put in its place.
               }
               if ( !pentity->m_fInternal )
-                THROWXMLPARSEEXCEPTION( "The external parameter entity [%s] is referenced within an entity value: reading external entities isn't supported yet.", StrConvertString< char >( sv ).c_str() );
-              _rstr += pentity->m_strValue;
+              {
+                // Included in the literal ( 4.4.5 ): its replacement text - without its text declaration.
+                _TyStdStr strText, strLocation;
+                if ( !_FGetExternalEntityText( *pentity, strText, strLocation ) )
+                  THROWXMLPARSEEXCEPTION( "The external parameter entity [%s] is referenced within an entity value and is not read: the value can't be had.", StrConvertString< char >( sv ).c_str() );
+                _StripTextDecl( strText );
+                _rstr += strText;
+              }
+              else
+                _rstr += pentity->m_strValue;
             }
             break;
             default:
@@ -1272,31 +1585,49 @@ protected:
       _ParameterEntityNotDeclared( _rstrName );
       return;
     }
-    if ( !pentity->m_fInternal )
+    // WFC: No Recursion.
+    if ( m_setParameterEntitiesActive.contains( _rstrName ) )
+      THROWXMLPARSEEXCEPTION( "The DTD is not well formed: the parameter entity [%s] contains a reference to itself.", StrConvertString< char >( _rstrName ).c_str() );
+    VerifyThrowSz( m_nParameterEntityDepth < s_knMaxParameterEntityDepth, "Parameter entities are within each other more than [%zu] deep.", s_knMaxParameterEntityDepth );
+    // The text is copied: declarations within it may add entities and the map may then move this one. Never mind speed here.
+    const bool kfExternalEntity = !pentity->m_fInternal;
+    _TyStdStr strText, strLocation;
+    if ( !kfExternalEntity )
+      strText = pentity->m_strValue;
+    else
+    if ( !_FGetExternalEntityText( *pentity, strText, strLocation ) )
     {
       // It isn't read: we don't know what it declares, so what is declared after it may not be what binds.
       m_rdtd.m_fStoppedProcessingDeclarations = true;
       return;
     }
-    // WFC: No Recursion.
-    if ( m_setParameterEntitiesActive.contains( _rstrName ) )
-      THROWXMLPARSEEXCEPTION( "The DTD is not well formed: the parameter entity [%s] contains a reference to itself.", StrConvertString< char >( _rstrName ).c_str() );
-    VerifyThrowSz( m_nParameterEntityDepth < s_knMaxParameterEntityDepth, "Parameter entities are within each other more than [%zu] deep.", s_knMaxParameterEntityDepth );
-    // The replacement text is copied: declarations within it may add entities and the map may then move this one. Never mind speed here.
-    const _TyStdStr strReplacementText = pentity->m_strValue;
     m_setParameterEntitiesActive.insert( _rstrName );
     ++m_nParameterEntityDepth;
+    const bool kfExternalSave = m_fExternal;
+    if ( kfExternalEntity )
+    {
+      m_rgstrBase.push_back( std::move( strLocation ) );
+      m_fExternal = true;
+    }
     struct _Leave
     {
       _TyThis & m_r;
       _TyStdStr const & m_rstrName;
+      bool m_fExternalEntity;
+      bool m_fExternalSave;
       ~_Leave()
       {
+        if ( m_fExternalEntity )
+        {
+          m_r.m_fExternal = m_fExternalSave;
+          m_r.m_rgstrBase.pop_back();
+        }
         --m_r.m_nParameterEntityDepth;
         m_r.m_setParameterEntitiesActive.erase( m_rstrName );
       }
-    } leave{ *this, _rstrName };
-    _ParseText( strReplacementText, ns_xmlpdtd::s_knEntry_extSubsetDecl );
+    } leave{ *this, _rstrName, kfExternalEntity, kfExternalSave };
+    // An external entity may begin with a text declaration - as the external subset may: [78], [30].
+    _ParseText( strText, kfExternalEntity ? ns_xmlpdtd::s_knEntry_extSubset : ns_xmlpdtd::s_knEntry_extSubsetDecl );
   }
   // A reference to a parameter entity which isn't declared - 4.1: Entity Declared.
   // For a standalone document this is not well formed - unless a parameter entity wasn't read, since it may be declared there.
@@ -1313,6 +1644,7 @@ protected:
     if ( m_rdtd.m_fStoppedProcessingDeclarations || _rmap.contains( _rentity.m_strName ) )
       return;
     _rentity.m_fDeclaredExternally = m_fExternal || !!m_nParameterEntityDepth;
+    _rentity.m_strBase = _SvBase();
     _TyStdStr strName = _rentity.m_strName;
     _rmap.emplace( std::move( strName ), std::move( _rentity ) );
   }
@@ -1353,13 +1685,66 @@ protected:
     }
     return _TyValue( std::move( at ) );
   }
-  // The document type declaration has been read: the constraints on the declarations as a whole.
-  // ( Not if some of them were not read: what they refer to may be in what wasn't. And the external subset is not read
-  //  yet: when it is this is to be after it. )
+  // The document type declaration has been read - and its external subset: the constraints on the declarations as a whole.
+  // ( Not if some of them were not read: what they refer to may be in what wasn't. )
   void _EndOfDeclarations()
   {
-    if ( !m_rdtd.m_fStoppedProcessingDeclarations && !m_rdtd.m_optExternalId.has_value() )
+    if ( m_rdtd.FAllDeclarationsRead() )
       m_rdtd.CheckDeclarations();
+  }
+  // The external subset [30] - after the internal subset, whose declarations are then those which bind ( 2.8 ).
+  void _ReadExternalSubset()
+  {
+    if ( !m_rdtd.m_optExternalId.has_value() || !m_resolver )
+      return;
+    _TyStdStr strText, strLocation;
+    if ( !m_resolver( *m_rdtd.m_optExternalId, _SvBase(), strText, strLocation ) )
+      return;
+    m_rgstrBase.push_back( std::move( strLocation ) );
+    struct _Leave
+    {
+      _TyThis & m_r;
+      ~_Leave()
+      {
+        m_r.m_rgstrBase.pop_back();
+      }
+    } leave{ *this };
+    ParseExternalSubset( strText );
+    m_rdtd.m_fExternalSubsetRead = true;
+  }
+  // The location of the entity which is being read - the base for what it declares.
+  _TyStrView _SvBase() const
+  {
+    return m_rgstrBase.empty() ? _TyStrView() : _TyStrView( m_rgstrBase.back() );
+  }
+  // The text of an external parameter entity. Returns false if it is not to be had - then it is not read.
+  bool _FGetExternalEntityText( _TyEntity const & _rentity, _TyStdStr & _rstrText, _TyStdStr & _rstrLocation )
+  {
+    Assert( !_rentity.m_fInternal );
+    return !!m_resolver && m_resolver( _rentity.m_externalId, _rentity.m_strBase, _rstrText, _rstrLocation );
+  }
+  // The text declaration [77] of an external entity is not part of its replacement text ( 4.3.1 ): where the text is
+  //  put in place of a reference - and not parsed as an external subset is, where the grammar has it - it is taken off.
+  static void _StripTextDecl( _TyStdStr & _rstrText )
+  {
+    static const char s_kszBegin[] = "<?xml";
+    const size_t knLenBegin = StaticStringLen( s_kszBegin );
+    if ( _rstrText.length() <= knLenBegin )
+      return;
+    for ( size_t n = 0; n < knLenBegin; ++n )
+      if ( _rstrText[n] != _TyChar( s_kszBegin[n] ) )
+        return;
+    const _TyChar chAfter = _rstrText[knLenBegin];
+    if ( ( _TyChar( 0x20 ) != chAfter ) && ( _TyChar( 0x9 ) != chAfter ) && ( _TyChar( 0xd ) != chAfter ) && ( _TyChar( 0xa ) != chAfter ) )
+      return; // A processing instruction whose target begins so.
+    for ( size_t n = knLenBegin; n + 1 < _rstrText.length(); ++n )
+    {
+      if ( ( _TyChar( '?' ) == _rstrText[n] ) && ( _TyChar( '>' ) == _rstrText[n+1] ) )
+      {
+        _rstrText.erase( 0, n + 2 );
+        return;
+      }
+    }
   }
   void _ValidityError( const char * _pszFormat, _TyStdStr const & _rstrName )
   {
@@ -1373,6 +1758,8 @@ protected:
   bool m_fExternal{ false }; // Parsing the external subset or an external parameter entity.
   size_t m_nParameterEntityDepth{ 0 }; // Within the replacement text of this many parameter entities.
   _TyStdStr * m_pstrDoctypeText{ nullptr }; // See SetKeepDoctypeText().
+  _TyExternalEntityResolver m_resolver; // See SetExternalEntityResolver().
+  vector< _TyStdStr > m_rgstrBase; // The locations of the entities which we are within - the document first: the last is the base.
   set< _TyStdStr, less<> > m_setParameterEntitiesActive; // Those whose replacement text is being parsed.
 };
 

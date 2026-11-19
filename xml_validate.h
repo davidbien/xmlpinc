@@ -26,6 +26,11 @@
 //    Nmtoken ( or Nmtokens ). VC: Notation Attributes [58] and VC: Enumeration [59] - one of those listed.
 //  - VC: Required Attribute [60]: an attribute declared #REQUIRED is in the tag.
 //  - VC: Fixed Attribute Default [60]: an attribute declared #FIXED has that value.
+//  - VC: Standalone Document Declaration [32]: a document which is declared standalone is not changed by declarations
+//    which are external - those of the external subset and of parameter entities: it has no attribute by a default
+//    which is declared so, no white space within an element whose element content is declared so - and it doesn't
+//    refer to an entity nor have an attribute whose value is normalized by a type which is declared so: the read
+//    cursor finds those two, see StandaloneViolation().
 // A violation is not an error of well-formedness: it is recorded - RgErrors() - and the document is read on, unless
 //  errors are to be thrown.
 // The DTD knows nothing of namespaces: names are compared as they are written, prefix and all, and an attribute which
@@ -239,6 +244,21 @@ public:
   {
     return m_fThrowOnError;
   }
+  // The document is declared standalone in its XML declaration: VC: Standalone Document Declaration is checked.
+  void SetStandalone( bool _fStandalone = true )
+  {
+    m_fStandalone = _fStandalone;
+  }
+  bool FGetStandalone() const
+  {
+    return m_fStandalone;
+  }
+  // VC: Standalone Document Declaration - what whoever reads the document finds: a reference to an entity which is
+  //  declared externally, an attribute whose value is another by its type which is declared externally.
+  void StandaloneViolation( const char * _pszWhat, _TyStrView _svName )
+  {
+    _Error( "The document is declared standalone and %s [%s] - which is declared externally.", _pszWhat, _StrName( _svName ).c_str() );
+  }
   // The violations found so far - those of the document, not those of the declarations: see xml_dtd<>::m_rgstrValidityErrors.
   vector< string > const & RgErrors() const
   {
@@ -302,10 +322,25 @@ public:
           res.m_fContentError = true;
           _Error( "The element <%s> is declared to have element content and has character data.", _StrName( res.m_pElement->m_strName ).c_str() );
         }
+        else
+        if ( m_fStandalone && res.m_pElement->m_fDeclaredExternally && !res.m_fStandaloneWhiteSpace )
+        {
+          // VC: Standalone Document Declaration: without the declaration this white space is character data of the document.
+          res.m_fStandaloneWhiteSpace = true;
+          _Error( "The document is declared standalone and has white space within the element <%s> - whose element content is declared externally.",
+                  _StrName( res.m_pElement->m_strName ).c_str() );
+        }
       break;
       default:
       break;
     }
+  }
+  // Something is within the current element which we are not told of: a reference to an entity whose replacement text
+  //  is not read. Then nothing more is said of what is within the element - whether it is as declared is not known.
+  void ContentNotKnown()
+  {
+    if ( !m_rgElements.empty() )
+      m_rgElements.back().m_fContentError = true;
   }
   // A comment or a processing instruction within the current element.
   void CommentOrProcessingInstruction()
@@ -351,7 +386,8 @@ protected:
     const _TyContentModel * m_pModel{ nullptr }; // Element content.
     typename _TyContentModel::_TyRgPositions m_rgPositions; // Where we are in the content model - once we have left its start.
     bool m_fAtStart{ true };
-    bool m_fContentError{ false }; // The content is not as declared: said once, and then the rest of it is not looked at.
+    bool m_fContentError{ false }; // The content is not as declared - said once - or is not known: the rest of it is not looked at.
+    bool m_fStandaloneWhiteSpace{ false }; // Said - once for the element.
   };
   static string _StrName( _TyStrView _sv )
   {
@@ -467,7 +503,13 @@ protected:
         _Error( "The attribute [%s] of the element <%s> is declared #REQUIRED and the tag doesn't have it.", _StrName( rad.m_strName ).c_str(), _StrName( _svElement ).c_str() );
       else
       if ( rad.m_fHasDefaultValue )
+      {
+        // VC: Standalone Document Declaration: without the declaration the tag doesn't have the attribute.
+        if ( m_fStandalone && rad.m_fDeclaredExternally )
+          _Error( "The document is declared standalone and a tag <%s> has the attribute [%s] by its default - which is declared externally.",
+                  _StrName( _svElement ).c_str(), _StrName( rad.m_strName ).c_str() );
         _AttributeValue( _svElement, rad, rad.m_strDefaultValue ); // The tag has it by default - and what it refers to must be there.
+      }
     }
   }
   // VC: Attribute Value Type - the value of an attribute by its declared type.
@@ -589,6 +631,7 @@ protected:
   vector< _TyStdStr > m_rgstrIdRefs; // The IDREFs of the document - until its end.
   vector< string > m_rgstrErrors;
   bool m_fThrowOnError{ false };
+  bool m_fStandalone{ false };
   bool m_fDocumentElementEnded{ false };
 };
 

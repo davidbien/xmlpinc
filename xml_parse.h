@@ -13,6 +13,7 @@
 #include "xml_ns.h"
 #include "xml_types.h"
 #include "xml_traits.h"
+#include "xml_external.h"
 #include <_xmlplex_utf32.h>
 #include <_xmlplex_utf16.h>
 #include <_xmlplex_utf8.h>
@@ -103,6 +104,45 @@ public:
     m_mapUris.swap( _r.m_mapUris );
     m_mapPrefixes.swap( _r.m_mapPrefixes );
     m_strFileName.swap( _r.m_strFileName );
+    m_resolverExternalEntities.swap( _r.m_resolverExternalEntities );
+    m_strBaseLocation.swap( _r.m_strBaseLocation );
+  }
+
+// External entities - with XML traits which support the DTD: the external subset of the DTD and its external parameter
+//  entities are read only if there is a resolver for them - see xml_external_entity_resolver in xml_dtd.h. A document
+//  names what is read, so this is for whoever opens the document to decide.
+// The document type declaration is read when the document is opened: these are to be set before that.
+  typedef xml_external_entity_resolver< _TyChar > _TyExternalEntityResolver;
+  void SetExternalEntityResolver( _TyExternalEntityResolver const & _rresolver )
+  {
+    m_resolverExternalEntities = _rresolver;
+  }
+  _TyExternalEntityResolver const & GetExternalEntityResolver() const
+  {
+    return m_resolverExternalEntities;
+  }
+  // The external entities are files: their system identifiers are paths - see FReadExternalEntityFile() in xml_external.h.
+  void SetReadExternalEntityFiles( bool _fReadExternalEntityFiles = true )
+  {
+    if ( _fReadExternalEntityFiles )
+      m_resolverExternalEntities = &FReadExternalEntityFile< _TyChar >;
+    else
+      m_resolverExternalEntities = nullptr;
+  }
+  // The location of the document: what the system identifier of its external subset - and those of the entities which
+  //  its internal subset declares - are relative to. If this isn't set it is the name of the file which is opened - and
+  //  nothing for a document which is opened in memory.
+  void SetBaseLocation( _TyStrView _svBaseLocation )
+  {
+    m_strBaseLocation = _svBaseLocation;
+  }
+  _TyStdStr StrBaseLocation() const
+  {
+    if ( !m_strBaseLocation.empty() || m_strFileName.empty() )
+      return m_strBaseLocation;
+    _TyStdStr strBaseLocation;
+    ConvertString( strBaseLocation, m_strFileName );
+    return strBaseLocation;
   }
 
   // This will attempt to open the file. If it is in the wrong format it will throw an xml_parse_exception.
@@ -419,6 +459,8 @@ protected:
   _TyUriAndPrefixMap m_mapUris;
   _TyUriAndPrefixMap m_mapPrefixes;
   string m_strFileName; // Record this because it doesn't cost much - it may be enpty.
+  _TyExternalEntityResolver m_resolverExternalEntities; // See SetExternalEntityResolver().
+  _TyStdStr m_strBaseLocation; // See SetBaseLocation().
 };
 
 // The implementation currently assumes that if you are using a xml_parser_var with three character types and sharing the switch-endian stuff as below as in _xml_var_get_var_transport.

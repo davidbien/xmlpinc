@@ -896,8 +896,12 @@ protected:
     m_upDtd = make_unique< _TyDtd >();
     _TyStdStr strDoctypeText;
     xml_dtd_parser< _TyChar > dtdParser( *m_upDtd );
-    dtdParser.SetStandalone( m_XMLDeclProperties.m_fStandalone );
+    // Standalone only if the XML declaration says so: m_fStandalone is true as well when it says nothing.
+    dtdParser.SetStandalone( m_XMLDeclProperties.m_fHasStandalone && m_XMLDeclProperties.m_fStandalone );
     dtdParser.SetKeepDoctypeText( &strDoctypeText );
+    // The external subset and the external parameter entities are read if the parser has been given the means.
+    if ( !!m_pXp->GetExternalEntityResolver() )
+      dtdParser.SetExternalEntityResolver( m_pXp->GetExternalEntityResolver(), m_pXp->StrBaseLocation() );
     dtdParser.ParseDoctypeDecl( rAnalyzer, std::move( pltokDoctype ) );
     // The entities of the document are those which the DTD declares - with the predefined ones, which are there already.
     m_upDtd->AddGeneralEntitiesTo( m_pXp->GetUserObj().GetEntityMap() );
@@ -1440,6 +1444,7 @@ protected:
     {
       m_upValidator = make_unique< _TyValidator >( m_upDtd.get() );
       m_upValidator->SetThrowOnError( m_fThrowOnValidityError );
+      m_upValidator->SetStandalone( m_XMLDeclProperties.m_fHasStandalone && m_XMLDeclProperties.m_fStandalone && !!m_upDtd );
     }
     const _TyLexValue & krvalTag = _rltok.GetValue();
     const _TyLexValue & krrgAttrs = krvalTag[vknAttributesIdx];
@@ -1458,6 +1463,28 @@ protected:
       {
         m_rgstrValidateValues[nAttr].clear();
         (void)_rltok.FGetStringViewOrString( rattr.m_svValue, m_rgstrValidateValues[nAttr], krvalValue );
+        if ( m_upValidator->FGetStandalone() )
+        {
+          // VC: Standalone Document Declaration - what the value owes to declarations which are external:
+          _ValidateStandaloneEntityReferences( _rltok, krvalValue );
+          // If its type is declared so and without the type the value would be another - only white space was taken away, so by its length.
+          const xml_dtd_attdef< _TyChar > * pAttDef = m_upDtd->PGetAttDef( _SvNameAsWritten( _rltok, krvalTag[vknTagNameIdx] ), rattr.m_svName );
+          if ( !!pAttDef && pAttDef->m_fDeclaredExternally && ( exdatCDATA != pAttDef->m_eType ) && krvalValue.FHasTypedData() )
+          {
+            _TyLexValue valAsCDATA( krvalValue.template GetVal< _TyData >() );
+            valAsCDATA.template GetVal< _TyData >().Apply(
+              []( _l_data_typed_range * _pdtrBegin, _l_data_typed_range * const _pdtrEnd )
+              {
+                for ( ; _pdtrEnd != _pdtrBegin; ++_pdtrBegin )
+                  _pdtrBegin->m_nType &= ~s_kdtfAttrTokenized;
+              }
+            );
+            _TyStdStr strAsCDATA;
+            _rltok.GetString( strAsCDATA, valAsCDATA );
+            if ( strAsCDATA.length() != rattr.m_svValue.length() )
+              m_upValidator->StandaloneViolation( "the value of an attribute is normalized by the type of the attribute", rattr.m_svName );
+          }
+        }
       }
     }
     m_upValidator->StartTag( _SvNameAsWritten( _rltok, krvalTag[vknTagNameIdx] ), m_rgValidateAttrs.data(), m_rgValidateAttrs.data() + knAttrs );
@@ -1473,6 +1500,28 @@ protected:
   // Whether character data is white space which matches S [3] - which is all that may be among the elements of an element
   //  with element content ( 3.2.1 ): white space written as itself, or a reference to an entity whose text is that. A
   //  reference to a character is not, whatever the character.
+  // VC: Standalone Document Declaration: the references to entities in the pieces of a value - of an attribute or
+  //  character data - of a document which is declared standalone are not to entities which are declared externally.
+  void _ValidateStandaloneEntityReferences( _TyLexToken const & _rltok, _TyLexValue const & _rval )
+  {
+    if ( !_rval.FHasTypedData() )
+      return;
+    _rval.template GetVal< _TyData >().Apply(
+      [this,&_rltok]( const _l_data_typed_range * _pdtrBegin, const _l_data_typed_range * const _pdtrEnd )
+      {
+        for ( ; _pdtrEnd != _pdtrBegin; ++_pdtrBegin )
+        {
+          if ( _pdtrBegin->FIsNull() || ( s_kdtEntityRef != DtGetType( _pdtrBegin->type() ) ) )
+            continue;
+          _TyStrView svEntity;
+          _rltok.KGetStringView( svEntity, _pdtrBegin->GetRangeBase() );
+          const xml_dtd_entity< _TyChar > * pEntity = m_upDtd->PGetGeneralEntity( svEntity );
+          if ( !!pEntity && pEntity->m_fDeclaredExternally )
+            m_upValidator->StandaloneViolation( "refers to the entity", svEntity );
+        }
+      }
+    );
+  }
   // If the character data refers to an entity whose text is not read then nothing is said of what that stands for:
   //  see FValidationIncomplete().
   bool _FIsWhiteSpaceCharData( _TyLexToken const & _rltok )
@@ -1480,6 +1529,8 @@ protected:
     const _TyLexValue & krval = _rltok.GetValue();
     if ( !krval.FHasTypedData() )
       return false;
+    if ( m_upValidator->FGetStandalone() )
+      _ValidateStandaloneEntityReferences( _rltok, krval );
     bool fWhiteSpace = true;
     krval.template GetVal< _TyData >().Apply(
       [this,&_rltok,&fWhiteSpace]( const _l_data_typed_range * _pdtrBegin, const _l_data_typed_range * const _pdtrEnd )
@@ -1501,7 +1552,11 @@ protected:
               if ( rmapEntities.end() == citEntity )
               {
                 if ( !!m_upDtd && !!m_upDtd->PGetGeneralEntity( sv ) )
-                  m_fValidationIncomplete = true; // Declared, and we don't have its text: as if the reference were not there.
+                {
+                  // Declared, and we don't have its text: what is within this element is not known.
+                  m_fValidationIncomplete = true;
+                  m_upValidator->ContentNotKnown();
+                }
                 else
                   fWhiteSpace = false;
                 continue;
