@@ -26,6 +26,9 @@
 //    yet which reads external entities ): as the specification requires of a processor which doesn't read one, the entity
 //    and attribute-list declarations after the reference are then not processed - see FStoppedProcessingDeclarations().
 //  - The first declaration of an entity and of an attribute of an element type is the one which binds.
+//  - The default value of an attribute is made from its literal as the value of an attribute of a tag is ( 3.3.3 ):
+//    its references are replaced and it is normalized according to the type of the attribute. The cursor adds the
+//    attributes which a tag doesn't have and which have a default to the tag ( 3.3.2 ).
 //  - Well-formedness constraints: a parameter entity reference may not be within a declaration in the internal subset
 //    and a parameter entity may not contain itself. These throw. A parameter entity must be declared before it is
 //    referenced: that is a well-formedness constraint only for a document which is declared to be standalone - see
@@ -33,7 +36,8 @@
 //  - Validity constraints which can be seen in the declarations alone - an element type or a notation declared twice,
 //    the same name twice in mixed content - are recorded and don't throw: see RgValidityErrors().
 // What isn't done yet: reading the external subset and external parameter entities from where they are, references to
-//  parameter entities within declarations ( external subset only ), and validating a document.
+//  parameter entities within declarations ( external subset only ), normalizing the values of the attributes of a tag
+//  according to their declared types, and validating a document.
 //
 // The cursor ( xml_cursor.h ) reads the document type declaration of a document when the XML traits support the DTD
 //  ( xml_traits< ..., true, ... > ): the xml_dtd is then the cursor's - GetDtd() - and the general entities which it
@@ -134,6 +138,22 @@ struct xml_dtd_attdef
   EXmlDtdAttDefault m_eDefault{ exdadImplied };
   // exdadFixed, exdadDefault: the value as it is written between the quotes - its references are not replaced and it isn't normalized.
   _TyStdStr m_strDefault;
+  // exdadFixed, exdadDefault: the value which a tag without the attribute has for it ( 3.3.2 ): the default with its
+  //  references replaced and normalized ( 3.3.3 ). m_fHasDefaultValue is false if there is no default - or if the default
+  //  refers to an entity which isn't declared ( not valid - see xml_dtd<>::m_rgstrValidityErrors ): then there is no value to give.
+  bool m_fHasDefaultValue{ false };
+  _TyStdStr m_strDefaultValue;
+};
+// Why the text of an entity or the value of an attribute couldn't be made - see xml_dtd<>::EGetAttributeValueText().
+enum EXmlDtdExpand : uint8_t
+{
+  exdeOk,
+  exdeNotDeclared, // A reference to an entity which isn't declared.
+  exdeExternal, // A reference to an external ( or unparsed ) entity.
+  exdeMarkup, // A '<' in the replacement text of an entity.
+  exdeRecursive, // An entity which refers to itself.
+  exdeNotWellFormed, // An '&' which is not a reference, a character reference to what is not a character.
+  exdeEXmlDtdExpandCount
 };
 // ExternalID [75] and PublicID [83].
 template < class t_TyChar >
@@ -255,7 +275,32 @@ public:
   {
     _rstrText.clear();
     vector< _TyStrView > rgsvActive;
-    return _FExpandGeneralEntityText( _svName, _rstrText, rgsvActive );
+    return exdeOk == _EExpandGeneralEntity( _svName, _rstrText, rgsvActive, false );
+  }
+  // The normalized value of an attribute from its literal - what is between the quotes - 3.3.3:
+  //  a character reference is the character, a reference to an entity is the replacement text of the entity treated in
+  //  the same way, and a white space character ( which isn't from a character reference ) is a space. Then, unless the
+  //  type of the attribute is CDATA, leading and trailing spaces are removed and spaces in a row are one space.
+  // The well-formedness constraints are those of 3.1: the entities must be declared, may not be external and may not
+  //  have a '<' in their replacement text.
+  EXmlDtdExpand EGetAttributeValueText( _TyStrView _svLiteral, EXmlDtdAttType _eType, _TyStdStr & _rstrValue ) const
+  {
+    _rstrValue.clear();
+    vector< _TyStrView > rgsvActive;
+    const EXmlDtdExpand exde = _EExpandText( _svLiteral, _rstrValue, rgsvActive, true );
+    if ( ( exdeOk != exde ) || ( exdatCDATA == _eType ) )
+      return exde;
+    _TyStdStr strNormalized;
+    for ( _TyChar ch : _rstrValue )
+    {
+      if ( ( _TyChar( ' ' ) == ch ) && ( strNormalized.empty() || ( _TyChar( ' ' ) == strNormalized.back() ) ) )
+        continue;
+      strNormalized += ch;
+    }
+    if ( !strNormalized.empty() && ( _TyChar( ' ' ) == strNormalized.back() ) )
+      strNormalized.pop_back();
+    _rstrValue.swap( strNormalized );
+    return exdeOk;
   }
   // Add the general entities which stand for text alone to the map of entity name to text - that of the lexical
   //  analyzer's user object ( xml_user_obj<>::GetEntityMap() ), with which references in character data and in the
@@ -282,7 +327,9 @@ protected:
     }
     return !*_psz;
   }
-  bool _FExpandGeneralEntityText( _TyStrView _svName, _TyStdStr & _rstrText, vector< _TyStrView > & _rrgsvActive ) const
+  // The text for which a reference to the entity stands is added to _rstrText.
+  // _fAttributeValue: within the value of an attribute: white space is a space.
+  EXmlDtdExpand _EExpandGeneralEntity( _TyStrView _svName, _TyStdStr & _rstrText, vector< _TyStrView > & _rrgsvActive, bool _fAttributeValue ) const
   {
     // The predefined entities ( 4.6 ): as text they are their characters.
     static const struct { const char * m_pszName; char m_ch; } s_rgPredefined[] = { { "lt", '<' }, { "gt", '>' }, { "amp", '&' }, { "apos", '\'' }, { "quot", '"' } };
@@ -291,35 +338,47 @@ protected:
       if ( _FIsName( _svName, rPredefined.m_pszName ) )
       {
         _rstrText += _TyChar( rPredefined.m_ch );
-        return true;
+        return exdeOk;
       }
     }
     const _TyEntity * pentity = PGetGeneralEntity( _svName );
-    if ( !pentity || !pentity->m_fInternal )
-      return false;
+    if ( !pentity )
+      return exdeNotDeclared;
+    if ( !pentity->m_fInternal )
+      return exdeExternal;
     if ( _rrgsvActive.end() != std::find( _rrgsvActive.begin(), _rrgsvActive.end(), _svName ) )
-      return false; // WFC: No Recursion - an error only if it is referenced.
+      return exdeRecursive; // WFC: No Recursion - an error only if it is referenced.
     _rrgsvActive.push_back( _svName );
-    const _TyStrView svValue( pentity->m_strValue );
+    const EXmlDtdExpand exde = _EExpandText( pentity->m_strValue, _rstrText, _rrgsvActive, _fAttributeValue );
+    _rrgsvActive.pop_back();
+    return exde;
+  }
+  // The text - the replacement text of an entity or the literal of the value of an attribute - with its references replaced.
+  EXmlDtdExpand _EExpandText( _TyStrView svValue, _TyStdStr & _rstrText, vector< _TyStrView > & _rrgsvActive, bool _fAttributeValue ) const
+  {
     for ( size_t n = 0; n < svValue.length(); ++n )
     {
       const _TyChar ch = svValue[ n ];
       if ( _TyChar( '<' ) == ch )
-        return false; // Markup.
+        return exdeMarkup;
       if ( _TyChar( '&' ) != ch )
       {
-        _rstrText += ch;
+        if ( _fAttributeValue && ( ( _TyChar( 0x20 ) == ch ) || ( _TyChar( 0x0d ) == ch ) || ( _TyChar( 0x0a ) == ch ) || ( _TyChar( 0x09 ) == ch ) ) )
+          _rstrText += _TyChar( ' ' );
+        else
+          _rstrText += ch;
         continue;
       }
       const size_t nEnd = svValue.find( _TyChar( ';' ), n );
       if ( ( _TyStrView::npos == nEnd ) || ( nEnd == n + 1 ) )
-        return false; // An '&' which isn't a reference.
+        return exdeNotWellFormed; // An '&' which isn't a reference.
       _TyStrView svReference = svValue.substr( n + 1, nEnd - n - 1 );
       n = nEnd;
       if ( _TyChar( '#' ) != svReference[0] )
       {
-        if ( !_FExpandGeneralEntityText( svReference, _rstrText, _rrgsvActive ) )
-          return false;
+        const EXmlDtdExpand exde = _EExpandGeneralEntity( svReference, _rstrText, _rrgsvActive, _fAttributeValue );
+        if ( exdeOk != exde )
+          return exde;
         continue;
       }
       // A character reference: "#" digits or "#x" hex digits.
@@ -327,7 +386,7 @@ protected:
       svReference.remove_prefix( fHex ? 2 : 1 );
       char32_t ch32 = 0;
       if ( svReference.empty() )
-        return false;
+        return exdeNotWellFormed;
       for ( _TyChar chDigit : svReference )
       {
         uint32_t nDigit;
@@ -340,20 +399,19 @@ protected:
         if ( fHex && ( chDigit >= _TyChar( 'A' ) ) && ( chDigit <= _TyChar( 'F' ) ) )
           nDigit = 10 + uint32_t( chDigit - _TyChar( 'A' ) );
         else
-          return false;
+          return exdeNotWellFormed;
         ch32 = ch32 * ( fHex ? 16 : 10 ) + nDigit;
         if ( ch32 > 0x10FFFF )
-          return false;
+          return exdeNotWellFormed;
       }
       // [2] Char.
       if ( !( ( 0x9 == ch32 ) || ( 0xA == ch32 ) || ( 0xD == ch32 ) || ( ( ch32 >= 0x20 ) && ( ch32 <= 0xD7FF ) ) || ( ( ch32 >= 0xE000 ) && ( ch32 <= 0xFFFD ) ) || ( ch32 >= 0x10000 ) ) )
-        return false;
+        return exdeNotWellFormed;
       _TyStdStr strChar;
       ConvertString( strChar, &ch32, 1 );
       _rstrText += strChar;
     }
-    _rrgsvActive.pop_back();
-    return true;
+    return exdeOk;
   }
 };
 
@@ -789,6 +847,36 @@ public:
     {
       ad.m_eDefault = _rvDefault.template Get< _TyValueDefaultDecl >().m_eDefault;
       ad.m_strDefault = std::move( _rvDefault.template Get< _TyValueDefaultDecl >().m_strDefault );
+      // The value which a tag without the attribute has. The entities it refers to must have been declared by now.
+      // ( Not if we stopped processing attribute-list declarations: this one will not be recorded. )
+      if ( !m_rdtd.m_fStoppedProcessingDeclarations )
+      {
+        const EXmlDtdExpand exde = m_rdtd.EGetAttributeValueText( ad.m_strDefault, ad.m_eType, ad.m_strDefaultValue );
+        ad.m_fHasDefaultValue = ( exdeOk == exde );
+        const string strName = StrConvertString< char >( ad.m_strName );
+        switch( exde )
+        {
+          case exdeOk:
+          break;
+          case exdeNotDeclared: // 4.1 Entity Declared: well-formedness for a standalone document and otherwise validity.
+            if ( m_fStandalone )
+              THROWXMLPARSEEXCEPTION( "The DTD is not well formed: the default value of attribute [%s] refers to an entity which is not declared.", strName.c_str() );
+            _ValidityError( "The default value of attribute [%s] refers to an entity which is not declared.", ad.m_strName );
+          break;
+          case exdeExternal: // WFC: No External Entity References.
+            THROWXMLPARSEEXCEPTION( "The DTD is not well formed: the default value of attribute [%s] refers to an external entity.", strName.c_str() );
+          break;
+          case exdeMarkup: // WFC: No < in Attribute Values.
+            THROWXMLPARSEEXCEPTION( "The DTD is not well formed: the default value of attribute [%s] refers to an entity which has a '<' in its replacement text.", strName.c_str() );
+          break;
+          case exdeRecursive: // WFC: No Recursion.
+            THROWXMLPARSEEXCEPTION( "The DTD is not well formed: the default value of attribute [%s] refers to an entity which contains a reference to itself.", strName.c_str() );
+          break;
+          default:
+            THROWXMLPARSEEXCEPTION( "The DTD is not well formed: the default value of attribute [%s] is not well formed once its references are replaced.", strName.c_str() );
+          break;
+        }
+      }
     }
     else
       ad.m_eDefault = _rvDefault.FIsToken( s_knTokenDtdREQUIRED ) ? exdadRequired : exdadImplied;

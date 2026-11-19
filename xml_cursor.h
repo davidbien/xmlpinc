@@ -330,6 +330,10 @@ public:
   // The cursor doesn't have a token for it: what it declares is the xml_dtd. The general entities which it declares - those
   //  which stand for text alone - are in the entity map of the parser's user object from then on, so references to them
   //  in character data and in the values of attributes are replaced as references to the predefined entities are.
+  // An attribute which is declared with a default value and which a tag doesn't have is added to the tag with that
+  //  value ( 3.3.2 ): after the attributes which the tag does have, in the order in which they are declared. If
+  //  namespaces are being processed such an attribute may declare a namespace - "xmlns" or "xmlns:prefix" - and it does
+  //  so for the tag as one which is written in the tag does.
   bool FHasDtd() const
   {
     return m_optDtd.has_value();
@@ -929,10 +933,23 @@ protected:
       case s_knTokenEmptyElemTag:
       {
         m_fGotFirstTag = true;
+        // The attributes which the tag doesn't have and which the DTD gives a default value: found before the names of
+        //  the tag are processed below - and those which declare a namespace declare it now so that it is there for them.
+        _TyRgDefaultAttrs rgDefaultAttrs;
+        if constexpr ( _TyXmlTraits::s_kfSupportDTD )
+        {
+          if ( m_optDtd.has_value() && !m_optDtd->m_mapAttLists.empty() )
+            _GetDefaultAttributes( *_rpltok, rgDefaultAttrs );
+        }
         if ( m_fUseXMLNamespaces )
           _ProcessNamespaces( *_rpltok );
         else
           _ProcessNoNamespaces( *_rpltok );
+        if constexpr ( _TyXmlTraits::s_kfSupportDTD )
+        {
+          if ( !rgDefaultAttrs.empty() )
+            _AddDefaultAttributes( *_rpltok, rgDefaultAttrs );
+        }
         _PushNewContext( *_rpltok );
       }
       break;
@@ -1193,6 +1210,99 @@ protected:
   void _CheckDuplicateAttrs( _TyLexToken & _rltok )
   {
     return CheckDuplicateTokenAttrs( m_fStrict, _rltok, false );
+  }
+// The default values of attributes - 3.3.2:
+  // An attribute to add to a tag - and the namespace which it declares if it does.
+  struct _TyDefaultAttr
+  {
+    const xml_dtd_attdef< _TyChar > * m_pAttDef{ nullptr };
+    bool m_fNamespaceDecl{ false };
+    _TyXmlNamespaceValueWrap m_xnvwNamespaceDecl;
+  };
+  typedef vector< _TyDefaultAttr > _TyRgDefaultAttrs;
+  // The name of a tag or of an attribute as it is written - prefix, colon and all - before the names of the token are
+  //  processed: the lexical analyzer has the first part of the name at vknNameIdx and what is after a colon at vknNamespaceIdx.
+  _TyStrView _SvNameAsWritten( _TyLexToken const & _rltok, _TyLexValue const & _rrgvName ) const
+  {
+    _TyData const & krdtFirst = _rrgvName[vknNameIdx].template GetVal< _TyData >();
+    _TyData const & krdtAfterColon = _rrgvName[vknNamespaceIdx].template GetVal< _TyData >();
+    const _l_data_range dr( krdtFirst.DataRangeGetSingle().begin(), krdtAfterColon.FIsNull() ? krdtFirst.DataRangeGetSingle().end() : krdtAfterColon.DataRangeGetSingle().end() );
+    _TyStrView sv;
+    _rltok.KGetStringView( sv, dr );
+    return sv;
+  }
+  // Find the attributes which the DTD declares for the tag's element type with a default value and which the tag doesn't have.
+  // This is called before the names of the token are processed.
+  void _GetDefaultAttributes( _TyLexToken & _rltok, _TyRgDefaultAttrs & _rrgDefaultAttrs )
+  {
+    const _TyLexValue & krvalTag = _rltok.GetValue();
+    const vector< xml_dtd_attdef< _TyChar > > * prgAttDefs = m_optDtd->PGetAttList( _SvNameAsWritten( _rltok, krvalTag[vknTagNameIdx] ) );
+    if ( !prgAttDefs )
+      return;
+    const _TyLexValue & krrgAttrs = krvalTag[vknAttributesIdx];
+    const size_t knAttrs = krrgAttrs.GetSize();
+    for ( xml_dtd_attdef< _TyChar > const & rad : *prgAttDefs )
+    {
+      if ( !rad.m_fHasDefaultValue )
+        continue;
+      bool fHasAttr = false;
+      for ( size_t nAttr = 0; !fHasAttr && ( nAttr < knAttrs ); ++nAttr )
+        fHasAttr = ( _SvNameAsWritten( _rltok, krrgAttrs[nAttr] ) == _TyStrView( rad.m_strName ) );
+      if ( fHasAttr )
+        continue;
+      _TyDefaultAttr & rda = _rrgDefaultAttrs.emplace_back();
+      rda.m_pAttDef = &rad;
+      if ( m_fUseXMLNamespaces )
+      {
+        // A declaration of a namespace: "xmlns" - the default namespace - or "xmlns:" and the prefix.
+        const _TyStrView svName( rad.m_strName );
+        static constexpr size_t knLenXmlns = 5;
+        if ( !svName.compare( 0, knLenXmlns, str_array_cast< _TyChar >("xmlns") ) && ( ( svName.length() == knLenXmlns ) || ( _TyChar(':') == svName[knLenXmlns] ) ) )
+        {
+          _TyStrView svPrefix = ( svName.length() == knLenXmlns ) ? _TyStrView() : svName.substr( knLenXmlns + 1 );
+          _TyStrView svUri( rad.m_strDefaultValue );
+          rda.m_xnvwNamespaceDecl = m_mapNamespaces.GetNamespaceValueWrap( *m_pXp, enrtAttrNamespaceDeclReference, svPrefix, svUri );
+          rda.m_fNamespaceDecl = true;
+        }
+      }
+    }
+  }
+  // Add the attributes to the tag. This is called after the names of the token have been processed: these are made as
+  //  those are left - but their names and values are strings since they are not in the text of the document.
+  void _AddDefaultAttributes( _TyLexToken & _rltok, _TyRgDefaultAttrs & _rrgDefaultAttrs )
+  {
+    _TyLexValue & rrgAttrs = _rltok[vknAttributesIdx];
+    vtySignedLvalueInt nNamespaceDecls = 0;
+    for ( _TyDefaultAttr & rda : _rrgDefaultAttrs )
+    {
+      _TyStrView svName( rda.m_pAttDef->m_strName );
+      _TyLexValue & rrgAttr = rrgAttrs[ rrgAttrs.GetSize() ]; // This adds one.
+      rrgAttr.SetSize( vknAttr_ArrayCount );
+      const size_t nPosColon = svName.find( _TyChar(':') );
+      if ( rda.m_fNamespaceDecl )
+      {
+        // As _ProcessNamespaces() leaves a declaration which is written in the tag: the whole name and the namespace.
+        _TyXmlNamespaceValueWrap & rxnvw = rrgAttr[vknNamespaceIdx].emplaceVal( std::move( rda.m_xnvwNamespaceDecl ) );
+        if ( rxnvw.FIsNamespaceDeclaration() )
+          ++nNamespaceDecls;
+      }
+      else
+      if ( m_fUseXMLNamespaces && ( _TyStrView::npos != nPosColon ) )
+      {
+        // A name with a prefix: the namespace of the prefix - and the name with the prefix or without as the user wants it.
+        const _TyStrView svPrefix = svName.substr( 0, nPosColon );
+        rrgAttr[vknNamespaceIdx].emplaceVal( m_mapNamespaces.GetNamespaceValueWrap( enrtAttrNameReference, &svPrefix ) );
+        if ( !m_fIncludePrefixesInAttrNames )
+          svName.remove_prefix( nPosColon + 1 );
+      }
+      else
+        rrgAttr[vknNamespaceIdx].emplaceVal( false ); // In no namespace.
+      rrgAttr[vknNameIdx].emplaceVal( _TyStdStr( svName ) );
+      rrgAttr[vknAttr_ValueIdx].emplaceVal( _TyStdStr( rda.m_pAttDef->m_strDefaultValue ) );
+      rrgAttr[vknAttr_FDoubleQuoteIdx].emplaceVal( true );
+    }
+    if ( !!nNamespaceDecls )
+      _rltok[vknTagNameIdx][vknTagName_NNamespaceDeclsIdx].template GetVal< vtySignedLvalueInt >() += nNamespaceDecls; // So that they are undeclared with the tag.
   }
   void _UpdateSkip()
   {
