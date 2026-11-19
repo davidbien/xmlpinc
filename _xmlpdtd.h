@@ -13,8 +13,8 @@
 //  0: $accept : $entry:doctypedecl doctypedecl
 //  1: $accept : $entry:extSubset extSubset
 //  2: $accept : $entry:extSubsetDecl extSubsetDecl
-//  3: doctypedecl : '<!DOCTYPE' S Name ( S ExternalID S? | S? ) ( '[' intSubset ']' S? )? '>'
-//  4: DeclSep : PEReference
+//  3: doctypedecl : '<!DOCTYPE' S Name ( S ExternalID S? | S? ) ( '[' intSubset ']' S? )? '>'  [doctypedecl]
+//  4: DeclSep : PEReference  [DeclSep_PEReference]
 //  5: DeclSep : S
 //  6: intSubset : ( markupdecl | DeclSep )*
 //  7: markupdecl : elementdecl
@@ -25,20 +25,20 @@
 //  12: markupdecl : Comment
 //  13: extSubset : TextDecl? extSubsetDecl
 //  14: extSubsetDecl : ( markupdecl | conditionalSect | DeclSep )*
-//  15: elementdecl : '<!ELEMENT' S Name S contentspec S? '>'
+//  15: elementdecl : '<!ELEMENT' S Name S contentspec S? '>'  [elementdecl]
 //  16: contentspec : 'EMPTY'
 //  17: contentspec : 'ANY'
 //  18: contentspec : Mixed
 //  19: contentspec : children
-//  20: children : ( choice | seq ) ( '?' | '*' | '+' )?
-//  21: cp : ( Name | choice | seq ) ( '?' | '*' | '+' )?
-//  22: choice : '(' S? cp ( S? '|' S? cp )+ S? ')'
-//  23: seq : '(' S? cp ( S? ',' S? cp )+ S? ')'
-//  24: seq : '(' S? cp S? ')'
-//  25: Mixed : '(' S? '#PCDATA' ( S? '|' S? Name )+ S? ')' '*'
-//  26: Mixed : '(' S? '#PCDATA' S? ')' '*'?
-//  27: AttlistDecl : '<!ATTLIST' S Name AttDef* S? '>'
-//  28: AttDef : S Name S AttType S DefaultDecl
+//  20: children : ( choice | seq ) ( '?' | '*' | '+' )?  [children]
+//  21: cp : ( Name | choice | seq ) ( '?' | '*' | '+' )?  [cp]
+//  22: choice : '(' S? cp ( S? '|' S? cp )+ S? ')'  [choice]
+//  23: seq : '(' S? cp ( S? ',' S? cp )+ S? ')'  [seq_list]
+//  24: seq : '(' S? cp S? ')'  [seq_single]
+//  25: Mixed : '(' S? '#PCDATA' ( S? '|' S? Name )+ S? ')' '*'  [Mixed_names]
+//  26: Mixed : '(' S? '#PCDATA' S? ')' '*'?  [Mixed_pcdata]
+//  27: AttlistDecl : '<!ATTLIST' S Name AttDef* S? '>'  [AttlistDecl]
+//  28: AttDef : S Name S AttType S DefaultDecl  [AttDef]
 //  29: AttType : StringType
 //  30: AttType : TokenizedType
 //  31: AttType : EnumeratedType
@@ -52,11 +52,11 @@
 //  39: TokenizedType : 'NMTOKENS'
 //  40: EnumeratedType : NotationType
 //  41: EnumeratedType : Enumeration
-//  42: NotationType : 'NOTATION' S '(' S? Name ( S? '|' S? Name )* S? ')'
-//  43: Enumeration : '(' S? Nmtoken ( S? '|' S? Nmtoken )* S? ')'
+//  42: NotationType : 'NOTATION' S '(' S? Name ( S? '|' S? Name )* S? ')'  [NotationType]
+//  43: Enumeration : '(' S? Nmtoken ( S? '|' S? Nmtoken )* S? ')'  [Enumeration]
 //  44: DefaultDecl : '#REQUIRED'
 //  45: DefaultDecl : '#IMPLIED'
-//  46: DefaultDecl : ( '#FIXED' S )? AttValue
+//  46: DefaultDecl : ( '#FIXED' S )? AttValue  [DefaultDecl_value]
 //  47: conditionalSect : includeSect
 //  48: conditionalSect : ignoreSect
 //  49: includeSect : '<![' S? 'INCLUDE' S? '[' extSubsetDecl ']]>'
@@ -64,18 +64,18 @@
 //  51: ignoreSectContents : Ignore* ( '<![' ignoreSectContents ']]>' Ignore* )*
 //  52: EntityDecl : GEDecl
 //  53: EntityDecl : PEDecl
-//  54: GEDecl : '<!ENTITY' S Name S EntityDef '>'
-//  55: PEDecl : '<!ENTITY' S '%' S Name S PEDef S? '>'
-//  56: EntityDef : EntityValue S?
-//  57: EntityDef : ExternalID S?
-//  58: EntityDef : ExternalID NDataDecl S?
+//  54: GEDecl : '<!ENTITY' S Name S EntityDef '>'  [GEDecl]
+//  55: PEDecl : '<!ENTITY' S '%' S Name S PEDef S? '>'  [PEDecl]
+//  56: EntityDef : EntityValue S?  [EntityDef_value]
+//  57: EntityDef : ExternalID S?  [EntityDef_external]
+//  58: EntityDef : ExternalID NDataDecl S?  [EntityDef_unparsed]
 //  59: PEDef : EntityValue
 //  60: PEDef : ExternalID
-//  61: ExternalID : 'SYSTEM' S SystemLiteral
-//  62: ExternalID : PublicID S SystemLiteral
-//  63: NDataDecl : S 'NDATA' S Name
-//  64: NotationDecl : '<!NOTATION' S Name S ( ExternalID S? | PublicID S? ) '>'
-//  65: PublicID : 'PUBLIC' S PubidLiteral
+//  61: ExternalID : 'SYSTEM' S SystemLiteral  [ExternalID_system]
+//  62: ExternalID : PublicID S SystemLiteral  [ExternalID_public]
+//  63: NDataDecl : S 'NDATA' S Name  [NDataDecl]
+//  64: NotationDecl : '<!NOTATION' S Name S ( ExternalID S? | PublicID S? ) '>'  [NotationDecl]
+//  65: PublicID : 'PUBLIC' S PubidLiteral  [PublicID]
 //  66: ( S ExternalID S? | S? ) : S ExternalID S?
 //  67: ( S ExternalID S? | S? ) : S?
 //  68: S? : <empty>
@@ -266,6 +266,31 @@ inline constexpr uint32_t s_knNonTerminal_PublicID = 35;
 //  64: ( '<![' ignoreSectContents ']]>' Ignore* )*
 //  65: ( ExternalID S? | PublicID S? )
 // The named productions.
+inline constexpr vtyParseProduction s_knProduction_doctypedecl = 3; // doctypedecl : '<!DOCTYPE' S Name ( S ExternalID S? | S? ) ( '[' intSubset ']' S? )? '>'
+inline constexpr vtyParseProduction s_knProduction_DeclSep_PEReference = 4; // DeclSep : PEReference
+inline constexpr vtyParseProduction s_knProduction_elementdecl = 15; // elementdecl : '<!ELEMENT' S Name S contentspec S? '>'
+inline constexpr vtyParseProduction s_knProduction_children = 20; // children : ( choice | seq ) ( '?' | '*' | '+' )?
+inline constexpr vtyParseProduction s_knProduction_cp = 21; // cp : ( Name | choice | seq ) ( '?' | '*' | '+' )?
+inline constexpr vtyParseProduction s_knProduction_choice = 22; // choice : '(' S? cp ( S? '|' S? cp )+ S? ')'
+inline constexpr vtyParseProduction s_knProduction_seq_list = 23; // seq : '(' S? cp ( S? ',' S? cp )+ S? ')'
+inline constexpr vtyParseProduction s_knProduction_seq_single = 24; // seq : '(' S? cp S? ')'
+inline constexpr vtyParseProduction s_knProduction_Mixed_names = 25; // Mixed : '(' S? '#PCDATA' ( S? '|' S? Name )+ S? ')' '*'
+inline constexpr vtyParseProduction s_knProduction_Mixed_pcdata = 26; // Mixed : '(' S? '#PCDATA' S? ')' '*'?
+inline constexpr vtyParseProduction s_knProduction_AttlistDecl = 27; // AttlistDecl : '<!ATTLIST' S Name AttDef* S? '>'
+inline constexpr vtyParseProduction s_knProduction_AttDef = 28; // AttDef : S Name S AttType S DefaultDecl
+inline constexpr vtyParseProduction s_knProduction_NotationType = 42; // NotationType : 'NOTATION' S '(' S? Name ( S? '|' S? Name )* S? ')'
+inline constexpr vtyParseProduction s_knProduction_Enumeration = 43; // Enumeration : '(' S? Nmtoken ( S? '|' S? Nmtoken )* S? ')'
+inline constexpr vtyParseProduction s_knProduction_DefaultDecl_value = 46; // DefaultDecl : ( '#FIXED' S )? AttValue
+inline constexpr vtyParseProduction s_knProduction_GEDecl = 54; // GEDecl : '<!ENTITY' S Name S EntityDef '>'
+inline constexpr vtyParseProduction s_knProduction_PEDecl = 55; // PEDecl : '<!ENTITY' S '%' S Name S PEDef S? '>'
+inline constexpr vtyParseProduction s_knProduction_EntityDef_value = 56; // EntityDef : EntityValue S?
+inline constexpr vtyParseProduction s_knProduction_EntityDef_external = 57; // EntityDef : ExternalID S?
+inline constexpr vtyParseProduction s_knProduction_EntityDef_unparsed = 58; // EntityDef : ExternalID NDataDecl S?
+inline constexpr vtyParseProduction s_knProduction_ExternalID_system = 61; // ExternalID : 'SYSTEM' S SystemLiteral
+inline constexpr vtyParseProduction s_knProduction_ExternalID_public = 62; // ExternalID : PublicID S SystemLiteral
+inline constexpr vtyParseProduction s_knProduction_NDataDecl = 63; // NDataDecl : S 'NDATA' S Name
+inline constexpr vtyParseProduction s_knProduction_NotationDecl = 64; // NotationDecl : '<!NOTATION' S Name S ( ExternalID S? | PublicID S? ) '>'
+inline constexpr vtyParseProduction s_knProduction_PublicID = 65; // PublicID : 'PUBLIC' S PubidLiteral
 // The entries - the non-terminals at which a parse may start: see _parser<>::FParse().
 inline constexpr uint32_t s_knEntries = 3;
 inline constexpr uint32_t s_knEntry_doctypedecl = 0;
@@ -435,8 +460,8 @@ inline constexpr ParseProductionInfo s_rgParseProductions[] = {
   { 0, 2, "", "$accept : $entry:doctypedecl doctypedecl" }, // 0
   { 0, 2, "", "$accept : $entry:extSubset extSubset" }, // 1
   { 0, 2, "", "$accept : $entry:extSubsetDecl extSubsetDecl" }, // 2
-  { 1, 6, "", "doctypedecl : '<!DOCTYPE' S Name ( S ExternalID S\077 | S\077 ) ( '[' intSubset ']' S\077 )\077 '>'" }, // 3
-  { 2, 1, "", "DeclSep : PEReference" }, // 4
+  { 1, 6, "doctypedecl", "doctypedecl : '<!DOCTYPE' S Name ( S ExternalID S\077 | S\077 ) ( '[' intSubset ']' S\077 )\077 '>'" }, // 3
+  { 2, 1, "DeclSep_PEReference", "DeclSep : PEReference" }, // 4
   { 2, 1, "", "DeclSep : S" }, // 5
   { 3, 1, "", "intSubset : ( markupdecl | DeclSep )*" }, // 6
   { 4, 1, "", "markupdecl : elementdecl" }, // 7
@@ -447,20 +472,20 @@ inline constexpr ParseProductionInfo s_rgParseProductions[] = {
   { 4, 1, "", "markupdecl : Comment" }, // 12
   { 5, 2, "", "extSubset : TextDecl\077 extSubsetDecl" }, // 13
   { 6, 1, "", "extSubsetDecl : ( markupdecl | conditionalSect | DeclSep )*" }, // 14
-  { 7, 7, "", "elementdecl : '<!ELEMENT' S Name S contentspec S\077 '>'" }, // 15
+  { 7, 7, "elementdecl", "elementdecl : '<!ELEMENT' S Name S contentspec S\077 '>'" }, // 15
   { 8, 1, "", "contentspec : 'EMPTY'" }, // 16
   { 8, 1, "", "contentspec : 'ANY'" }, // 17
   { 8, 1, "", "contentspec : Mixed" }, // 18
   { 8, 1, "", "contentspec : children" }, // 19
-  { 9, 2, "", "children : ( choice | seq ) ( '\077' | '*' | '+' )\077" }, // 20
-  { 10, 2, "", "cp : ( Name | choice | seq ) ( '\077' | '*' | '+' )\077" }, // 21
-  { 11, 6, "", "choice : '(' S\077 cp ( S\077 '|' S\077 cp )+ S\077 ')'" }, // 22
-  { 12, 6, "", "seq : '(' S\077 cp ( S\077 ',' S\077 cp )+ S\077 ')'" }, // 23
-  { 12, 5, "", "seq : '(' S\077 cp S\077 ')'" }, // 24
-  { 13, 7, "", "Mixed : '(' S\077 '#PCDATA' ( S\077 '|' S\077 Name )+ S\077 ')' '*'" }, // 25
-  { 13, 6, "", "Mixed : '(' S\077 '#PCDATA' S\077 ')' '*'\077" }, // 26
-  { 14, 6, "", "AttlistDecl : '<!ATTLIST' S Name AttDef* S\077 '>'" }, // 27
-  { 15, 6, "", "AttDef : S Name S AttType S DefaultDecl" }, // 28
+  { 9, 2, "children", "children : ( choice | seq ) ( '\077' | '*' | '+' )\077" }, // 20
+  { 10, 2, "cp", "cp : ( Name | choice | seq ) ( '\077' | '*' | '+' )\077" }, // 21
+  { 11, 6, "choice", "choice : '(' S\077 cp ( S\077 '|' S\077 cp )+ S\077 ')'" }, // 22
+  { 12, 6, "seq_list", "seq : '(' S\077 cp ( S\077 ',' S\077 cp )+ S\077 ')'" }, // 23
+  { 12, 5, "seq_single", "seq : '(' S\077 cp S\077 ')'" }, // 24
+  { 13, 7, "Mixed_names", "Mixed : '(' S\077 '#PCDATA' ( S\077 '|' S\077 Name )+ S\077 ')' '*'" }, // 25
+  { 13, 6, "Mixed_pcdata", "Mixed : '(' S\077 '#PCDATA' S\077 ')' '*'\077" }, // 26
+  { 14, 6, "AttlistDecl", "AttlistDecl : '<!ATTLIST' S Name AttDef* S\077 '>'" }, // 27
+  { 15, 6, "AttDef", "AttDef : S Name S AttType S DefaultDecl" }, // 28
   { 16, 1, "", "AttType : StringType" }, // 29
   { 16, 1, "", "AttType : TokenizedType" }, // 30
   { 16, 1, "", "AttType : EnumeratedType" }, // 31
@@ -474,11 +499,11 @@ inline constexpr ParseProductionInfo s_rgParseProductions[] = {
   { 18, 1, "", "TokenizedType : 'NMTOKENS'" }, // 39
   { 19, 1, "", "EnumeratedType : NotationType" }, // 40
   { 19, 1, "", "EnumeratedType : Enumeration" }, // 41
-  { 20, 8, "", "NotationType : 'NOTATION' S '(' S\077 Name ( S\077 '|' S\077 Name )* S\077 ')'" }, // 42
-  { 21, 6, "", "Enumeration : '(' S\077 Nmtoken ( S\077 '|' S\077 Nmtoken )* S\077 ')'" }, // 43
+  { 20, 8, "NotationType", "NotationType : 'NOTATION' S '(' S\077 Name ( S\077 '|' S\077 Name )* S\077 ')'" }, // 42
+  { 21, 6, "Enumeration", "Enumeration : '(' S\077 Nmtoken ( S\077 '|' S\077 Nmtoken )* S\077 ')'" }, // 43
   { 22, 1, "", "DefaultDecl : '#REQUIRED'" }, // 44
   { 22, 1, "", "DefaultDecl : '#IMPLIED'" }, // 45
-  { 22, 2, "", "DefaultDecl : ( '#FIXED' S )\077 AttValue" }, // 46
+  { 22, 2, "DefaultDecl_value", "DefaultDecl : ( '#FIXED' S )\077 AttValue" }, // 46
   { 23, 1, "", "conditionalSect : includeSect" }, // 47
   { 23, 1, "", "conditionalSect : ignoreSect" }, // 48
   { 24, 7, "", "includeSect : '<![' S\077 'INCLUDE' S\077 '[' extSubsetDecl ']]>'" }, // 49
@@ -486,18 +511,18 @@ inline constexpr ParseProductionInfo s_rgParseProductions[] = {
   { 26, 2, "", "ignoreSectContents : Ignore* ( '<![' ignoreSectContents ']]>' Ignore* )*" }, // 51
   { 27, 1, "", "EntityDecl : GEDecl" }, // 52
   { 27, 1, "", "EntityDecl : PEDecl" }, // 53
-  { 28, 6, "", "GEDecl : '<!ENTITY' S Name S EntityDef '>'" }, // 54
-  { 29, 9, "", "PEDecl : '<!ENTITY' S '%' S Name S PEDef S\077 '>'" }, // 55
-  { 30, 2, "", "EntityDef : EntityValue S\077" }, // 56
-  { 30, 2, "", "EntityDef : ExternalID S\077" }, // 57
-  { 30, 3, "", "EntityDef : ExternalID NDataDecl S\077" }, // 58
+  { 28, 6, "GEDecl", "GEDecl : '<!ENTITY' S Name S EntityDef '>'" }, // 54
+  { 29, 9, "PEDecl", "PEDecl : '<!ENTITY' S '%' S Name S PEDef S\077 '>'" }, // 55
+  { 30, 2, "EntityDef_value", "EntityDef : EntityValue S\077" }, // 56
+  { 30, 2, "EntityDef_external", "EntityDef : ExternalID S\077" }, // 57
+  { 30, 3, "EntityDef_unparsed", "EntityDef : ExternalID NDataDecl S\077" }, // 58
   { 31, 1, "", "PEDef : EntityValue" }, // 59
   { 31, 1, "", "PEDef : ExternalID" }, // 60
-  { 32, 3, "", "ExternalID : 'SYSTEM' S SystemLiteral" }, // 61
-  { 32, 3, "", "ExternalID : PublicID S SystemLiteral" }, // 62
-  { 33, 4, "", "NDataDecl : S 'NDATA' S Name" }, // 63
-  { 34, 6, "", "NotationDecl : '<!NOTATION' S Name S ( ExternalID S\077 | PublicID S\077 ) '>'" }, // 64
-  { 35, 3, "", "PublicID : 'PUBLIC' S PubidLiteral" }, // 65
+  { 32, 3, "ExternalID_system", "ExternalID : 'SYSTEM' S SystemLiteral" }, // 61
+  { 32, 3, "ExternalID_public", "ExternalID : PublicID S SystemLiteral" }, // 62
+  { 33, 4, "NDataDecl", "NDataDecl : S 'NDATA' S Name" }, // 63
+  { 34, 6, "NotationDecl", "NotationDecl : '<!NOTATION' S Name S ( ExternalID S\077 | PublicID S\077 ) '>'" }, // 64
+  { 35, 3, "PublicID", "PublicID : 'PUBLIC' S PubidLiteral" }, // 65
   { 36, 3, "", "( S ExternalID S\077 | S\077 ) : S ExternalID S\077", EParseProductionKind::eppkGroup, 0 }, // 66
   { 36, 1, "", "( S ExternalID S\077 | S\077 ) : S\077", EParseProductionKind::eppkGroup, 1 }, // 67
   { 37, 0, "", "S\077 : \316\265", EParseProductionKind::eppkOptionEmpty, 0 }, // 68
@@ -880,6 +905,31 @@ inline constexpr ParseTableView< int32_t, int16_t > s_viewParseTable = {
 
 // _parser_dispatch: Calls the method of the handler for the production which is reduced.
 // The handler has these methods - each returns the value of the non-terminal and has a _TyValue & parameter for each symbol:
+//    _TyValue doctypedecl( _TyValue & /* '<!DOCTYPE' */, _TyValue & /* S */, _TyValue & /* Name */, _TyValue & /* ( S ExternalID S? | S? ) */, _TyValue & /* ( '[' intSubset ']' S? )? */, _TyValue & /* '>' */ )  -  doctypedecl : '<!DOCTYPE' S Name ( S ExternalID S? | S? ) ( '[' intSubset ']' S? )? '>'
+//    _TyValue DeclSep_PEReference( _TyValue & /* PEReference */ )  -  DeclSep : PEReference
+//    _TyValue elementdecl( _TyValue & /* '<!ELEMENT' */, _TyValue & /* S */, _TyValue & /* Name */, _TyValue & /* S */, _TyValue & /* contentspec */, _TyValue & /* S? */, _TyValue & /* '>' */ )  -  elementdecl : '<!ELEMENT' S Name S contentspec S? '>'
+//    _TyValue children( _TyValue & /* ( choice | seq ) */, _TyValue & /* ( '?' | '*' | '+' )? */ )  -  children : ( choice | seq ) ( '?' | '*' | '+' )?
+//    _TyValue cp( _TyValue & /* ( Name | choice | seq ) */, _TyValue & /* ( '?' | '*' | '+' )? */ )  -  cp : ( Name | choice | seq ) ( '?' | '*' | '+' )?
+//    _TyValue choice( _TyValue & /* '(' */, _TyValue & /* S? */, _TyValue & /* cp */, _TyValue & /* ( S? '|' S? cp )+ */, _TyValue & /* S? */, _TyValue & /* ')' */ )  -  choice : '(' S? cp ( S? '|' S? cp )+ S? ')'
+//    _TyValue seq_list( _TyValue & /* '(' */, _TyValue & /* S? */, _TyValue & /* cp */, _TyValue & /* ( S? ',' S? cp )+ */, _TyValue & /* S? */, _TyValue & /* ')' */ )  -  seq : '(' S? cp ( S? ',' S? cp )+ S? ')'
+//    _TyValue seq_single( _TyValue & /* '(' */, _TyValue & /* S? */, _TyValue & /* cp */, _TyValue & /* S? */, _TyValue & /* ')' */ )  -  seq : '(' S? cp S? ')'
+//    _TyValue Mixed_names( _TyValue & /* '(' */, _TyValue & /* S? */, _TyValue & /* '#PCDATA' */, _TyValue & /* ( S? '|' S? Name )+ */, _TyValue & /* S? */, _TyValue & /* ')' */, _TyValue & /* '*' */ )  -  Mixed : '(' S? '#PCDATA' ( S? '|' S? Name )+ S? ')' '*'
+//    _TyValue Mixed_pcdata( _TyValue & /* '(' */, _TyValue & /* S? */, _TyValue & /* '#PCDATA' */, _TyValue & /* S? */, _TyValue & /* ')' */, _TyValue & /* '*'? */ )  -  Mixed : '(' S? '#PCDATA' S? ')' '*'?
+//    _TyValue AttlistDecl( _TyValue & /* '<!ATTLIST' */, _TyValue & /* S */, _TyValue & /* Name */, _TyValue & /* AttDef* */, _TyValue & /* S? */, _TyValue & /* '>' */ )  -  AttlistDecl : '<!ATTLIST' S Name AttDef* S? '>'
+//    _TyValue AttDef( _TyValue & /* S */, _TyValue & /* Name */, _TyValue & /* S */, _TyValue & /* AttType */, _TyValue & /* S */, _TyValue & /* DefaultDecl */ )  -  AttDef : S Name S AttType S DefaultDecl
+//    _TyValue NotationType( _TyValue & /* 'NOTATION' */, _TyValue & /* S */, _TyValue & /* '(' */, _TyValue & /* S? */, _TyValue & /* Name */, _TyValue & /* ( S? '|' S? Name )* */, _TyValue & /* S? */, _TyValue & /* ')' */ )  -  NotationType : 'NOTATION' S '(' S? Name ( S? '|' S? Name )* S? ')'
+//    _TyValue Enumeration( _TyValue & /* '(' */, _TyValue & /* S? */, _TyValue & /* Nmtoken */, _TyValue & /* ( S? '|' S? Nmtoken )* */, _TyValue & /* S? */, _TyValue & /* ')' */ )  -  Enumeration : '(' S? Nmtoken ( S? '|' S? Nmtoken )* S? ')'
+//    _TyValue DefaultDecl_value( _TyValue & /* ( '#FIXED' S )? */, _TyValue & /* AttValue */ )  -  DefaultDecl : ( '#FIXED' S )? AttValue
+//    _TyValue GEDecl( _TyValue & /* '<!ENTITY' */, _TyValue & /* S */, _TyValue & /* Name */, _TyValue & /* S */, _TyValue & /* EntityDef */, _TyValue & /* '>' */ )  -  GEDecl : '<!ENTITY' S Name S EntityDef '>'
+//    _TyValue PEDecl( _TyValue & /* '<!ENTITY' */, _TyValue & /* S */, _TyValue & /* '%' */, _TyValue & /* S */, _TyValue & /* Name */, _TyValue & /* S */, _TyValue & /* PEDef */, _TyValue & /* S? */, _TyValue & /* '>' */ )  -  PEDecl : '<!ENTITY' S '%' S Name S PEDef S? '>'
+//    _TyValue EntityDef_value( _TyValue & /* EntityValue */, _TyValue & /* S? */ )  -  EntityDef : EntityValue S?
+//    _TyValue EntityDef_external( _TyValue & /* ExternalID */, _TyValue & /* S? */ )  -  EntityDef : ExternalID S?
+//    _TyValue EntityDef_unparsed( _TyValue & /* ExternalID */, _TyValue & /* NDataDecl */, _TyValue & /* S? */ )  -  EntityDef : ExternalID NDataDecl S?
+//    _TyValue ExternalID_system( _TyValue & /* 'SYSTEM' */, _TyValue & /* S */, _TyValue & /* SystemLiteral */ )  -  ExternalID : 'SYSTEM' S SystemLiteral
+//    _TyValue ExternalID_public( _TyValue & /* PublicID */, _TyValue & /* S */, _TyValue & /* SystemLiteral */ )  -  ExternalID : PublicID S SystemLiteral
+//    _TyValue NDataDecl( _TyValue & /* S */, _TyValue & /* 'NDATA' */, _TyValue & /* S */, _TyValue & /* Name */ )  -  NDataDecl : S 'NDATA' S Name
+//    _TyValue NotationDecl( _TyValue & /* '<!NOTATION' */, _TyValue & /* S */, _TyValue & /* Name */, _TyValue & /* S */, _TyValue & /* ( ExternalID S? | PublicID S? ) */, _TyValue & /* '>' */ )  -  NotationDecl : '<!NOTATION' S Name S ( ExternalID S? | PublicID S? ) '>'
+//    _TyValue PublicID( _TyValue & /* 'PUBLIC' */, _TyValue & /* S */, _TyValue & /* PubidLiteral */ )  -  PublicID : 'PUBLIC' S PubidLiteral
 //    _TyValue OnReduceDefault( vtyParseProduction, std::span< _TyValue > )  -  for the productions which aren't named.
 //  and for the repetitions, options and groups of the grammar - see _p_parse.h:
 //    _TyValue OnListEmpty(), _TyValue OnListAppend( _TyValue & /* list */, _TyValue & /* element */ ),
@@ -903,9 +953,63 @@ public:
   template < class t_TyValue >
   t_TyValue OnReduce( vtyParseProduction _nProduction, std::span< t_TyValue > _spValues )
   {
-    if ( EParseProductionKind::eppkUser != s_rgParseProductions[ _nProduction ].m_eKind )
-      return ReduceAuxiliaryProduction( m_rhandler, s_rgParseProductions[ _nProduction ], _spValues ); // A repetition, an option or a group.
-    return m_rhandler.OnReduceDefault( _nProduction, _spValues );
+    switch( _nProduction )
+    {
+      case 3: // doctypedecl : '<!DOCTYPE' S Name ( S ExternalID S? | S? ) ( '[' intSubset ']' S? )? '>'
+        return m_rhandler.doctypedecl( _spValues[0], _spValues[1], _spValues[2], _spValues[3], _spValues[4], _spValues[5] );
+      case 4: // DeclSep : PEReference
+        return m_rhandler.DeclSep_PEReference( _spValues[0] );
+      case 15: // elementdecl : '<!ELEMENT' S Name S contentspec S? '>'
+        return m_rhandler.elementdecl( _spValues[0], _spValues[1], _spValues[2], _spValues[3], _spValues[4], _spValues[5], _spValues[6] );
+      case 20: // children : ( choice | seq ) ( '?' | '*' | '+' )?
+        return m_rhandler.children( _spValues[0], _spValues[1] );
+      case 21: // cp : ( Name | choice | seq ) ( '?' | '*' | '+' )?
+        return m_rhandler.cp( _spValues[0], _spValues[1] );
+      case 22: // choice : '(' S? cp ( S? '|' S? cp )+ S? ')'
+        return m_rhandler.choice( _spValues[0], _spValues[1], _spValues[2], _spValues[3], _spValues[4], _spValues[5] );
+      case 23: // seq : '(' S? cp ( S? ',' S? cp )+ S? ')'
+        return m_rhandler.seq_list( _spValues[0], _spValues[1], _spValues[2], _spValues[3], _spValues[4], _spValues[5] );
+      case 24: // seq : '(' S? cp S? ')'
+        return m_rhandler.seq_single( _spValues[0], _spValues[1], _spValues[2], _spValues[3], _spValues[4] );
+      case 25: // Mixed : '(' S? '#PCDATA' ( S? '|' S? Name )+ S? ')' '*'
+        return m_rhandler.Mixed_names( _spValues[0], _spValues[1], _spValues[2], _spValues[3], _spValues[4], _spValues[5], _spValues[6] );
+      case 26: // Mixed : '(' S? '#PCDATA' S? ')' '*'?
+        return m_rhandler.Mixed_pcdata( _spValues[0], _spValues[1], _spValues[2], _spValues[3], _spValues[4], _spValues[5] );
+      case 27: // AttlistDecl : '<!ATTLIST' S Name AttDef* S? '>'
+        return m_rhandler.AttlistDecl( _spValues[0], _spValues[1], _spValues[2], _spValues[3], _spValues[4], _spValues[5] );
+      case 28: // AttDef : S Name S AttType S DefaultDecl
+        return m_rhandler.AttDef( _spValues[0], _spValues[1], _spValues[2], _spValues[3], _spValues[4], _spValues[5] );
+      case 42: // NotationType : 'NOTATION' S '(' S? Name ( S? '|' S? Name )* S? ')'
+        return m_rhandler.NotationType( _spValues[0], _spValues[1], _spValues[2], _spValues[3], _spValues[4], _spValues[5], _spValues[6], _spValues[7] );
+      case 43: // Enumeration : '(' S? Nmtoken ( S? '|' S? Nmtoken )* S? ')'
+        return m_rhandler.Enumeration( _spValues[0], _spValues[1], _spValues[2], _spValues[3], _spValues[4], _spValues[5] );
+      case 46: // DefaultDecl : ( '#FIXED' S )? AttValue
+        return m_rhandler.DefaultDecl_value( _spValues[0], _spValues[1] );
+      case 54: // GEDecl : '<!ENTITY' S Name S EntityDef '>'
+        return m_rhandler.GEDecl( _spValues[0], _spValues[1], _spValues[2], _spValues[3], _spValues[4], _spValues[5] );
+      case 55: // PEDecl : '<!ENTITY' S '%' S Name S PEDef S? '>'
+        return m_rhandler.PEDecl( _spValues[0], _spValues[1], _spValues[2], _spValues[3], _spValues[4], _spValues[5], _spValues[6], _spValues[7], _spValues[8] );
+      case 56: // EntityDef : EntityValue S?
+        return m_rhandler.EntityDef_value( _spValues[0], _spValues[1] );
+      case 57: // EntityDef : ExternalID S?
+        return m_rhandler.EntityDef_external( _spValues[0], _spValues[1] );
+      case 58: // EntityDef : ExternalID NDataDecl S?
+        return m_rhandler.EntityDef_unparsed( _spValues[0], _spValues[1], _spValues[2] );
+      case 61: // ExternalID : 'SYSTEM' S SystemLiteral
+        return m_rhandler.ExternalID_system( _spValues[0], _spValues[1], _spValues[2] );
+      case 62: // ExternalID : PublicID S SystemLiteral
+        return m_rhandler.ExternalID_public( _spValues[0], _spValues[1], _spValues[2] );
+      case 63: // NDataDecl : S 'NDATA' S Name
+        return m_rhandler.NDataDecl( _spValues[0], _spValues[1], _spValues[2], _spValues[3] );
+      case 64: // NotationDecl : '<!NOTATION' S Name S ( ExternalID S? | PublicID S? ) '>'
+        return m_rhandler.NotationDecl( _spValues[0], _spValues[1], _spValues[2], _spValues[3], _spValues[4], _spValues[5] );
+      case 65: // PublicID : 'PUBLIC' S PubidLiteral
+        return m_rhandler.PublicID( _spValues[0], _spValues[1], _spValues[2] );
+      default:
+        if ( EParseProductionKind::eppkUser != s_rgParseProductions[ _nProduction ].m_eKind )
+          return ReduceAuxiliaryProduction( m_rhandler, s_rgParseProductions[ _nProduction ], _spValues ); // A repetition, an option or a group.
+        return m_rhandler.OnReduceDefault( _nProduction, _spValues );
+    }
   }
   template < class t_TyToken >
   void OnSyntaxError( ParseError const & _rerror, const t_TyToken * _ptok )
