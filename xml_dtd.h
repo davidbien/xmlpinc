@@ -317,6 +317,155 @@ public:
         _rmap.emplace( rvt.first, strText );
     }
   }
+// Names and name tokens - [4], [4a], [5], [7]:
+  static bool FIsNameStartChar( char32_t _ch )
+  {
+    return  ( U':' == _ch ) || ( ( _ch >= U'A' ) && ( _ch <= U'Z' ) ) || ( U'_' == _ch ) || ( ( _ch >= U'a' ) && ( _ch <= U'z' ) ) ||
+            ( ( _ch >= 0xC0 ) && ( _ch <= 0xD6 ) ) || ( ( _ch >= 0xD8 ) && ( _ch <= 0xF6 ) ) || ( ( _ch >= 0xF8 ) && ( _ch <= 0x2FF ) ) ||
+            ( ( _ch >= 0x370 ) && ( _ch <= 0x37D ) ) || ( ( _ch >= 0x37F ) && ( _ch <= 0x1FFF ) ) || ( ( _ch >= 0x200C ) && ( _ch <= 0x200D ) ) ||
+            ( ( _ch >= 0x2070 ) && ( _ch <= 0x218F ) ) || ( ( _ch >= 0x2C00 ) && ( _ch <= 0x2FEF ) ) || ( ( _ch >= 0x3001 ) && ( _ch <= 0xD7FF ) ) ||
+            ( ( _ch >= 0xF900 ) && ( _ch <= 0xFDCF ) ) || ( ( _ch >= 0xFDF0 ) && ( _ch <= 0xFFFD ) ) || ( ( _ch >= 0x10000 ) && ( _ch <= 0xEFFFF ) );
+  }
+  static bool FIsNameChar( char32_t _ch )
+  {
+    return  FIsNameStartChar( _ch ) || ( U'-' == _ch ) || ( U'.' == _ch ) || ( ( _ch >= U'0' ) && ( _ch <= U'9' ) ) || ( 0xB7 == _ch ) ||
+            ( ( _ch >= 0x300 ) && ( _ch <= 0x36F ) ) || ( ( _ch >= 0x203F ) && ( _ch <= 0x2040 ) );
+  }
+  // _fName: a Name [5] - which begins as one must - and otherwise an Nmtoken [7].
+  static bool FIsNmtoken( _TyStrView _sv, bool _fName = false )
+  {
+    if ( _sv.empty() )
+      return false;
+    // Most are ASCII: only one which isn't is converted.
+    bool fAscii = true;
+    for ( _TyChar ch : _sv )
+    {
+      if ( (make_unsigned_t< _TyChar >)ch >= 0x80 )
+      {
+        fAscii = false;
+        break;
+      }
+    }
+    if ( fAscii )
+    {
+      if ( _fName && !FIsNameStartChar( char32_t( _sv.front() ) ) )
+        return false;
+      for ( _TyChar ch : _sv )
+        if ( !FIsNameChar( char32_t( ch ) ) )
+          return false;
+      return true;
+    }
+    basic_string< char32_t > str32;
+    ConvertString( str32, _sv );
+    if ( str32.empty() || ( _fName && !FIsNameStartChar( str32.front() ) ) )
+      return false;
+    for ( char32_t ch : str32 )
+      if ( !FIsNameChar( ch ) )
+        return false;
+    return true;
+  }
+  static bool FIsName( _TyStrView _sv )
+  {
+    return FIsNmtoken( _sv, true );
+  }
+  // Whether a normalized value is one or more Names ( or Nmtokens ) with a space between each [6], [8].
+  static bool FAreNmtokens( _TyStrView _sv, bool _fNames = false )
+  {
+    if ( _sv.empty() )
+      return false;
+    for ( ; ; )
+    {
+      const size_t knPosSpace = _sv.find( _TyChar( ' ' ) );
+      if ( !FIsNmtoken( _sv.substr( 0, knPosSpace ), _fNames ) )
+        return false;
+      if ( _TyStrView::npos == knPosSpace )
+        return true;
+      _sv.remove_prefix( knPosSpace + 1 );
+    }
+  }
+
+  // The validity constraints on the declarations which can be checked only once all of the declarations have been read:
+  //  what one of them refers to may be declared after it. What isn't met is added to m_rgstrValidityErrors.
+  //  - VC: ID Attribute Default [56]: an attribute of type ID is declared #IMPLIED or #REQUIRED.
+  //  - VC: One ID per Element Type [56] and VC: One Notation Per Element Type [58].
+  //  - VC: No Notation on Empty Element [58].
+  //  - VC: Notation Attributes [58]: the notations of an attribute of type NOTATION are declared.
+  //  - VC: Attribute Default Value Syntactically Correct [60]: a default value is as the type of its attribute requires.
+  //  - VC: Notation Declared [76]: the notation of an unparsed entity is declared.
+  // xml_dtd_parser calls this at the end of the document type declaration.
+  void CheckDeclarations()
+  {
+    auto lambdaError = [this]( const char * _pszFormat, _TyStrView _svFirst, _TyStrView _svSecond = _TyStrView(), _TyStrView _svThird = _TyStrView() )
+    {
+      // ( An empty view is not given to the conversion: it may have no characters to point to. )
+      auto lambdaNarrow = []( _TyStrView _sv ) { return _sv.empty() ? string() : StrConvertString< char >( _sv ); };
+      string str;
+      PrintfStdStr( str, _pszFormat, lambdaNarrow( _svFirst ).c_str(), lambdaNarrow( _svSecond ).c_str(), lambdaNarrow( _svThird ).c_str() );
+      m_rgstrValidityErrors.push_back( std::move( str ) );
+    };
+    for ( typename _TyMapAttLists::value_type const & rvtAttList : m_mapAttLists )
+    {
+      const _TyStdStr & rstrElement = rvtAttList.first;
+      size_t nIds = 0, nNotations = 0;
+      for ( _TyAttDef const & rad : rvtAttList.second )
+      {
+        if ( exdatID == rad.m_eType )
+        {
+          if ( 2 == ++nIds )
+            lambdaError( "The element type [%s] has more than one attribute of type ID.", rstrElement );
+          if ( ( exdadImplied != rad.m_eDefault ) && ( exdadRequired != rad.m_eDefault ) )
+            lambdaError( "The attribute [%s] of the element type [%s] is of type ID and is not declared #IMPLIED or #REQUIRED.", rad.m_strName, rstrElement );
+        }
+        if ( exdatNOTATION == rad.m_eType )
+        {
+          if ( 2 == ++nNotations )
+            lambdaError( "The element type [%s] has more than one attribute of type NOTATION.", rstrElement );
+          const _TyElement * pElement = PGetElement( rstrElement );
+          if ( !!pElement && ( exdcEmpty == pElement->m_eContent ) )
+            lambdaError( "The attribute [%s] of the element type [%s] is of type NOTATION and the element type is declared EMPTY.", rad.m_strName, rstrElement );
+          for ( _TyStdStr const & rstrNotation : rad.m_rgstrEnumeration )
+            if ( !PGetNotation( rstrNotation ) )
+              lambdaError( "The notation [%s] of the attribute [%s] of the element type [%s] is not declared.", rstrNotation, rad.m_strName, rstrElement );
+        }
+        if ( !rad.m_fHasDefaultValue )
+          continue;
+        // Only what the value must look like: whether what it names is there is asked of a tag which has the value.
+        bool fSyntacticallyCorrect = true;
+        const _TyStrView svValue( rad.m_strDefaultValue );
+        switch( rad.m_eType )
+        {
+          case exdatID:
+          case exdatIDREF:
+          case exdatENTITY:
+            fSyntacticallyCorrect = FIsName( svValue );
+          break;
+          case exdatIDREFS:
+          case exdatENTITIES:
+            fSyntacticallyCorrect = FAreNmtokens( svValue, true );
+          break;
+          case exdatNMTOKEN:
+            fSyntacticallyCorrect = FIsNmtoken( svValue );
+          break;
+          case exdatNMTOKENS:
+            fSyntacticallyCorrect = FAreNmtokens( svValue );
+          break;
+          case exdatNOTATION:
+          case exdatEnumeration:
+            fSyntacticallyCorrect = ( rad.m_rgstrEnumeration.end() != std::find( rad.m_rgstrEnumeration.begin(), rad.m_rgstrEnumeration.end(), rad.m_strDefaultValue ) );
+          break;
+          default:
+          break;
+        }
+        if ( !fSyntacticallyCorrect )
+          lambdaError( "The default value [%s] of the attribute [%s] of the element type [%s] is not as the type of the attribute requires.", svValue, rad.m_strName, rstrElement );
+      }
+    }
+    for ( typename _TyMapEntities::value_type const & rvtEntity : m_mapGeneralEntities )
+    {
+      if ( rvtEntity.second.FIsUnparsed() && !PGetNotation( rvtEntity.second.m_strNotation ) )
+        lambdaError( "The notation [%s] of the unparsed entity [%s] is not declared.", rvtEntity.second.m_strNotation, rvtEntity.first );
+    }
+  }
 protected:
   static bool _FIsName( _TyStrView _sv, const char * _psz )
   {
@@ -622,6 +771,7 @@ public:
   {
     m_fExternal = false;
     _Parse( _rAnalyzer, ns_xmlpdtd::s_knEntry_doctypedecl, unique_ptr< typename t_TyAnalyzer::_TyToken >() );
+    _EndOfDeclarations();
   }
   // The same when the "<!DOCTYPE" has been read already: _rrupTokenDoctype is its token - the lexical analyzer is after it.
   // ( The cursor finds a document type declaration by reading that token. )
@@ -631,6 +781,7 @@ public:
     VerifyThrowSz( !!_rrupTokenDoctype && ( s_knTokenDtdDoctypeBegin == _rrupTokenDoctype->GetTokenId() ), "Not the token which begins a document type declaration." );
     m_fExternal = false;
     _Parse( _rAnalyzer, ns_xmlpdtd::s_knEntry_doctypedecl, std::move( _rrupTokenDoctype ) );
+    _EndOfDeclarations();
   }
   // Parse an external subset [30] - or an external parameter entity [79] - which is in memory.
   void ParseExternalSubset( _TyStrView _svText )
@@ -1201,6 +1352,14 @@ protected:
         at.m_rgstrEnumeration.push_back( std::move( rstrName ) );
     }
     return _TyValue( std::move( at ) );
+  }
+  // The document type declaration has been read: the constraints on the declarations as a whole.
+  // ( Not if some of them were not read: what they refer to may be in what wasn't. And the external subset is not read
+  //  yet: when it is this is to be after it. )
+  void _EndOfDeclarations()
+  {
+    if ( !m_rdtd.m_fStoppedProcessingDeclarations && !m_rdtd.m_optExternalId.has_value() )
+      m_rdtd.CheckDeclarations();
   }
   void _ValidityError( const char * _pszFormat, _TyStdStr const & _rstrName )
   {

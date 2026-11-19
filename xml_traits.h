@@ -38,7 +38,9 @@ public:
   typedef basic_string_view< _TyChar > _TyStrView;
 
   static constexpr bool s_kfSupportDTD = t_kfSupportDTD;
+  // The document is validated against its DTD as it is read: see xml_read_cursor<>::FIsValid() and xml_validate.h.
   static constexpr bool s_kfValidating = t_kfValidating;
+  static_assert( !t_kfValidating || t_kfSupportDTD, "Validation is against the DTD: XML traits which are validating must support the DTD." );
 
 // Declare our lexical analyzer traits:
   typedef xml_user_obj< _TyChar, s_kfSupportDTD > _TyLexUserObj;

@@ -28,6 +28,7 @@
 #include "xml_traits.h"
 #include "xml_parse.h"
 #include "xml_dtd.h"
+#include "xml_validate.h"
 #include "xml_context.h"
 #include "xml_util.h"
 
@@ -336,12 +337,49 @@ public:
   //  so for the tag as one which is written in the tag does.
   bool FHasDtd() const
   {
-    return m_optDtd.has_value();
+    return !!m_upDtd;
   }
   const _TyDtd & GetDtd() const
   {
-    VerifyThrowSz( m_optDtd.has_value(), "The document has no document type declaration - or it hasn't been read yet." );
-    return *m_optDtd;
+    VerifyThrowSz( !!m_upDtd, "The document has no document type declaration - or it hasn't been read yet." );
+    return *m_upDtd;
+  }
+
+// Validation - only when the XML traits are validating ( _TyXmlTraits::s_kfValidating ): the document is checked against
+//  its DTD as it is read - see xml_validate.h for what is checked.
+  // A document which is not valid is still read: what is wrong with it is recorded. Since it is checked as it is read
+  //  these say what is so of as much of it as has been read - all of it once the cursor is beyond the document's element.
+  // And all of it is checked: what the cursor passes over ( FNextTag() from above ) is read as what it stops at is.
+  // FIsValid(): there is a DTD and neither its declarations nor the document violate a validity constraint.
+  bool FIsValid() const
+  {
+    VerifyThrowSz( _TyXmlTraits::s_kfValidating, "The XML traits of this cursor are not validating." );
+    return !!m_upDtd && m_upDtd->m_rgstrValidityErrors.empty() && ( !m_upValidator || m_upValidator->RgErrors().empty() );
+  }
+  // What the document violates - not what the declarations of its DTD do: for those see GetDtd().m_rgstrValidityErrors.
+  vector< string > const & RgValidityErrors() const
+  {
+    VerifyThrowSz( _TyXmlTraits::s_kfValidating, "The XML traits of this cursor are not validating." );
+    static const vector< string > s_rgstrNone;
+    return !m_upValidator ? s_rgstrNone : m_upValidator->RgErrors();
+  }
+  // A violation is thrown as an xml_parse_exception - as an error of well-formedness is - and not recorded.
+  void SetThrowOnValidityError( bool _fThrowOnValidityError = true )
+  {
+    m_fThrowOnValidityError = _fThrowOnValidityError;
+    if ( !!m_upValidator )
+      m_upValidator->SetThrowOnError( _fThrowOnValidityError );
+  }
+  bool FGetThrowOnValidityError() const
+  {
+    return m_fThrowOnValidityError;
+  }
+  // The document refers - in its content - to an entity which is declared and whose replacement text is not read: one
+  //  which has markup or which is external. What such a reference stands for is not validated, so the document is not
+  //  all validated: that nothing is found wrong doesn't say that it is valid.
+  bool FValidationIncomplete() const
+  {
+    return m_fValidationIncomplete;
   }
 
 // State querying:
@@ -630,7 +668,7 @@ public:
       if ( !_FAtTailContext() || ( s_knTokenETag != m_pltokLookahead->GetTokenId() ) )
       {
         // Then we need to get to the point where the above conditions hold.
-        _SkipToEndCurrentContext(); // Skip potentially a ton of XML.
+        _SkipOrReadToEndCurrentContext(); // Skip potentially a ton of XML.
       }
       Assert( _FAtTailContext() && ( s_knTokenETag == m_pltokLookahead->GetTokenId() ) );
       // Process the end tag and then consume it.
@@ -642,7 +680,7 @@ public:
     }
     Assert( s_knTokenXMLDecl == tidCur );
     if ( !_FAtTailContext() )
-      _SkipToEndCurrentContext(); // Skip potentially a ton of XML.
+      _SkipOrReadToEndCurrentContext(); // Skip potentially a ton of XML.
     Assert( _FAtTailContext() );
     Assert( m_lContexts.size() == 1 );
     return false;
@@ -688,6 +726,30 @@ protected:
     VerifyThrowSz( _FGetToken( m_pltokLookahead ) || ( ( tid == s_knTokenETag ) && ( m_lContexts.size() == 2 ) ), _pszMesg );
   }
 
+  // Get to the end of the current context: the lexical analyzer is then at its end tag ( or at the end of the document ).
+  // What is between here and there is skipped - unless the document is being validated: then it is read as it would be
+  //  if the user were moving through it, so that all of it is checked.
+  void _SkipOrReadToEndCurrentContext()
+  {
+    if constexpr ( _TyXmlTraits::s_kfValidating )
+    {
+      const typename _TyListReadContexts::iterator itContext = m_itCurContext;
+      for ( ; ; )
+      {
+        m_itCurContext = std::prev( m_lContexts.end() );
+        while ( FMoveDown() ) // To the first tag which has no sub-tag - reading as we go.
+          ;
+        if ( itContext == m_itCurContext )
+          break; // Nothing is left within it.
+        const typename _TyListReadContexts::iterator itBefore = m_itCurContext;
+        if ( !FNextTag() && ( itBefore == m_itCurContext ) )
+          break; // The end of the document.
+      }
+      m_itCurContext = itContext;
+    }
+    else
+      _SkipToEndCurrentContext();
+  }
   void _SkipToEndCurrentContext()
   {
     Assert( !_FAtTailContext() || ( s_knTokenETag != m_pltokLookahead->GetTokenId() ) );
@@ -789,7 +851,9 @@ protected:
     // Must clear all namespaces, prefixes, URIs, entities and parameter entities.
     m_XMLDeclProperties.clear();
     m_mapNamespaces.clear();
-    m_optDtd.reset();
+    m_upValidator.reset();
+    m_fValidationIncomplete = false;
+    m_upDtd.reset();
   }
   bool _FGetToken( unique_ptr< _TyLexToken > & _rpltok, const _TyStateProto * _pspStart = nullptr )
   {
@@ -805,7 +869,7 @@ protected:
       // That is in the prolog - after the XML declaration and before the first tag - and there may be only one.
       // We read it and what we return for it is a token whose value is its text: s_knTokenDoctypeDecl - which is then
       //  one of the tokens of the prolog as a comment there is.
-      if ( !fGotToken && ( m_pspStartAll == _pspStart ) && !m_fGotFirstTag && !m_lContexts.empty() && !m_optDtd.has_value() )
+      if ( !fGotToken && ( m_pspStartAll == _pspStart ) && !m_fGotFirstTag && !m_lContexts.empty() && !m_upDtd )
         fGotToken = _FReadDoctypeDecl( _rpltok );
     }
     return fGotToken;
@@ -829,14 +893,14 @@ protected:
     }
     if ( s_knTokenDtdDoctypeBegin != pltokDoctype->GetTokenId() )
       THROWXMLPARSEEXCEPTION( "Found markup in the prolog which is neither a document type declaration nor the document's element." );
-    m_optDtd.emplace();
+    m_upDtd = make_unique< _TyDtd >();
     _TyStdStr strDoctypeText;
-    xml_dtd_parser< _TyChar > dtdParser( *m_optDtd );
+    xml_dtd_parser< _TyChar > dtdParser( *m_upDtd );
     dtdParser.SetStandalone( m_XMLDeclProperties.m_fStandalone );
     dtdParser.SetKeepDoctypeText( &strDoctypeText );
     dtdParser.ParseDoctypeDecl( rAnalyzer, std::move( pltokDoctype ) );
     // The entities of the document are those which the DTD declares - with the predefined ones, which are there already.
-    m_optDtd->AddGeneralEntitiesTo( m_pXp->GetUserObj().GetEntityMap() );
+    m_upDtd->AddGeneralEntitiesTo( m_pXp->GetUserObj().GetEntityMap() );
     // The token of the declaration. It was read as many tokens of the DTD so its text is not a piece of the document
     //  which a token of ours refers to: the value is a string.
     _rpltok = make_unique< _TyLexToken >( m_pXp->GetUserObj(), s_knTokenDoctypeDecl );
@@ -889,6 +953,12 @@ protected:
   }
   void _PopContext( _TyOptXmlToken * _popttokRtnSpentTag, bool _fReleaseNamespaces )
   {
+    if constexpr ( _TyXmlTraits::s_kfValidating )
+    {
+      // The end of an element: its content must be all that its content model requires.
+      if ( !!m_upValidator && ( m_lContexts.size() > 1 ) )
+        m_upValidator->EndTag();
+    }
     if ( _popttokRtnSpentTag )
     {
       *_popttokRtnSpentTag = std::move( m_lContexts.back().GetTag() );
@@ -949,9 +1019,12 @@ protected:
         _TyRgDefaultAttrs rgDefaultAttrs;
         if constexpr ( _TyXmlTraits::s_kfSupportDTD )
         {
-          if ( m_optDtd.has_value() && !m_optDtd->m_mapAttLists.empty() )
+          if ( !!m_upDtd && !m_upDtd->m_mapAttLists.empty() )
             _GetDefaultAttributes( *_rpltok, rgDefaultAttrs );
         }
+        // The tag as it is written and the attributes which it has - their values as the declarations make them - are validated.
+        if constexpr ( _TyXmlTraits::s_kfValidating )
+          _ValidateStartTag( *_rpltok );
         if ( m_fUseXMLNamespaces )
           _ProcessNamespaces( *_rpltok );
         else
@@ -1017,6 +1090,7 @@ protected:
     drToken.m_posEnd -= 3; // -->
     // REVIEW:<dbien>: Could strip whitespace off front and rear but...
     _rltok.template emplaceValue< _TyData >( drToken );
+    _ValidateCommentOrProcessingInstruction();
     _AppendContextContent( _rltok );
   }
   void _ProcessProcessingInstruction( _TyLexToken & _rltok )
@@ -1034,6 +1108,7 @@ protected:
       _rltok.GetTokenDataRange( drToken );
       _rltok[vknProcessingInstruction_MeatIdx].template emplaceArgs< _TyData >( posMeatBegin, drToken.end()-2, s_kdtPlainText, s_knTriggerPITargetMeatBegin ); // subtract "?>".
     }
+    _ValidateCommentOrProcessingInstruction();
     _AppendContextContent( _rltok );
   }
   void _ProcessCDataSection( _TyLexToken & _rltok )
@@ -1044,6 +1119,11 @@ protected:
     drToken.m_posBegin += 9; // <![CDATA[
     drToken.m_posEnd -= 3; // ]]>
     _rltok.template emplaceValue< _TyData >( drToken );
+    if constexpr ( _TyXmlTraits::s_kfValidating )
+    {
+      if ( !!m_upValidator )
+        m_upValidator->CharacterData( false ); // A CDATA section is not white space among elements whatever is in it.
+    }
     _AppendContextContent( _rltok );
   }
   void _ProcessCharData( _TyLexToken & _rltok )
@@ -1062,6 +1142,12 @@ protected:
         fError = ( svData.length() != StrSpn( &svData[0], svData.length(), (const _TyChar *)str_array_cast<_TyChar>( STR_XML_WHITESPACE_TOKEN ) ) );
       }
       VerifyThrowSz( !fError, "Found non-whitespace CharData before first tag declaration." );
+    }
+    else
+    if constexpr ( _TyXmlTraits::s_kfValidating )
+    {
+      if ( !!m_upValidator )
+        m_upValidator->CharacterData( _FIsWhiteSpaceCharData( _rltok ) );
     }
     _AppendContextContent( _rltok ); // Push on current context.
   }
@@ -1252,7 +1338,7 @@ protected:
   void _GetDefaultAttributes( _TyLexToken & _rltok, _TyRgDefaultAttrs & _rrgDefaultAttrs )
   {
     const _TyLexValue & krvalTag = _rltok.GetValue();
-    const vector< xml_dtd_attdef< _TyChar > > * prgAttDefs = m_optDtd->PGetAttList( _SvNameAsWritten( _rltok, krvalTag[vknTagNameIdx] ) );
+    const vector< xml_dtd_attdef< _TyChar > > * prgAttDefs = m_upDtd->PGetAttList( _SvNameAsWritten( _rltok, krvalTag[vknTagNameIdx] ) );
     if ( !prgAttDefs )
       return;
     const _TyLexValue & krrgAttrs = krvalTag[vknAttributesIdx];
@@ -1345,6 +1431,94 @@ protected:
     if ( !!nNamespaceDecls )
       _rltok[vknTagNameIdx][vknTagName_NNamespaceDeclsIdx].template GetVal< vtySignedLvalueInt >() += nNamespaceDecls; // So that they are undeclared with the tag.
   }
+// Validation - see FIsValid():
+  // Tell the validator of the tag. This is called before the names of the token are processed - the DTD knows the names as
+  //  they are written - and after the values of the attributes whose declared type is not CDATA have been flagged.
+  void _ValidateStartTag( _TyLexToken & _rltok )
+  {
+    if ( !m_upValidator )
+    {
+      m_upValidator = make_unique< _TyValidator >( m_upDtd.get() );
+      m_upValidator->SetThrowOnError( m_fThrowOnValidityError );
+    }
+    const _TyLexValue & krvalTag = _rltok.GetValue();
+    const _TyLexValue & krrgAttrs = krvalTag[vknAttributesIdx];
+    const size_t knAttrs = krrgAttrs.GetSize();
+    // The values: a view of the document where the value is one piece of it as it is and otherwise a string.
+    if ( m_rgstrValidateValues.size() < knAttrs )
+      m_rgstrValidateValues.resize( knAttrs );
+    m_rgValidateAttrs.resize( knAttrs );
+    for ( size_t nAttr = 0; nAttr < knAttrs; ++nAttr )
+    {
+      xml_validate_attr< _TyChar > & rattr = m_rgValidateAttrs[nAttr];
+      rattr.m_svName = _SvNameAsWritten( _rltok, krrgAttrs[nAttr] );
+      rattr.m_svValue = _TyStrView();
+      const _TyLexValue & krvalValue = krrgAttrs[nAttr][vknAttr_ValueIdx];
+      if ( !krvalValue.FEmptyTypedData() )
+      {
+        m_rgstrValidateValues[nAttr].clear();
+        (void)_rltok.FGetStringViewOrString( rattr.m_svValue, m_rgstrValidateValues[nAttr], krvalValue );
+      }
+    }
+    m_upValidator->StartTag( _SvNameAsWritten( _rltok, krvalTag[vknTagNameIdx] ), m_rgValidateAttrs.data(), m_rgValidateAttrs.data() + knAttrs );
+  }
+  void _ValidateCommentOrProcessingInstruction()
+  {
+    if constexpr ( _TyXmlTraits::s_kfValidating )
+    {
+      if ( !!m_upValidator && FInsideDocumentTag() )
+        m_upValidator->CommentOrProcessingInstruction();
+    }
+  }
+  // Whether character data is white space which matches S [3] - which is all that may be among the elements of an element
+  //  with element content ( 3.2.1 ): white space written as itself, or a reference to an entity whose text is that. A
+  //  reference to a character is not, whatever the character.
+  // If the character data refers to an entity whose text is not read then nothing is said of what that stands for:
+  //  see FValidationIncomplete().
+  bool _FIsWhiteSpaceCharData( _TyLexToken const & _rltok )
+  {
+    const _TyLexValue & krval = _rltok.GetValue();
+    if ( !krval.FHasTypedData() )
+      return false;
+    bool fWhiteSpace = true;
+    krval.template GetVal< _TyData >().Apply(
+      [this,&_rltok,&fWhiteSpace]( const _l_data_typed_range * _pdtrBegin, const _l_data_typed_range * const _pdtrEnd )
+      {
+        for ( ; fWhiteSpace && ( _pdtrEnd != _pdtrBegin ); ++_pdtrBegin )
+        {
+          if ( _pdtrBegin->FIsNull() )
+            continue;
+          _TyStrView sv;
+          _rltok.KGetStringView( sv, _pdtrBegin->GetRangeBase() );
+          switch( DtGetType( _pdtrBegin->type() ) )
+          {
+            case s_kdtPlainText:
+            break;
+            case s_kdtEntityRef:
+            {
+              auto const & rmapEntities = m_pXp->GetUserObj().GetEntityMap();
+              auto citEntity = rmapEntities.find( sv );
+              if ( rmapEntities.end() == citEntity )
+              {
+                if ( !!m_upDtd && !!m_upDtd->PGetGeneralEntity( sv ) )
+                  m_fValidationIncomplete = true; // Declared, and we don't have its text: as if the reference were not there.
+                else
+                  fWhiteSpace = false;
+                continue;
+              }
+              sv = citEntity->second;
+            }
+            break;
+            default:
+              fWhiteSpace = false;
+            continue;
+          }
+          fWhiteSpace = ( sv.length() == StrSpn( sv.data(), sv.length(), (const _TyChar *)str_array_cast<_TyChar>( STR_XML_WHITESPACE_TOKEN ) ) );
+        }
+      }
+    );
+    return fWhiteSpace;
+  }
   void _UpdateSkip()
   {
     if ( !m_fUpdateSkip )
@@ -1395,7 +1569,15 @@ protected:
   bool m_fSkipPI{false};
   _TyXMLDeclProperties m_XMLDeclProperties;
   // What the document type declaration declares - if the XML traits support the DTD and the document has one.
-  optional< _TyDtd > m_optDtd;
+  // Not within this object: the validator - and the values which the DTD gives attributes - refer to it, and we may be moved.
+  unique_ptr< _TyDtd > m_upDtd;
+  // Validation - see FIsValid(). The validator is made when the first tag is read: by then the DTD has been read if there is one.
+  typedef xml_validator< _TyChar > _TyValidator;
+  unique_ptr< _TyValidator > m_upValidator;
+  vector< xml_validate_attr< _TyChar > > m_rgValidateAttrs; // The attributes of a tag as the validator is given them.
+  vector< _TyStdStr > m_rgstrValidateValues; // Their values where a value is not a piece of the document as it is.
+  bool m_fThrowOnValidityError{ false };
+  bool m_fValidationIncomplete{ false };
 };
 
 // xml_read_cursor_var:
