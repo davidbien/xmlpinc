@@ -172,7 +172,7 @@ public:
   }
   bool FIsProcessingInstruction() const
   {
-    return s_knTokenComment == m_tokToken.GetTokenId();
+    return s_knTokenProcessingInstruction == m_tokToken.GetTokenId();
   }
   template< class t_TyStrView >
   void KGetStringView( _TyLexValue const & _rval, t_TyStrView & _rsv ) const

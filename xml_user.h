@@ -473,6 +473,15 @@ public:
     _rsvDest = t_TyStringView( (const typename t_TyStringView::value_type*)&_rstrDest[0], _rstrDest.length() );;
     return false;
   }
+  // A view in another character type without changing the value: there is nowhere to keep the converted string.
+  // This is here so that KGetStringView() compiles for every type of view - the value may hold a string of that
+  //  character type instead of positions, and then there is a view of it. It throws if it is reached.
+  template < class t_TyStringView, class t_TyToken, class t_TyTransportCtxt >
+  void KGetStringView( t_TyStringView & /* _rsvDest */, t_TyTransportCtxt & /* _rcxt */, t_TyToken const & /* _rtok */, typename t_TyToken::_TyValue const & /* _rval */ ) const
+    requires ( ( sizeof( typename t_TyStringView::value_type ) != sizeof( _TyChar ) ) && !TFIsTransportVarCtxt_v< t_TyTransportCtxt > )
+  {
+    THROWNAMEDBADVARIANTACCESSEXCEPTION("Can't get a constant string view of a character type not matching the character type of the parser - use GetStringView() or FGetStringViewOrString().");
+  }
 // var transport:
   template < class t_TyStringView, class t_TyToken, class t_TyTransportCtxt >
   void GetStringView( t_TyStringView & _rsvDest, t_TyTransportCtxt & _rcxt, t_TyToken & _rtok, typename t_TyToken::_TyValue & _rval ) const
@@ -514,7 +523,7 @@ public:
     return visit(_VisitHelpOverloadFCall {
       [this,&_rsvDest,&_rstrDest,&_rtok,&_rval]( auto & _rcxtTransport )
       {
-        FGetStringViewOrString( _rsvDest, _rstrDest, _rcxtTransport, _rtok, _rval );
+        return FGetStringViewOrString( _rsvDest, _rstrDest, _rcxtTransport, _rtok, _rval );
       }
     }, _rcxt.GetVariant() );
   }
