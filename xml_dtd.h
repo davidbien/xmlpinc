@@ -811,6 +811,12 @@ public:
   {
     m_fStandalone = _fStandalone;
   }
+  // The document is read with Namespaces in XML: then the name of an entity or of a notation and the target of a
+  //  processing instruction have no colon - a document which has one is not namespace-well-formed, which is an error.
+  void SetUseXMLNamespaces( bool _fUseXMLNamespaces )
+  {
+    m_fUseXMLNamespaces = _fUseXMLNamespaces;
+  }
   // Keep the text of the document type declaration as it is read by ParseDoctypeDecl(): each of its tokens - white space,
   //  comments and all - is added to *_pstrText as the parser takes it, so afterwards that is the declaration from its
   //  "<!DOCTYPE" through its '>' just as it was. ( Not what is read within it from elsewhere: the replacement text of
@@ -870,6 +876,13 @@ public:
       *m_pstrDoctypeText += _SvTokenText( *_rrupToken ); // See SetKeepDoctypeText().
     _TyValueToken vtok;
     vtok.m_tid = _rrupToken->GetTokenId();
+    if ( m_fUseXMLNamespaces && ( s_knTokenProcessingInstruction == vtok.m_tid ) )
+    {
+      // "<?" and the target: up to white space or the "?>".
+      const _TyStrView svPI = _SvTokenText( *_rrupToken );
+      const size_t knPosEndTarget = svPI.find_first_of( str_array_cast< _TyChar >( " \t\r\n?" ), 2 );
+      _CheckNoColon( svPI.substr( 2, ( _TyStrView::npos == knPosEndTarget ) ? _TyStrView::npos : ( knPosEndTarget - 2 ) ), "the target of a processing instruction" );
+    }
     switch( vtok.m_tid )
     {
       case s_knTokenDtdName:
@@ -1207,6 +1220,7 @@ public:
   {
     _TyNotation notation;
     notation.m_strName = std::move( _rvName.StrToken() );
+    _CheckNoColon( notation.m_strName, "the name of a notation" );
     notation.m_externalId = std::move( _rvId[0].template Get< _TyExternalId >() );
     if ( m_rdtd.m_mapNotations.contains( notation.m_strName ) )
       _ValidityError( "Notation [%s] is declared more than once.", notation.m_strName ); // VC: Unique Notation Name.
@@ -1672,8 +1686,15 @@ protected:
     m_rdtd.m_fStoppedProcessingDeclarations = true;
   }
   // The first declaration of an entity binds ( 4.2 ).
+  // Namespaces in XML: no colon in the name of an entity or of a notation or in the target of a processing instruction.
+  void _CheckNoColon( _TyStrView _svName, const char * _pszWhat ) const
+  {
+    if ( m_fUseXMLNamespaces && ( _TyStrView::npos != _svName.find( _TyChar( ':' ) ) ) )
+      THROWXMLPARSEEXCEPTION( "The document is not namespace-well-formed: [%s] is %s and has a colon.", StrConvertString< char >( _svName ).c_str(), _pszWhat );
+  }
   void _DeclareEntity( typename _TyDtd::_TyMapEntities & _rmap, _TyEntity & _rentity )
   {
+    _CheckNoColon( _rentity.m_strName, "the name of an entity" );
     if ( m_rdtd.m_fStoppedProcessingDeclarations || _rmap.contains( _rentity.m_strName ) )
       return;
     _rentity.m_fDeclaredExternally = m_fExternal || !!m_nParameterEntityDepth;
@@ -1821,6 +1842,7 @@ protected:
 
   _TyDtd & m_rdtd;
   bool m_fStandalone{ false }; // The document is declared to be standalone.
+  bool m_fUseXMLNamespaces{ false }; // See SetUseXMLNamespaces().
   bool m_fExternal{ false }; // Parsing the external subset or an external parameter entity.
   size_t m_nParameterEntityDepth{ 0 }; // Within the replacement text of this many parameter entities.
   _TyStdStr * m_pstrDoctypeText{ nullptr }; // See SetKeepDoctypeText().

@@ -106,6 +106,23 @@ public:
     m_strFileName.swap( _r.m_strFileName );
     m_resolverExternalEntities.swap( _r.m_resolverExternalEntities );
     m_strBaseLocation.swap( _r.m_strBaseLocation );
+    std::swap( m_fUseXMLNamespaces, _r.m_fUseXMLNamespaces );
+  }
+
+// Namespaces in XML: whether the document is read as one which uses them - which is so unless this says not.
+//  - With them the names of tags and of attributes are qualified names: a prefix is that of a namespace which is
+//    declared, an attribute "xmlns" or "xmlns:prefix" declares one - and a document which is not namespace-well-formed
+//    is an error as one which is not well formed is: see xml_read_cursor<>.
+//  - Without them the document is one of XML 1.0 alone: a name is any Name [5] - a colon is a character of it as any
+//    other - and an attribute "xmlns" is an attribute as any other.
+// This is to be set before the document is opened.
+  void SetUseXMLNamespaces( bool _fUseXMLNamespaces = true )
+  {
+    m_fUseXMLNamespaces = _fUseXMLNamespaces;
+  }
+  bool FUseXMLNamespaces() const
+  {
+    return m_fUseXMLNamespaces;
   }
 
 // External entities - with XML traits which support the DTD: the external subset of the DTD and its external parameter
@@ -461,6 +478,7 @@ protected:
   string m_strFileName; // Record this because it doesn't cost much - it may be enpty.
   _TyExternalEntityResolver m_resolverExternalEntities; // See SetExternalEntityResolver().
   _TyStdStr m_strBaseLocation; // See SetBaseLocation().
+  bool m_fUseXMLNamespaces{ true }; // See SetUseXMLNamespaces().
 };
 
 // The implementation currently assumes that if you are using a xml_parser_var with three character types and sharing the switch-endian stuff as below as in _xml_var_get_var_transport.
@@ -541,6 +559,15 @@ public:
   {
     m_strBaseLocation = _svBaseLocation;
   }
+  // Namespaces in XML - see xml_parser<>::SetUseXMLNamespaces(): to be set before the document is opened.
+  void SetUseXMLNamespaces( bool _fUseXMLNamespaces = true )
+  {
+    m_fUseXMLNamespaces = _fUseXMLNamespaces;
+  }
+  bool FUseXMLNamespaces() const
+  {
+    return m_fUseXMLNamespaces;
+  }
   // This will open the file with transport t_tempTyTransport<>
   _TyReadCursorVar OpenFile( const char * _pszFileName )
     requires( !s_kfIsVariantTransport )
@@ -592,6 +619,7 @@ protected:
   void _InitExternalEntities( t_TyParser & _rParser )
   {
     typedef typename t_TyParser::_TyChar _TyCharParser;
+    _rParser.SetUseXMLNamespaces( m_fUseXMLNamespaces );
     xml_external_entity_resolver< _TyCharParser > const & rresolver = std::get< xml_external_entity_resolver< _TyCharParser > >( m_tpResolvers );
     if ( !!rresolver )
       _rParser.SetExternalEntityResolver( rresolver );
@@ -914,6 +942,7 @@ protected:
   _TyParserVariant m_varParser;
   // See SetReadExternalEntityFiles(), SetExternalEntityResolver() and SetBaseLocation().
   bool m_fReadExternalEntityFiles{ false };
+  bool m_fUseXMLNamespaces{ true };
   tuple< xml_external_entity_resolver< char8_t >, xml_external_entity_resolver< char16_t >, xml_external_entity_resolver< char32_t > > m_tpResolvers;
   string m_strBaseLocation;
 };

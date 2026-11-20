@@ -249,6 +249,12 @@ public:
   {
     m_fStandalone = _fStandalone;
   }
+  // The document is read with Namespaces in XML: then it is to be namespace-valid as well - the value of an attribute
+  //  whose declared type is ID, IDREF(S), ENTITY(IES) or NOTATION has no colon.
+  void SetUseXMLNamespaces( bool _fUseXMLNamespaces = true )
+  {
+    m_fUseXMLNamespaces = _fUseXMLNamespaces;
+  }
   bool FGetStandalone() const
   {
     return m_fStandalone;
@@ -595,6 +601,22 @@ protected:
         Assert( false );
       break;
     }
+    if ( !pszWhat && m_fUseXMLNamespaces && ( _TyStrView::npos != _svValue.find( _TyChar( ':' ) ) ) )
+    {
+      switch( _rad.m_eType )
+      {
+        case exdatID:
+        case exdatIDREF:
+        case exdatIDREFS:
+        case exdatENTITY:
+        case exdatENTITIES:
+        case exdatNOTATION:
+          pszWhat = "without a colon - which the value of an attribute of its type is to be for the document to be namespace-valid";
+        break;
+        default:
+        break;
+      }
+    }
     if ( pszWhat )
       _Error( "The value [%s] of the attribute [%s] of the element <%s> is not %s.", _StrName( _svValue ).c_str(), _StrName( _rad.m_strName ).c_str(),
               _StrName( _svElement ).c_str(), pszWhat );
@@ -632,6 +654,7 @@ protected:
   vector< string > m_rgstrErrors;
   bool m_fThrowOnError{ false };
   bool m_fStandalone{ false };
+  bool m_fUseXMLNamespaces{ false };
   bool m_fDocumentElementEnded{ false };
 };
 

@@ -784,6 +784,7 @@ protected:
       else
       if ( s_knTokenSTag == m_pltokLookahead->GetTokenId() ) // We just skip empty element tags entirely.
       {
+        _CheckName( *m_pltokLookahead, (*m_pltokLookahead)[vknTagNameIdx] );
         _ProcessTagName( (*m_pltokLookahead)[vknTagNameIdx] );
         _PushNewContext( *m_pltokLookahead );
       }
@@ -827,6 +828,7 @@ protected:
       _DetachXmlParser();
     _InitStartStates();
     m_pXp = _pXp;
+    m_fUseXMLNamespaces = m_pXp->FUseXMLNamespaces(); // As whoever opened the document said.
     m_pXp->_InitMapsAndUserObj();
     _InitNamespaceMap();
     m_pXp->_SetFilterWhitespaceCharData( _FLexFiltersWhitespaceCharData() );
@@ -1194,6 +1196,7 @@ protected:
     xml_dtd_parser< _TyChar > dtdParser( *m_spDtd );
     // Standalone only if the XML declaration says so: m_fStandalone is true as well when it says nothing.
     dtdParser.SetStandalone( m_XMLDeclProperties.m_fHasStandalone && m_XMLDeclProperties.m_fStandalone );
+    dtdParser.SetUseXMLNamespaces( m_fUseXMLNamespaces );
     dtdParser.SetKeepDoctypeText( &strDoctypeText );
     // The external subset and the external parameter entities are read if the parser has been given the means.
     if ( !!m_pXp->GetExternalEntityResolver() )
@@ -1335,6 +1338,7 @@ protected:
         // The attributes which the tag doesn't have and which the DTD gives a default value: found before the names of
         //  the tag are processed below - and those which declare a namespace declare it now so that it is there for them.
         // And the values of the attributes which the tag has and whose declared type is not CDATA are flagged as such.
+        _CheckNamesOfTag( *_rpltok ); // First: the names are then what was written - and qualified names if they are to be.
         _TyRgDefaultAttrs rgDefaultAttrs;
         if constexpr ( _TyXmlTraits::s_kfSupportDTD )
         {
@@ -1386,6 +1390,7 @@ protected:
   {
     VerifyThrowSz( FInsideDocumentTag(), "Found end tag before first tag declaration." );
     _TyLexValue & rvalTagEnd = _rltok.GetValue();
+    _CheckName( _rltok, rvalTagEnd ); // It is the name of its start tag: checked as that was - and all of it as that is.
     _ProcessTagName( rvalTagEnd ); // No need to process namespaces on the end tag - just the name itself.
     const _TyXmlToken & rxtTagStart = m_lContexts.back().GetTag();
     Assert( rxtTagStart.FIsTag() );
@@ -1423,6 +1428,18 @@ protected:
   void _ProcessProcessingInstruction( _TyLexToken & _rltok )
   {
     _ValidateCommentOrProcessingInstruction();
+    if ( m_fUseXMLNamespaces )
+    {
+      // Namespaces in XML, 6: the target of a processing instruction has no colon.
+      const _TyLexValue & krvalTarget = _rltok[vknProcessingInstruction_PITargetIdx];
+      if ( krvalTarget.FHasTypedData() && !krvalTarget.template GetVal< _TyData >().FIsNull() )
+      {
+        _TyStrView svTarget;
+        _rltok.KGetStringView( svTarget, krvalTarget.template GetVal< _TyData >().DataRangeGetSingle().GetRangeBase() );
+        if ( _TyStrView::npos != svTarget.find( _TyChar( ':' ) ) )
+          THROWXMLPARSEEXCEPTION( "The document is not namespace-well-formed: the target [%s] of a processing instruction has a colon.", StrConvertString< char >( svTarget ).c_str() );
+      }
+    }
     // We may have some "meat" after the PITarget - or not.
     vtyDataPosition posMeatBegin = _rltok[vknProcessingInstruction_MeatIdx].template GetVal< vtyDataPosition >();
     if ( vkdpNullDataPosition == posMeatBegin )
@@ -1619,6 +1636,76 @@ protected:
       );
     }
   }
+// The names of tags and of attributes as the lexical analyzer has them - see QName in the generators ( xmlpgen_utf8.cpp, etc. ):
+  // The name is any Name [5] of XML in two pieces: the first - at vknNameIdx - is the name up to its first colon which
+  //  is not its first character and the second - at vknNamespaceIdx - is what is after that colon. A name which ends
+  //  with that colon has no second piece - as a name which has no such colon: we look at the character after the first
+  //  piece - the token has one - and the colon is then of the first piece from here, so that the pieces are all of
+  //  the name as it is written.
+  // With namespaces the name is to be a QName [7] of Namespaces in XML - an NCName [4], or two of them with a colon
+  //  between: the first piece doesn't begin with a colon, the name doesn't end with one and the second piece - if
+  //  there is one - is an NCName: it has no colon and begins as a name does. A name which isn't is an error: the
+  //  document is not namespace-well-formed. Without namespaces every Name is a name.
+  // This is called before anything else is done with the name.
+  void _CheckName( _TyLexToken const & _rltok, _TyLexValue & _rrgvalName )
+  {
+    _l_data_typed_range & rdtrFirst = _rrgvalName[vknNameIdx].template GetVal< _TyData >().DataRangeGetSingle();
+    _TyData const & krdtSecond = _rrgvalName[vknNamespaceIdx].template GetVal< _TyData >();
+    bool fQName = true;
+    if ( krdtSecond.FIsNull() )
+    {
+      _TyStrView svAfter;
+      _rltok.KGetStringView( svAfter, _l_data_range( rdtrFirst.end(), rdtrFirst.end() + 1 ) );
+      if ( !svAfter.empty() && ( _TyChar( ':' ) == svAfter.front() ) )
+      {
+        rdtrFirst.m_posEnd += 1;
+        fQName = false;
+      }
+    }
+    if ( !m_fUseXMLNamespaces )
+      return;
+    if ( fQName )
+    {
+      _TyStrView svFirst;
+      _rltok.KGetStringView( svFirst, rdtrFirst.GetRangeBase() );
+      fQName = ( _TyChar( ':' ) != svFirst.front() );
+      if ( fQName && !krdtSecond.FIsNull() )
+      {
+        _TyStrView svSecond;
+        _rltok.KGetStringView( svSecond, krdtSecond.DataRangeGetSingle().GetRangeBase() );
+        fQName = ( _TyStrView::npos == svSecond.find( _TyChar( ':' ) ) ) && _TyDtd::FIsName( svSecond );
+      }
+    }
+    if ( !fQName )
+      THROWXMLPARSEEXCEPTION( "The document is not namespace-well-formed: the name [%s] is not a qualified name - it has a colon where one may not be.",
+        StrConvertString< char >( _SvNameAsWritten( _rltok, _rrgvalName ) ).c_str() );
+  }
+  // The name of the tag and those of its attributes.
+  void _CheckNamesOfTag( _TyLexToken & _rltok )
+  {
+    _CheckName( _rltok, _rltok[vknTagNameIdx] );
+    _TyLexValue & rrgAttrs = _rltok[vknAttributesIdx];
+    const size_t knAttrs = rrgAttrs.GetSize();
+    for ( size_t nAttr = 0; nAttr < knAttrs; ++nAttr )
+      _CheckName( _rltok, rrgAttrs[nAttr] );
+  }
+  // Namespaces in XML, 3: the prefix xml is bound to its namespace name and to no other - and no other prefix is bound
+  //  to that; the prefix xmlns is not declared and nothing is bound to its namespace name. _rsvPrefix is empty for a
+  //  declaration of the default namespace.
+  void _CheckReservedNamespace( _TyStrView const & _rsvPrefix, _TyStrView const & _rsvUri ) const
+  {
+    const _TyStrView svXmlUri( str_array_cast< _TyChar >( "http://www.w3.org/XML/1998/namespace" ) );
+    const _TyStrView svXmlnsUri( str_array_cast< _TyChar >( "http://www.w3.org/2000/xmlns/" ) );
+    if ( _rsvPrefix == _TyStrView( str_array_cast< _TyChar >( "xmlns" ) ) )
+      THROWXMLPARSEEXCEPTION( "The document is not namespace-well-formed: the prefix xmlns is declared." );
+    if ( _rsvUri == svXmlnsUri )
+      THROWXMLPARSEEXCEPTION( "The document is not namespace-well-formed: the namespace name of the prefix xmlns is bound to [%s].",
+        _rsvPrefix.empty() ? "the default namespace" : StrConvertString< char >( _rsvPrefix ).c_str() );
+    const bool kfXmlPrefix = ( _rsvPrefix == _TyStrView( str_array_cast< _TyChar >( "xml" ) ) );
+    if ( kfXmlPrefix != ( _rsvUri == svXmlUri ) )
+      THROWXMLPARSEEXCEPTION( kfXmlPrefix ? "The document is not namespace-well-formed: the prefix xml is bound to a namespace name which is not its own."
+                                          : "The document is not namespace-well-formed: the namespace name of the prefix xml is bound to something else." );
+  }
   void _ProcessTagName( _TyLexValue & _rrgvalName )
   {
     // Tag names must match literally between start and end tags.
@@ -1667,8 +1754,12 @@ protected:
         // Check for uniqueness of prefix:
         VerifyThrowSz( !lPrefixesUsed.FFind( &rvtPrefix ), "Namespaces Validity: Cannot use same namespace prefix more than once within the same tag." );
         ALLOCA_LIST_PUSH( lPrefixesUsed, &rvtPrefix );
+        // The namespace name is the value of the attribute - as any value: what its references stand for and normalized.
         _TyStrView svUri;
-        rrgAttr[vknAttr_ValueIdx].KGetStringView( _rltok, svUri );
+        _TyStdStr strUri;
+        if ( !rrgAttr[vknAttr_ValueIdx].FEmptyTypedData() )
+          (void)_rltok.FGetStringViewOrString( svUri, strUri, rrgAttr[vknAttr_ValueIdx] );
+        _CheckReservedNamespace( svPrefix, svUri );
         _ProcessTagName( rrgAttr ); // For xmlns attr names we process the same as we process the tag name. We want to leave both "xmlns" and any colon and prefix in the attr name.
         // Add the (prefix,uri) pair and put a _TyXmlNamespaceValueWrap in the _l_value to track its lifetime:
         _TyXmlNamespaceValueWrap & rnsvwNew = rrgAttr[vknNamespaceIdx].emplaceVal( m_mapNamespaces.GetNamespaceValueWrap( *m_pXp, enrtAttrNamespaceDeclReference, svPrefix, svUri ) );
@@ -1854,6 +1945,7 @@ protected:
         {
           _TyStrView svPrefix = ( svName.length() == knLenXmlns ) ? _TyStrView() : svName.substr( knLenXmlns + 1 );
           _TyStrView svUri( rad.m_strDefaultValue );
+          _CheckReservedNamespace( svPrefix, svUri );
           rda.m_xnvwNamespaceDecl = m_mapNamespaces.GetNamespaceValueWrap( *m_pXp, enrtAttrNamespaceDeclReference, svPrefix, svUri );
           rda.m_fNamespaceDecl = true;
         }
@@ -1909,6 +2001,7 @@ protected:
       m_upValidator = make_unique< _TyValidator >( m_spDtd.get() );
       m_upValidator->SetThrowOnError( m_fThrowOnValidityError );
       m_upValidator->SetStandalone( m_XMLDeclProperties.m_fHasStandalone && m_XMLDeclProperties.m_fStandalone && !!m_spDtd );
+      m_upValidator->SetUseXMLNamespaces( m_fUseXMLNamespaces );
     }
     const _TyLexValue & krvalTag = _rltok.GetValue();
     const _TyLexValue & krrgAttrs = krvalTag[vknAttributesIdx];
@@ -2248,6 +2341,15 @@ public:
       []( auto & _tCursor ) -> bool
       {
         return _tCursor.FValidationIncomplete();
+      }
+    }, m_varCursor );
+  }
+  bool FUseXMLNamespaces() const
+  {
+    return std::visit( _VisitHelpOverloadFCall {
+      []( auto & _tCursor ) -> bool
+      {
+        return _tCursor.FUseXMLNamespaces();
       }
     }, m_varCursor );
   }
