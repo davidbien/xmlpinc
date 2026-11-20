@@ -902,6 +902,12 @@ public:
       case s_knTokenDoctypeDecl:
         _WriteDoctypeDecl( _rtok );
       break;
+      case s_knTokenEntityContentBegin:
+        _WriteEntityContentBegin( _rtok );
+      break;
+      case s_knTokenEntityContentEnd:
+        _WriteEntityContentEnd();
+      break;
     }
   }
   template < class... t_TysArgs >
@@ -922,6 +928,7 @@ protected:
     m_lContexts.clear();
     m_fWroteFirstTag = false;
     m_fWroteDoctypeDecl = false;
+    m_nWithinEntityReference = 0;
     m_setEntitiesOfSource.clear();
     m_pvUserObjSource = nullptr;
     m_fHaveUnendedTag = false;
@@ -937,6 +944,8 @@ protected:
     VerifyThrow( !!m_optTransportOut && ( _pcEnd >=_pcBegin ) );
     if ( _pcEnd == _pcBegin )
       return; // no-op.
+    if ( !!m_nWithinEntityReference )
+      return; // The reference to the entity is what was written for this - see _WriteEntityContentBegin().
     m_optTransportOut->Write( _pcBegin, _pcEnd );
   }
   template < class t_TyChar >
@@ -1216,6 +1225,37 @@ protected:
       _WriteTypedData( _rtok, rval );
     }
     _WriteTransportRaw( _TyMarkupTraits::s_kszCommentEnd, StaticStringLen( _TyMarkupTraits::s_kszCommentEnd ) );
+  }
+  // The content of a general entity - see s_knTokenEntityContentBegin: the tokens between these two are what the entity
+  //  of the document which was read has.
+  // If we have written the document type declaration - which declares the entity - we write the reference to the entity
+  //  as the document had it and nothing of what is between the two tokens: all goes on as it would - the tags are
+  //  started and ended - and nothing of it is written. If we haven't then what the entity has is the content which is
+  //  written, since whoever reads what we write doesn't know the entity.
+  template < class t_TyXmlToken >
+  void _WriteEntityContentBegin( t_TyXmlToken const & _rtok )
+  {
+    if ( !m_fWroteDoctypeDecl )
+      return;
+    _CheckCommitCur(); // The tag which the reference is within is written - all of it - before nothing more is.
+    if ( !m_nWithinEntityReference )
+    {
+      _WriteTransportRaw( _TyMarkupTraits::s_kszEntityRefRefBegin, StaticStringLen( _TyMarkupTraits::s_kszEntityRefRefBegin ) );
+      VerifyThrow( _rtok.GetValue().FIsString() );
+      _rtok.GetValue().ApplyString(
+        [this]< typename t_TyChar >( const t_TyChar * _pcBegin, const t_TyChar * const _pcEnd )
+        {
+          _WriteTransportRaw( _pcBegin, _pcEnd );
+        }
+      );
+      _WriteTransportRaw( _TyMarkupTraits::s_kszReferenceEnd, StaticStringLen( _TyMarkupTraits::s_kszReferenceEnd ) );
+    }
+    ++m_nWithinEntityReference;
+  }
+  void _WriteEntityContentEnd()
+  {
+    if ( !!m_nWithinEntityReference )
+      --m_nWithinEntityReference;
   }
   // Write the document type declaration: the token's value is its text from "<!DOCTYPE" through its '>' - see
   //  s_knTokenDoctypeDecl. It may be written once and only in the prolog.
@@ -1613,6 +1653,7 @@ protected:
 // state:
   bool m_fWroteFirstTag{false};
   bool m_fWroteDoctypeDecl{false};
+  size_t m_nWithinEntityReference{0}; // We are within what an entity has and its reference is what was written: nothing is.
   // The names of the entities which we have from the documents whose tokens we are given - see _ImportEntitiesOfSource().
   set< _TyStdStr, std::less<> > m_setEntitiesOfSource;
   const void * m_pvUserObjSource{nullptr}; // The user object from which we last had them.

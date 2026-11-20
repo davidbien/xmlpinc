@@ -117,6 +117,10 @@ public:
       case s_knTokenDoctypeDecl:
         Assert( GetValue().FHasTypedData() || GetValue().FIsString() ); // The text of the declaration.
       break;
+      case s_knTokenEntityContentBegin:
+      case s_knTokenEntityContentEnd:
+        Assert( GetValue().FIsString() ); // The name of the entity.
+      break;
     }
 #endif //ASSERTSENABLED
   }
@@ -177,6 +181,15 @@ public:
   bool FIsProcessingInstruction() const
   {
     return s_knTokenProcessingInstruction == m_tokToken.GetTokenId();
+  }
+  // Where the content of a general entity begins and ends - see s_knTokenEntityContentBegin.
+  bool FIsEntityContentBegin() const
+  {
+    return s_knTokenEntityContentBegin == m_tokToken.GetTokenId();
+  }
+  bool FIsEntityContentEnd() const
+  {
+    return s_knTokenEntityContentEnd == m_tokToken.GetTokenId();
   }
   // The document type declaration - see s_knTokenDoctypeDecl.
   bool FIsDoctypeDecl() const

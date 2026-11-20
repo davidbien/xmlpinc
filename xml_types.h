@@ -497,6 +497,16 @@ using TyGetTokenProcessingInstruction = _l_action_token< _l_action_save_data_sin
 //  type of the parser. It is what a writer writes for the declaration.
 static const vtyActionIdent s_knTokenDoctypeDecl = 1008;
 
+// The content of a general entity - with XML traits which support the DTD. A reference to an entity whose replacement
+//  text is not text alone - it has markup, or the entity is external - is replaced by that text ( 4.4.2 ), which the
+//  read cursor reads as content of the document where the reference is: its tags are tags of the document. These two
+//  tokens - which are not of the lexical analyzer either - are among the content before the first of what the entity
+//  has and after the last of it. Their value is the name of the entity, a string.
+// They are for whoever would have the document as it was written: a writer which writes the document type declaration
+//  writes the reference in place of all that is between them. Anyone else passes them over.
+static const vtyActionIdent s_knTokenEntityContentBegin = 1009;
+static const vtyActionIdent s_knTokenEntityContentEnd = 1010;
+
 // Write-validation tokens. These are used during writing to:
 // 1) Validate written tokens of various types.
 // 2) Determine the production of CharRefs withing Attribute Values and CharData and CDataSections.

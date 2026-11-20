@@ -1725,6 +1725,12 @@ protected:
   }
   // The text declaration [77] of an external entity is not part of its replacement text ( 4.3.1 ): where the text is
   //  put in place of a reference - and not parsed as an external subset is, where the grammar has it - it is taken off.
+public:
+  static void StripTextDecl( _TyStdStr & _rstrText )
+  {
+    _StripTextDecl( _rstrText );
+  }
+protected:
   static void _StripTextDecl( _TyStdStr & _rstrText )
   {
     static const char s_kszBegin[] = "<?xml";

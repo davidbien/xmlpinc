@@ -333,6 +333,9 @@ protected:
         ritem.m_strText = _StrValue( rltok, rval );
       }
       break;
+      case s_knTokenEntityContentBegin:
+      case s_knTokenEntityContentEnd:
+      break; // How the document is written: what an entity has is content of the document however it came to be there.
       default:
         VerifyThrowSz( false, "Unexpected token [%u] within the content of a tag.", unsigned( _rxt.GetTokenId() ) );
       break;
