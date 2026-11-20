@@ -808,16 +808,25 @@ template < class t_TyTransport >
 using TGetXmlTokenFromTransport = xml_token<  typename t_TyTransport::_TyTransportCtxt, 
                                               xml_user_obj< typename t_TyTransport::_TyChar, false >,
                                               xml_value_traits_pack< typename t_TyTransport::_TyChar > >;
+// The same for the tokens of XML traits which support the DTD or don't - the type of the user object is other.
+template < bool t_kfSupportDTD >
+struct TGetXmlTokenFromTransportOf
+{
+  template < class t_TyTransport >
+  using _TyGet = xml_token< typename t_TyTransport::_TyTransportCtxt,
+                            xml_user_obj< typename t_TyTransport::_TyChar, t_kfSupportDTD >,
+                            xml_value_traits_pack< typename t_TyTransport::_TyChar > >;
+};
 
 // As with all tokens: No default constructor, which translates to a variant: No monostate.
-template < class t_TyTpTransports >
+template < class t_TyTpTransports, bool t_kfSupportDTD >
 class xml_token_var
 {
   typedef xml_token_var _TyThis;
 public:
   typedef t_TyTpTransports _TyTpTransports;
   // Define our variant type - there is no monostate for this. We have to filter duplicates because some transports will share the same context.
-  typedef unique_variant_t< MultiplexTuplePack_t< TGetXmlTokenFromTransport, _TyTpTransports, variant > > _TyVariant;
+  typedef unique_variant_t< MultiplexTuplePack_t< TGetXmlTokenFromTransportOf< t_kfSupportDTD >::template _TyGet, _TyTpTransports, variant > > _TyVariant;
 
   template < class t_TyXmlToken >
   xml_token_var( t_TyXmlToken && _rrtok )
@@ -886,8 +895,8 @@ __XMLP_USING_NAMESPACE
   {
     _rl.swap(_rr);
   }
-template < class t_TyTpTransports >
-  void swap(xml_token_var< t_TyTpTransports >& _rl, xml_token_var< t_TyTpTransports >& _rr)
+template < class t_TyTpTransports, bool t_kfSupportDTD >
+  void swap(xml_token_var< t_TyTpTransports, t_kfSupportDTD >& _rl, xml_token_var< t_TyTpTransports, t_kfSupportDTD >& _rr)
   {
     _rl.swap(_rr);
   }

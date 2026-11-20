@@ -826,6 +826,18 @@ public:
       rmapOurs.emplace( strName, std::move( strText ) );
       m_setEntitiesOfSource.insert( std::move( strName ) );
     }
+    // And what those of them whose text is other within the value of an attribute stand for there.
+    _TyEntityMap & rmapOursAttrValues = m_xdcxtDocumentContext.GetUserObj().GetEntityMapAttrValues();
+    for ( auto const & rvtEntity : _ruoSource.GetEntityMapAttrValues() )
+    {
+      _TyStdStr strName;
+      ConvertString( strName, rvtEntity.first );
+      if ( ( m_setEntitiesOfSource.end() == m_setEntitiesOfSource.find( strName ) ) || ( rmapOursAttrValues.end() != rmapOursAttrValues.find( strName ) ) )
+        continue;
+      _TyStdStr strText;
+      ConvertString( strText, rvtEntity.second );
+      rmapOursAttrValues.emplace( std::move( strName ), std::move( strText ) );
+    }
   }
   // We are writing a token - we are not writing the end tag for a token.
   void _CheckCommitCur()
@@ -959,8 +971,12 @@ protected:
     typedef basic_string_view< typename t_TyXmlToken::_TyChar > _TyStrView;
     if ( _rval.FEmptyTypedData() )
       return; // no-op.
+    // The text as it is in the document - not the string of the value: that is without the #xD's of its ends of lines ( 2.11 ).
+    typedef _l_data<> _TyData;
+    _TyData const & krdt = _rval.GetTypedData();
+    VerifyThrowSz( krdt.FContainsSingleDataRange(), "Expected a single piece of the document." );
     _TyStrView sv;
-    _rtok.KGetStringView( _rval, sv );
+    _rtok.GetLexToken().KGetStringView( sv, krdt.DataRangeGetSingle().GetRangeBase() );
     _WriteTransportRaw( &sv[0], sv.length() );
   }
   // This just commits the start of the tag. And we can't write the last ">" or "/>" until
@@ -1055,6 +1071,23 @@ protected:
       pcRun = pcCur + 1;
       _WriteTransportRaw( _TyMarkupTraits::s_kszCharDecRefBegin, StaticStringLen( _TyMarkupTraits::s_kszCharDecRefBegin ) );
       _WriteTransportRaw( pszCharRef, StrNLen( pszCharRef ) );
+      _WriteTransportRaw( _TyMarkupTraits::s_kszReferenceEnd, StaticStringLen( _TyMarkupTraits::s_kszReferenceEnd ) );
+    }
+    _WriteTransportRaw( pcRun, _pcEnd );
+  }
+  // Write characters of character data which may be written as they are. But a #xD would be read as the end of a line -
+  //  as #xA ( 2.11 ): it is written as a reference to it so that what is read is what we were given.
+  template < class t_TyCharValue >
+  void _WriteCharDataRun( const t_TyCharValue * _pcBegin, const t_TyCharValue * const _pcEnd )
+  {
+    static constexpr _TyChar s_kszCarriageReturn[] = { _TyChar('1'), _TyChar('3'), 0 };
+    const t_TyCharValue * pcRun = _pcBegin;
+    for ( const t_TyCharValue * pcCur = std::find( _pcBegin, _pcEnd, t_TyCharValue( 0xD ) ); _pcEnd != pcCur; pcCur = std::find( pcCur, _pcEnd, t_TyCharValue( 0xD ) ) )
+    {
+      _WriteTransportRaw( pcRun, pcCur );
+      pcRun = ++pcCur;
+      _WriteTransportRaw( _TyMarkupTraits::s_kszCharDecRefBegin, StaticStringLen( _TyMarkupTraits::s_kszCharDecRefBegin ) );
+      _WriteTransportRaw( s_kszCarriageReturn, StrNLen( s_kszCarriageReturn ) );
       _WriteTransportRaw( _TyMarkupTraits::s_kszReferenceEnd, StaticStringLen( _TyMarkupTraits::s_kszReferenceEnd ) );
     }
     _WriteTransportRaw( pcRun, _pcEnd );
@@ -1413,7 +1446,7 @@ protected:
       {
         Assert( kfIsCharData && ( pcMatch - pcCur >= 3 ) );
         Assert( ( pcMatch[-3] == t_TyCharApplyString(']') ) && ( pcMatch[-2] == t_TyCharApplyString(']') ) && ( pcMatch[-1] == t_TyCharApplyString('>') ) );
-        _WriteTransportRaw( pcCur, pcMatch-1 );
+        _WriteCharDataRun( pcCur, pcMatch-1 );
         _WriteTransportRaw( _TyMarkupTraits::s_kszEntityGreaterThan, StaticStringLen( _TyMarkupTraits::s_kszEntityGreaterThan ) );
         pcCur = pcMatch; // The '>' is written.
         continue;
@@ -1423,7 +1456,7 @@ protected:
       if ( !pspAccept )
         pcMatch = pcCur;
       if ( kfIsCharData )
-        _WriteTransportRaw( pcCur, pcMatch );
+        _WriteCharDataRun( pcCur, pcMatch );
       else
         _WriteAttrValueRun( pcCur, pcMatch );
       pcCur = pcMatch;
@@ -1579,7 +1612,12 @@ protected:
                 {
                   _TyStrView svPlain;
                   _rtok.GetLexToken().KGetStringView( svPlain, pdtrCur->GetRangeBase() );
-                  _WriteTransportRaw( &svPlain[0], svPlain.length() );
+                  // ( Text whose #xD's are characters of it and not the ends of its lines - see s_kdtfLiteralLineEnds:
+                  //  written as they are they would be read as the ends of lines. )
+                  if ( !!( s_kdtfLiteralLineEnds & pdtrCur->type() ) )
+                    _WriteCharDataRun( svPlain.data(), svPlain.data() + svPlain.length() );
+                  else
+                    _WriteTransportRaw( &svPlain[0], svPlain.length() );
                 }
                 break;
                 case s_kdtCharDecRef:
@@ -1614,6 +1652,14 @@ protected:
                     ConvertString( strEntityName, svEntityRef );
                     if ( m_setEntitiesOfSource.end() != m_setEntitiesOfSource.find( strEntityName ) )
                     {
+                      // The text of the entity may be other here than in content - see s_kdtfEntityRefInAttrValue.
+                      const _TyStdStr * pstrAttrValue = !( s_kdtfEntityRefInAttrValue & pdtrCur->type() ) ? nullptr :
+                        m_xdcxtDocumentContext.GetUserObj().PStrLookupEntityAttrValue( strEntityName );
+                      if ( !!pstrAttrValue )
+                      {
+                        _WriteCharAndAttrString< t_tempGetStartToken >( pstrAttrValue->data(), pstrAttrValue->data() + pstrAttrValue->length(), edrNoReferences );
+                        break;
+                      }
                       _TyEntityMap const & rmapEntities = m_xdcxtDocumentContext.GetUserObj().GetEntityMap();
                       typename _TyEntityMap::const_iterator citEntity = rmapEntities.find( strEntityName );
                       VerifyThrowSz( rmapEntities.end() != citEntity, "Entity reference to [%s] not found.", StrConvertString<char>( svEntityRef ).c_str() );

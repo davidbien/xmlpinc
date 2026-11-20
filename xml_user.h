@@ -157,6 +157,10 @@ public:
 
   // Entity reference lookup:
   _TyEntityMap m_mapEntities;
+  // The entities whose text is other within the value of an attribute than it is in content: the white space of the
+  //  replacement text of an entity is spaces there ( 3.3.3 ). Only those are here - for any other entity the text is
+  //  that of the entity map - and this is looked in only for a reference which is flagged s_kdtfEntityRefInAttrValue.
+  _TyEntityMap m_mapEntitiesAttrValues;
   
   // Then this is true then when s_knTokenCharData is received it is check for be entirely composed of whitespace
   // and if so it is ignored entirely and not retunred to the xml parser.
@@ -175,6 +179,20 @@ public:
   {
     _TyBase::swap( _r );
     m_mapEntities.swap( _r.m_mapEntities );
+    m_mapEntitiesAttrValues.swap( _r.m_mapEntitiesAttrValues );
+  }
+  _TyEntityMap & GetEntityMapAttrValues()
+  {
+    return m_mapEntitiesAttrValues;
+  }
+  const _TyEntityMap & GetEntityMapAttrValues() const
+  {
+    return m_mapEntitiesAttrValues;
+  }
+  const _TyStdStr * PStrLookupEntityAttrValue( _TyStrView const & _rsv ) const
+  {
+    typename _TyEntityMap::const_iterator cit = m_mapEntitiesAttrValues.find( _rsv );
+    return ( m_mapEntitiesAttrValues.end() == cit ) ? nullptr : &cit->second;
   }
   _TyEntityMap & GetEntityMap()
   {
@@ -204,6 +222,7 @@ public:
                         { _TyStdStr( str_array_cast<_TyChar>("lt") ), _TyStdStr( str_array_cast<_TyChar>("<") ) }, 
                         { _TyStdStr( str_array_cast<_TyChar>("gt") ), _TyStdStr( str_array_cast<_TyChar>(">") ) } };
     }
+    m_mapEntitiesAttrValues.clear();
     _TyBase::ClearParamEntities();
   }
   template < class t_TyStream >
@@ -282,6 +301,8 @@ public:
     // These are the same as the S production from the XML specification. XML 1.1 might actually allow some other space characters but we aren't going to worry about that now.
     return _rstrm.FSpanChars( rdt.DataRangeGetSingle(), str_array_cast<_TyChar>( STR_XML_WHITESPACE_TOKEN ) );
   }
+  // The count of characters of the string of the data - or somewhat more: enough for the string in any case. A piece
+  //  of plain text may have fewer than its length - see _FNormalizesLineEnds().
   template < class t_TyTransportCtxt >
   size_t _NChars( _TyData const & _rd, t_TyTransportCtxt const & _rcxt ) const
   {
@@ -307,7 +328,7 @@ public:
         Assert( 0 );
         [[fallthrough]];
       case s_kdtPlainText:
-        nLen = _rdr.length();
+        nLen = _rdr.length(); // No more than this: an end of line which is two characters is one in the string - see _CopyDr().
       break;
       case s_kdtAttrWhitespace:
       {
@@ -453,6 +474,8 @@ public:
       size_t nCharsCopy = min( _rnCharsRemaining, sv.length() );
       Assert( nCharsCopy == sv.length() ); // should have reserved enough.
       memcpy( _rpcCur, sv.data(), nCharsCopy * sizeof( _TyChar ) );
+      if ( _FNormalizesLineEnds( _rdtr.type() ) )
+        nCharsCopy = NNormalizeLineEnds( _rpcCur, nCharsCopy ); // 2.11: then fewer than were reserved for.
       _rpcCur += nCharsCopy;
       _rnCharsRemaining -= nCharsCopy;
     }
@@ -463,7 +486,16 @@ public:
       --_rnCharsRemaining;
     }
   }
-// The value of an attribute whose declared type is not CDATA - 3.3.3: see s_kdtfAttrTokenized.
+// The ends of lines - 2.11: in the string of a piece of plain text of the document each #xD #xA and each #xD which is
+  //  not before a #xA is a single #xA. That is so of the string - the piece is the text as it is, which is what is
+  //  written. A #xD which a character reference stands for is that character, and the text of an entity is as the
+  //  entity map has it. Not so of a piece which is flagged s_kdtfLiteralLineEnds.
+  // ( The white space of the value of an attribute is not in its pieces of plain text - see s_kdtAttrWhitespace. )
+  static bool _FNormalizesLineEnds( vtyDataType _dt )
+  {
+    return ( s_kdtPlainText == DtGetType( _dt ) ) && !( s_kdtfLiteralLineEnds & _dt );
+  }
+  // The value of an attribute whose declared type is not CDATA - 3.3.3: see s_kdtfAttrTokenized.
   // Whether the pieces are flagged so. All of the pieces of a value are flagged or none is.
   static bool _FIsTokenized( _TyData const & _rdt )
   {
@@ -493,7 +525,7 @@ public:
     return size_t( pcOut - _pc ); // Those at the end were still pending.
   }
   // The view of a value which is all in one piece of the document as it is in the document - if there is one:
-  //  1) The value is one piece of plain text.
+  //  1) The value is one piece of plain text - which has no #xD: with one the string is other than the text ( 2.11 ).
   //  2) The same for the value of a tokenized attribute: then the view is the piece without the spaces at its ends - and
   //     there is none if there is a sequence of spaces within it.
   template < class t_TyStringView, class t_TyTransportCtxt >
@@ -502,14 +534,18 @@ public:
     if ( !_rdt.FContainsSingleDataRange() )
       return false;
     const vtyDataType kdt = _rdt.DataRangeGetSingle().type();
-    if ( s_kdtPlainText == kdt )
+    typedef typename t_TyStringView::value_type _TyCharView;
+    if ( ( s_kdtPlainText == kdt ) || ( ( s_kdtPlainText | s_kdtfLiteralLineEnds ) == kdt ) )
     {
-      _rcxt.GetStringView( _rsvDest, _rdt.DataRangeGetSingle() );
+      t_TyStringView svPlain;
+      _rcxt.GetStringView( svPlain, _rdt.DataRangeGetSingle() );
+      if ( ( s_kdtPlainText == kdt ) && ( t_TyStringView::npos != svPlain.find( _TyCharView( 0xD ) ) ) )
+        return false;
+      _rsvDest = svPlain;
       return true;
     }
     if ( ( s_kdtPlainText | s_kdtfAttrTokenized ) != kdt )
       return false;
-    typedef typename t_TyStringView::value_type _TyCharView;
     t_TyStringView sv;
     _rcxt.GetStringView( sv, _rdt.DataRangeGetSingle() );
     while ( !sv.empty() && ( _TyCharView( ' ' ) == sv.front() ) )
@@ -529,6 +565,13 @@ public:
   {
     _TyStrView sv;
     _rcxt.GetStringView( sv, _rdr );
+    if ( !!( s_kdtfEntityRefInAttrValue & _rdr.type() ) )
+    {
+      // Within the value of an attribute, and the text of some entity is other there: is it this one's?
+      const _TyStdStr * pstrAttrValue = PStrLookupEntityAttrValue( sv );
+      if ( !!pstrAttrValue )
+        return *pstrAttrValue;
+    }
     typename _TyEntityMap::const_iterator cit = m_mapEntities.find( sv );
     if ( m_mapEntities.end() == cit )
       THROWXMLPARSEEXCEPTION( "Can't find entity [%s].", StrConvertString<char>( sv ).c_str() );
@@ -674,7 +717,7 @@ public:
     Assert( _rval.FHasTypedData() ); // We are converting the _TyData object that is in _rval.
     const _TyData kdtr = _rval.template GetVal< _TyData >();
     _rcxt.AssertValidDataRange( kdtr );
-    VerifyThrowSz( _FGetViewOfData( _rsvDest, kdtr, _rcxt ), "KGetStringView() is only valid for single data ranges." );
+    VerifyThrowSz( _FGetViewOfData( _rsvDest, kdtr, _rcxt ), "KGetStringView() is only valid for a value which is a single data range of the text as it is: no reference and no end of line which is normalized." );
   }
   template < class t_TyStringView, class t_TyToken, class t_TyTransportCtxt >
   void KGetStringView( t_TyStringView & _rsvDest, t_TyTransportCtxt & _rcxt, t_TyToken const & _rtok, _l_data_range const & _rdr ) const
@@ -720,7 +763,7 @@ public:
     if ( kdtr.FContainsSingleDataRange(s_kdtPlainText) )
     {
       memcpy( &strBacking[0], _rcxt.GetTokenBuffer().begin() + kdtr.DataRangeGetSingle().begin() - _rcxt.PosTokenStart(), nCharsRemaining * sizeof( _TyChar ) );
-      nCharsRemaining = 0;
+      nCharsRemaining -= NNormalizeLineEnds( (_TyChar*)&strBacking[0], nCharsRemaining ); // 2.11.
     }
     else
     {
@@ -735,9 +778,8 @@ public:
       // A single data range that isn't plain text is a lone reference - it is stored as a single range, not in the segmented array.
       // _l_data::Apply() handles both the single range and the segmented array cases.
       kdtr.Apply( lambdaTranslate );
-      Assert( !nCharsRemaining ); // Should have eaten everything.
     }
-    nCharsCount -= nCharsRemaining;
+    nCharsCount -= nCharsRemaining; // What remains is the ends of lines which were two characters.
     if ( _FIsTokenized( kdtr ) )
       nCharsCount = _NNormalizeTokenized( (_TyChar*)&strBacking[0], nCharsCount );
     strBacking.resize( nCharsCount );
@@ -773,7 +815,7 @@ public:
     {
       // REVIEW: Could just use a string view here instead and not copy to the stack.
       memcpy( pcBuf, _rcxt.GetTokenBuffer().begin() + kdtr.DataRangeGetSingle().begin() - _rcxt.PosTokenStart(), nCharsRemaining * sizeof( _TyChar ) );
-      nCharsRemaining = 0;
+      nCharsRemaining -= NNormalizeLineEnds( pcBuf, nCharsRemaining ); // 2.11.
     }
     else
     {
@@ -788,10 +830,9 @@ public:
       // A single data range that isn't plain text is a lone reference - it is stored as a single range, not in the segmented array.
       // _l_data::Apply() handles both the single range and the segmented array cases.
       kdtr.Apply( lambdaTranslate );
-      Assert( !nCharsRemaining );
     }
     if ( nCharsRemaining )
-      nCharsCount -= nCharsRemaining;
+      nCharsCount -= nCharsRemaining; // The ends of lines which were two characters.
     if ( _FIsTokenized( kdtr ) )
       nCharsCount = _NNormalizeTokenized( pcBuf, nCharsCount );
     t_TyString strConverted;

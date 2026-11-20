@@ -16,7 +16,8 @@
 #else
 #include <set>
 #include <map>
-#endif 
+#endif
+#include <algorithm>
 #include "upslist.h"
 #include "xml_ns.h"
 #include "_l_types.h"
@@ -40,10 +41,50 @@ static const vtyDataType s_kdtAttrWhitespace = 5;
 //  value of an attribute this is so of the string which is had from the value - the pieces are still all of what is in
 //  the document.
 static const vtyDataType s_kdtfAttrTokenized = 0x80000000;
+// A flag in the type of data of a piece of plain text: its ends of lines are as they are - they are not normalized
+//  ( 2.11 ) in the string which is had from it. The text of a document is normalized as it is read from where it is:
+//  #xD #xA and a #xD which is not before a #xA are each #xA in the string - and the text itself is as it was, which is
+//  what is written. This is for text which is not to be: the replacement text of an internal entity which the cursor
+//  reads as content - a #xD in that is one which a character reference put there.
+static const vtyDataType s_kdtfLiteralLineEnds = 0x40000000;
+// A flag in the type of data of a reference to an entity ( s_kdtEntityRef ): the reference is within the value of an
+//  attribute and the text of the entity is other there than it is in content - its white space is spaces ( 3.3.3 ).
+//  The cursor sets this - see xml_user_obj<>::GetEntityMapAttrValues().
+static const vtyDataType s_kdtfEntityRefInAttrValue = 0x20000000;
 // The type of data without the flags.
 inline constexpr vtyDataType DtGetType( vtyDataType _dt )
 {
-  return _dt & ~s_kdtfAttrTokenized;
+  return _dt & ~( s_kdtfAttrTokenized | s_kdtfLiteralLineEnds | s_kdtfEntityRefInAttrValue );
+}
+
+// 2.11 End-of-Line Handling: each #xD #xA and each #xD which is not followed by #xA is a single #xA. In place: returns
+//  the count of characters which are left.
+template < class t_TyChar >
+size_t NNormalizeLineEnds( t_TyChar * _pc, size_t _nch )
+{
+  t_TyChar * const pcEnd = _pc + _nch;
+  t_TyChar * pcCur = std::find( _pc, pcEnd, t_TyChar( 0xD ) );
+  if ( pcEnd == pcCur )
+    return _nch; // As nearly all text is.
+  t_TyChar * pcOut = pcCur;
+  for ( ; pcEnd != pcCur; ++pcCur )
+  {
+    if ( t_TyChar( 0xD ) == *pcCur )
+    {
+      *pcOut++ = t_TyChar( 0xA );
+      if ( ( pcEnd != pcCur + 1 ) && ( t_TyChar( 0xA ) == pcCur[1] ) )
+        ++pcCur;
+    }
+    else
+      *pcOut++ = *pcCur;
+  }
+  return size_t( pcOut - _pc );
+}
+template < class t_TyString >
+void NormalizeLineEnds( t_TyString & _rstr )
+{
+  if ( !_rstr.empty() )
+    _rstr.resize( NNormalizeLineEnds( _rstr.data(), _rstr.length() ) );
 }
 
 // The string containing the values from the Production S.
@@ -76,7 +117,7 @@ template < class t_TyLexUserObj >
 class _xml_document_context;
 template < class t_TyXmlTraits >
 class _xml_document_context_transport;
-template < class t_TyTpTransports >
+template < class t_TyTpTransports, bool t_kfSupportDTD = false, bool t_kfValidating = false >
 class _xml_document_context_transport_var;
 
 // xml_namespace.h
@@ -96,13 +137,13 @@ template < class t_TyXmlTraits >
 class _xml_read_context;
 template < class t_TyXmlTraits >
 class xml_read_cursor;
-template < class t_TyTpTransports >
+template < class t_TyTpTransports, bool t_kfSupportDTD = false, bool t_kfValidating = false >
 class xml_read_cursor_var;
 
 // xml_token.h:
 template < class t_TyTransportCtxt, class t_TyUserObj, class t_TyTpValueTraits >
 class xml_token;
-template < class t_TyTpTransports >
+template < class t_TyTpTransports, bool t_kfSupportDTD = false >
 class xml_token_var;
 
 // xml_tag.h:
@@ -117,16 +158,17 @@ class _xml_tag_import_context;
 template < class t_TyXmlTraits >
 class _xml_local_import_context;
 // xml_tag_var.h:
-template < class t_TyTpTransports >
+template < class t_TyTpTransports, bool t_kfSupportDTD = false, bool t_kfValidating = false >
 class xml_tag_var;
-template < class t_TyTpTransports >
+template < class t_TyTpTransports, bool t_kfSupportDTD = false, bool t_kfValidating = false >
 class xml_document_var;
 
 // xml_parse.h:
 template < class t_TyXmlTraits >
 class xml_parser;
 template <  template < class ... > class t_tempTyTransport, 
-            class t_TyTp2DCharPack = tuple< tuple< char32_t, true_type >, tuple< char32_t, false_type >, tuple< char16_t, true_type >, tuple< char16_t, false_type >, tuple< char8_t, false_type > > >
+            class t_TyTp2DCharPack = tuple< tuple< char32_t, true_type >, tuple< char32_t, false_type >, tuple< char16_t, true_type >, tuple< char16_t, false_type >, tuple< char8_t, false_type > >,
+            bool t_kfSupportDTD = false, bool t_kfValidating = false >
 class xml_parser_var;
 
 // xml_exc.h:
@@ -189,6 +231,15 @@ struct map_input_to_any_output_transport< _l_transport_fixedmem< t_TyLexInputCha
 // This is an adaptor for use with MultiplexTuplePack_t<>.
 template < class t_TyTransport >
 using TGetXmlTraitsDefault = xml_traits< t_TyTransport, false, false >;
+// The XML traits of a transport which support the DTD - and validate - or don't: TGetXmlTraitsOf< , >::_TyGet is for
+//  MultiplexTuplePack_t<> as TGetXmlTraitsDefault is - and is that for < false, false >. The variant parser, cursor and
+//  document have these two as the non-variant ones have them in their XML traits.
+template < bool t_kfSupportDTD, bool t_kfValidating >
+struct TGetXmlTraitsOf
+{
+  template < class t_TyTransport >
+  using _TyGet = xml_traits< t_TyTransport, t_kfSupportDTD, t_kfValidating >;
+};
 
 // TGetPrefixUri (prefix,URI).
 template < class t_TyChar >
@@ -200,8 +251,8 @@ struct TFIsReadCursorVar
 {
   static constexpr bool value = false;
 };
-template < class t_TyTpTransports >
-struct TFIsReadCursorVar< xml_read_cursor_var< t_TyTpTransports > >
+template < class t_TyTpTransports, bool t_kfSupportDTD, bool t_kfValidating >
+struct TFIsReadCursorVar< xml_read_cursor_var< t_TyTpTransports, t_kfSupportDTD, t_kfValidating > >
 {
   static constexpr bool value = true;
 };

@@ -477,10 +477,12 @@ public:
       return;
     _TyBase::swap( _r );
     m_opttpImpl.swap( _r.m_opttpImpl );
+    m_spDtd.swap( _r.m_spDtd );
+    m_spEntityText.swap( _r.m_spEntityText );
   }
   bool FEmpty() const noexcept
   {
-    return _TyBase::FEmpty() && !m_opttpImpl.has_value();
+    return _TyBase::FEmpty() && !m_opttpImpl.has_value() && !m_spDtd && !m_spEntityText;
   }
   _TyBase const & GetBaseContext() const
   {
@@ -502,17 +504,25 @@ public:
   //  allows the parser object to go away entirely.
   typedef optional< _TyTransport > _TyOptTransport;
   _TyOptTransport m_opttpImpl;
+  // What the tokens of a document which has a DTD refer to and which is not in the transport - kept for as long as
+  //  the tokens are: the cursor gives them over with the rest - see xml_read_cursor<>::XMLDeclAcquireDocumentContext().
+  //  - The declarations of the DTD ( an xml_dtd<> ): the value of an attribute which a tag has by its default is the
+  //    DTD's string - see xml_attr_default_value - and so is the replacement text of an internal entity which was read
+  //    as content.
+  //  - The text of the external entities which was read as content.
+  shared_ptr< void > m_spDtd;
+  shared_ptr< void > m_spEntityText;
 };
 
 // _xml_document_context_transport_var: Variant version of the _xml_document_context_transport.
 // We must allow a monostate since we want a default constructor.
-template < class t_TyTpTransports >
+template < class t_TyTpTransports, bool t_kfSupportDTD, bool t_kfValidating >
 class _xml_document_context_transport_var
 {
   typedef _xml_document_context_transport_var _TyThis;
 public:
   typedef t_TyTpTransports _TyTpTransports;
-  typedef MultiplexTuplePack_t< TGetXmlTraitsDefault, _TyTpTransports > _TyTpXmlTraits;
+  typedef MultiplexTuplePack_t< TGetXmlTraitsOf< t_kfSupportDTD, t_kfValidating >::template _TyGet, _TyTpTransports > _TyTpXmlTraits;
   typedef MultiplexMonostateTuplePack_t< _xml_document_context_transport, _TyTpXmlTraits, variant > _TyVariant;
 
   ~_xml_document_context_transport_var() = default;

@@ -482,18 +482,24 @@ using xml_var_get_var_transport_t = typename _xml_var_get_var_transport< t_TyCha
 
 // xml_parser_var:
 // Templatized by transport template and set of characters types to support. To create a _l_transport_var use xml_var_get_var_transport_t<> or something like it.
-template <  template < class ... > class t_tempTyTransport, class t_TyTp2DCharPack >
+// t_kfSupportDTD, t_kfValidating: as those of xml_traits<> - each of the parsers is one of XML traits which have them.
+template <  template < class ... > class t_tempTyTransport, class t_TyTp2DCharPack, bool t_kfSupportDTD, bool t_kfValidating >
 class xml_parser_var
 {
   typedef xml_parser_var _TyThis;
 public:
   typedef t_TyTp2DCharPack _TyTp2DCharPack;
+  static constexpr bool s_kfSupportDTD = t_kfSupportDTD;
+  static constexpr bool s_kfValidating = t_kfValidating;
+  // The XML traits of a transport - of the type of this parser.
+  template < class t_TyTransport >
+  using _TyGetXmlTraits = xml_traits< t_TyTransport, t_kfSupportDTD, t_kfValidating >;
   typedef MultiplexTuplePack2D_t< t_tempTyTransport, _TyTp2DCharPack > _TyTpTransports;
-  typedef MultiplexTuplePack_t< TGetXmlTraitsDefault, _TyTpTransports > _TyTpXmlTraits;
+  typedef MultiplexTuplePack_t< TGetXmlTraitsOf< t_kfSupportDTD, t_kfValidating >::template _TyGet, _TyTpTransports > _TyTpXmlTraits;
   // Now get the variant type - include a monostate so that we can default initialize:
   typedef MultiplexMonostateTuplePack_t< xml_parser, _TyTpXmlTraits, variant > _TyParserVariant;
   // For the cursor we don't need a monostate because we will deliver the fully created type from a local method.
-  typedef xml_read_cursor_var< _TyTpTransports > _TyReadCursorVar;
+  typedef xml_read_cursor_var< _TyTpTransports, t_kfSupportDTD, t_kfValidating > _TyReadCursorVar;
   static constexpr bool s_kfIsVariantTransport = TFIsTransportVar_v< typename tuple_element<0,_TyTpTransports>::type >;
 
   ~xml_parser_var() = default;
@@ -515,6 +521,25 @@ public:
   bool FIsA() const
   {
     return holds_alternative< t_TyParser >( m_varParser );
+  }
+// External entities - as xml_parser<>: they are read only if this parser is told to. The type of character of the
+//  document is not known until it is opened, so what is said here is said for whichever it is.
+  // The external entities are files: their system identifiers are paths - see FReadExternalEntityFile() in xml_external.h.
+  void SetReadExternalEntityFiles( bool _fReadExternalEntityFiles = true )
+  {
+    m_fReadExternalEntityFiles = _fReadExternalEntityFiles;
+  }
+  // A resolver for each of the types of character whose documents are to have their external entities read: this is
+  //  kept for the documents of that type.
+  template < class t_TyChar >
+  void SetExternalEntityResolver( xml_external_entity_resolver< t_TyChar > const & _rresolver )
+  {
+    std::get< xml_external_entity_resolver< t_TyChar > >( m_tpResolvers ) = _rresolver;
+  }
+  // The location of the document - see xml_parser<>::SetBaseLocation(): if this isn't set it is the name of the file.
+  void SetBaseLocation( string_view _svBaseLocation )
+  {
+    m_strBaseLocation = _svBaseLocation;
   }
   // This will open the file with transport t_tempTyTransport<>
   _TyReadCursorVar OpenFile( const char * _pszFileName )
@@ -556,11 +581,32 @@ public:
       },
       [this]( auto & _tParser ) -> _TyReadCursorVar
       {
+        _InitExternalEntities( _tParser ); // The document type declaration is read as the cursor is attached.
         return _TyReadCursorVar( _tParser.GetReadCursor() );
       }
     }, m_varParser );
   }
 protected:
+  // Give the parser which was made for the document what was said of external entities.
+  template < class t_TyParser >
+  void _InitExternalEntities( t_TyParser & _rParser )
+  {
+    typedef typename t_TyParser::_TyChar _TyCharParser;
+    xml_external_entity_resolver< _TyCharParser > const & rresolver = std::get< xml_external_entity_resolver< _TyCharParser > >( m_tpResolvers );
+    if ( !!rresolver )
+      _rParser.SetExternalEntityResolver( rresolver );
+    else
+    if ( m_fReadExternalEntityFiles )
+      _rParser.SetReadExternalEntityFiles( true );
+    basic_string< _TyCharParser > strBaseLocation;
+    if ( !m_strBaseLocation.empty() )
+      ConvertString( strBaseLocation, m_strBaseLocation );
+    else
+    if ( !m_strFileName.empty() )
+      ConvertString( strBaseLocation, m_strFileName );
+    if ( !strBaseLocation.empty() )
+      _rParser.SetBaseLocation( strBaseLocation );
+  }
   // This will open the file with transport t__tempTyTransport.
   _TyReadCursorVar _OpenFile( const char * _pszFileName )
     requires( !s_kfIsVariantTransport )
@@ -608,7 +654,7 @@ protected:
     requires( !s_kfIsVariantTransport )
   {
     typedef t_TyTransport _TyTransport;
-    typedef TGetXmlTraitsDefault< _TyTransport > _TyXmlTraits;
+    typedef _TyGetXmlTraits< _TyTransport > _TyXmlTraits;
     typedef xml_parser< _TyXmlTraits > _TyXmlParser;
     typedef conditional_t< has_type_v< _TyXmlParser, _TyParserVariant >, _TyXmlParser, false_type > _TyXmlParserInVariant;
     _OpenParser< _TyXmlParserInVariant >( _rfo, _efceEncoding );
@@ -676,7 +722,7 @@ protected:
   {
     typedef t_TyTransport _TyTransport;
     typedef typename _TyTransport::_TyChar _TyChar;
-    typedef TGetXmlTraitsDefault< _TyTransport > _TyXmlTraits;
+    typedef _TyGetXmlTraits< _TyTransport > _TyXmlTraits;
     typedef xml_parser< _TyXmlTraits > _TyXmlParser;
     typedef conditional_t< has_type_v< _TyXmlParser, _TyParserVariant >, _TyXmlParser, false_type > _TyXmlParserInVariant;
     VerifyThrowSz( !( _nbyLenBytes % sizeof( _TyChar ) ), "Content byte size[%llu] is not an integral multiple of character size[%zu].", _nbyLenBytes, sizeof( _TyChar ) );
@@ -764,7 +810,7 @@ protected:
   {
     typedef t_TyVarTransport _TyVarTransport;
     typedef t_TyTransport _TyTransport;
-    typedef TGetXmlTraitsDefault< _TyVarTransport > _TyXmlTraits;
+    typedef _TyGetXmlTraits< _TyVarTransport > _TyXmlTraits;
     typedef xml_parser< _TyXmlTraits > _TyXmlParser;
     // We have a type, now, that is present in the variant...
     _TyXmlParser & rp = m_varParser.template emplace< _TyXmlParser >();
@@ -848,7 +894,7 @@ protected:
     typedef t_TyVarTransport _TyVarTransport;
     typedef t_TyTransport _TyTransport;
     typedef typename _TyTransport::_TyChar _TyChar;
-    typedef TGetXmlTraitsDefault< _TyVarTransport > _TyXmlTraits;
+    typedef _TyGetXmlTraits< _TyVarTransport > _TyXmlTraits;
     typedef xml_parser< _TyXmlTraits > _TyXmlParser;
     // We have a type, now, that is present in the variant...
     _TyXmlParser & rp = m_varParser.template emplace< _TyXmlParser >();
@@ -866,6 +912,10 @@ protected:
 
   string m_strFileName; // Record this because it doesn't cost much.
   _TyParserVariant m_varParser;
+  // See SetReadExternalEntityFiles(), SetExternalEntityResolver() and SetBaseLocation().
+  bool m_fReadExternalEntityFiles{ false };
+  tuple< xml_external_entity_resolver< char8_t >, xml_external_entity_resolver< char16_t >, xml_external_entity_resolver< char32_t > > m_tpResolvers;
+  string m_strBaseLocation;
 };
 
 __XMLP_END_NAMESPACE

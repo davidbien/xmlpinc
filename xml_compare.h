@@ -357,9 +357,10 @@ protected:
 // Returns true if they are the same. If not then *_pstrDifference - if it is given - says the first difference: where
 //  it is, by the tags from the document's tag down, and what it is. "left" is the first document and "right" the second.
 // Throws what the cursors throw: a document which is not well formed is not compared.
+// Either cursor may be a variant - an xml_read_cursor_var<>: then it is the cursor which that has which is read.
 template < class t_TyReadCursorLeft, class t_TyReadCursorRight >
-bool FCompareXmlDocuments(  t_TyReadCursorLeft & _rxrcLeft, t_TyReadCursorRight & _rxrcRight,
-                            xml_compare_options const & _roptions = xml_compare_options(), std::string * _pstrDifference = nullptr )
+bool _FCompareXmlDocumentsOfCursors(  t_TyReadCursorLeft & _rxrcLeft, t_TyReadCursorRight & _rxrcRight,
+                                      xml_compare_options const & _roptions, std::string * _pstrDifference )
 {
   _xml_compare_reader< t_TyReadCursorLeft > readerLeft( _rxrcLeft, _roptions );
   _xml_compare_reader< t_TyReadCursorRight > readerRight( _rxrcRight, _roptions );
@@ -464,6 +465,30 @@ bool FCompareXmlDocuments(  t_TyReadCursorLeft & _rxrcLeft, t_TyReadCursorRight 
       break;
     }
   }
+}
+template < class t_TyReadCursorLeft, class t_TyReadCursorRight >
+bool FCompareXmlDocuments(  t_TyReadCursorLeft & _rxrcLeft, t_TyReadCursorRight & _rxrcRight,
+                            xml_compare_options const & _roptions = xml_compare_options(), std::string * _pstrDifference = nullptr )
+{
+  if constexpr ( TFIsReadCursorVar_v< t_TyReadCursorLeft > )
+  {
+    return std::visit(
+      [&_rxrcRight,&_roptions,_pstrDifference]( auto & _tCursorLeft ) -> bool
+      {
+        return FCompareXmlDocuments( _tCursorLeft, _rxrcRight, _roptions, _pstrDifference );
+      }, _rxrcLeft.GetVariant() );
+  }
+  else
+  if constexpr ( TFIsReadCursorVar_v< t_TyReadCursorRight > )
+  {
+    return std::visit(
+      [&_rxrcLeft,&_roptions,_pstrDifference]( auto & _tCursorRight ) -> bool
+      {
+        return FCompareXmlDocuments( _rxrcLeft, _tCursorRight, _roptions, _pstrDifference );
+      }, _rxrcRight.GetVariant() );
+  }
+  else
+    return _FCompareXmlDocumentsOfCursors( _rxrcLeft, _rxrcRight, _roptions, _pstrDifference );
 }
 
 __XMLP_END_NAMESPACE

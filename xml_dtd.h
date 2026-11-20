@@ -318,6 +318,15 @@ public:
     _rstrValue.swap( strNormalized );
     return exdeOk;
   }
+  // What a reference to the general entity stands for within the value of an attribute ( 3.3.3 ): as above, and the
+  //  white space of the replacement text - which is not that of a character reference - is spaces.
+  // Returns what is wrong with the reference if something is: see EXmlDtdExpand.
+  EXmlDtdExpand EGetGeneralEntityTextInAttributeValue( _TyStrView _svName, _TyStdStr & _rstrText ) const
+  {
+    _rstrText.clear();
+    vector< _TyStrView > rgsvActive;
+    return _EExpandGeneralEntity( _svName, _rstrText, rgsvActive, true );
+  }
   // Add the general entities which stand for text alone to the map of entity name to text - that of the lexical
   //  analyzer's user object ( xml_user_obj<>::GetEntityMap() ), with which references in character data and in the
   //  values of attributes are replaced. An entity which is in the map already is left as it is - so the predefined
@@ -331,6 +340,23 @@ public:
     {
       if ( ( _rmap.end() == _rmap.find( rvt.first ) ) && FGetGeneralEntityText( rvt.first, strText ) )
         _rmap.emplace( rvt.first, strText );
+    }
+  }
+  // Add to _rmapAttrValues the general entities which stand for other text within the value of an attribute than
+  //  they do in content - see EGetGeneralEntityTextInAttributeValue(): those whose replacement text has white space
+  //  which is not spaces. _rmap: the map which AddGeneralEntitiesTo() added to - only the entities which are the
+  //  DTD's in that are looked at.
+  template < class t_TyEntityMap >
+  void AddGeneralEntitiesInAttributeValuesTo( t_TyEntityMap const & _rmap, t_TyEntityMap & _rmapAttrValues ) const
+  {
+    _TyStdStr strText, strTextAttrValue;
+    for ( typename _TyMapEntities::value_type const & rvt : m_mapGeneralEntities )
+    {
+      typename t_TyEntityMap::const_iterator cit = _rmap.find( rvt.first );
+      if ( ( _rmap.end() == cit ) || !FGetGeneralEntityText( rvt.first, strText ) || ( cit->second != strText ) )
+        continue; // Not text alone - or the entity of the map is not this one: a predefined one.
+      if ( ( exdeOk == EGetGeneralEntityTextInAttributeValue( rvt.first, strTextAttrValue ) ) && ( strTextAttrValue != strText ) )
+        _rmapAttrValues.emplace( rvt.first, strTextAttrValue );
     }
   }
 // Names and name tokens - [4], [4a], [5], [7]:
@@ -862,6 +888,8 @@ public:
       {
         const _TyStrView sv = _SvTokenText( *_rrupToken ); // What is between the quotes.
         vtok.m_str = sv.substr( 1, sv.length() - 2 );
+        if ( _FNormalizeLineEnds() )
+          NormalizeLineEnds( vtok.m_str );
       }
       break;
       case s_knTokenDtdEntityValue:
@@ -1526,7 +1554,12 @@ protected:
           switch( _pdtrBegin->type() )
           {
             case s_kdtPlainText:
+            {
+              const size_t knLenBefore = _rstr.length();
               _rstr += sv;
+              if ( _FNormalizeLineEnds() )
+                _rstr.resize( knLenBefore + NNormalizeLineEnds( _rstr.data() + knLenBefore, sv.length() ) );
+            }
             break;
             case s_kdtCharDecRef:
             case s_kdtCharHexRef:
@@ -1698,7 +1731,9 @@ protected:
     if ( !m_rdtd.m_optExternalId.has_value() || !m_resolver )
       return;
     _TyStdStr strText, strLocation;
-    if ( !m_resolver( *m_rdtd.m_optExternalId, _SvBase(), strText, strLocation ) )
+    const bool kfGotText = m_resolver( *m_rdtd.m_optExternalId, _SvBase(), strText, strLocation );
+    NormalizeLineEnds( strText ); // 2.11: the text is ours.
+    if ( !kfGotText )
       return;
     m_rgstrBase.push_back( std::move( strLocation ) );
     struct _Leave
@@ -1718,10 +1753,22 @@ protected:
     return m_rgstrBase.empty() ? _TyStrView() : _TyStrView( m_rgstrBase.back() );
   }
   // The text of an external parameter entity. Returns false if it is not to be had - then it is not read.
+  // Its ends of lines are normalized here ( 2.11 ): the text is ours.
   bool _FGetExternalEntityText( _TyEntity const & _rentity, _TyStdStr & _rstrText, _TyStdStr & _rstrLocation )
   {
     Assert( !_rentity.m_fInternal );
-    return !!m_resolver && m_resolver( _rentity.m_externalId, _rentity.m_strBase, _rstrText, _rstrLocation );
+    if ( !m_resolver || !m_resolver( _rentity.m_externalId, _rentity.m_strBase, _rstrText, _rstrLocation ) )
+      return false;
+    NormalizeLineEnds( _rstrText );
+    return true;
+  }
+  // The ends of lines - 2.11: those of the text of an entity are normalized as the entity is read. The text of the
+  //  document is as it is - we don't change it - so what we take from its internal subset is normalized as we take
+  //  it; the text of an external entity was when it was had. Not the replacement text of a parameter entity which is
+  //  being read: a #xD in that is one which a character reference put there.
+  bool _FNormalizeLineEnds() const
+  {
+    return !m_nParameterEntityDepth;
   }
   // The text declaration [77] of an external entity is not part of its replacement text ( 4.3.1 ): where the text is
   //  put in place of a reference - and not parsed as an external subset is, where the grammar has it - it is taken off.

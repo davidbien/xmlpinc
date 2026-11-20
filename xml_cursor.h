@@ -338,12 +338,12 @@ public:
   //  so for the tag as one which is written in the tag does.
   bool FHasDtd() const
   {
-    return !!m_upDtd;
+    return !!m_spDtd;
   }
   const _TyDtd & GetDtd() const
   {
-    VerifyThrowSz( !!m_upDtd, "The document has no document type declaration - or it hasn't been read yet." );
-    return *m_upDtd;
+    VerifyThrowSz( !!m_spDtd, "The document has no document type declaration - or it hasn't been read yet." );
+    return *m_spDtd;
   }
 
 // Validation - only when the XML traits are validating ( _TyXmlTraits::s_kfValidating ): the document is checked against
@@ -355,7 +355,7 @@ public:
   bool FIsValid() const
   {
     VerifyThrowSz( _TyXmlTraits::s_kfValidating, "The XML traits of this cursor are not validating." );
-    return !!m_upDtd && m_upDtd->m_rgstrValidityErrors.empty() && ( !m_upValidator || m_upValidator->RgErrors().empty() );
+    return !!m_spDtd && m_spDtd->m_rgstrValidityErrors.empty() && ( !m_upValidator || m_upValidator->RgErrors().empty() );
   }
   // What the document violates - not what the declarations of its DTD do: for those see GetDtd().m_rgstrValidityErrors.
   vector< string > const & RgValidityErrors() const
@@ -419,7 +419,7 @@ public:
     {
       m_fFilterWhitespaceCharData = _fFilterWhitespaceCharData;
       if ( !!m_pXp )
-        m_pXp->_SetFilterWhitespaceCharData( m_fFilterWhitespaceCharData );
+        m_pXp->_SetFilterWhitespaceCharData( _FLexFiltersWhitespaceCharData() );
     }
   }
   bool FUseXMLNamespaces() const
@@ -566,6 +566,13 @@ public:
     if ( GetXmlParser().GetTransport().FDependentTransportContexts() )
       _rxdcDocumentContext.m_opttpImpl.emplace( std::move( GetXmlParser().GetTransport() ) );
     _rxdcDocumentContext.m_fIncludePrefixesInAttrNames = m_fIncludePrefixesInAttrNames;
+    if constexpr ( _TyXmlTraits::s_kfSupportDTD )
+    {
+      // What tokens of the document refer to and which is not in the transport: the DTD and the text of the external
+      //  entities which we read. They are ours as well - we are still what we were: valid or not.
+      _rxdcDocumentContext.m_spDtd = m_spDtd;
+      _rxdcDocumentContext.m_spEntityText = m_spMapExternalEntityText;
+    }
     return m_lContexts.front().GetTag();
   }
   // This uses the cursor's prefix and uri hash's (the parser's) to create a namespace value wrap of the
@@ -730,9 +737,11 @@ protected:
   // Get to the end of the current context: the lexical analyzer is then at its end tag ( or at the end of the document ).
   // What is between here and there is skipped - unless the document is being validated: then it is read as it would be
   //  if the user were moving through it, so that all of it is checked.
+  // It is read as well if the DTD declares entities whose text is content of the document: a reference to one in what
+  //  is passed over is then replaced as it is anywhere - its text is read, and is well formed or isn't.
   void _SkipOrReadToEndCurrentContext()
   {
-    if constexpr ( _TyXmlTraits::s_kfValidating )
+    if ( _TyXmlTraits::s_kfValidating || m_fEntitiesAreContent )
     {
       const typename _TyListReadContexts::iterator itContext = m_itCurContext;
       for ( ; ; )
@@ -820,7 +829,7 @@ protected:
     m_pXp = _pXp;
     m_pXp->_InitMapsAndUserObj();
     _InitNamespaceMap();
-    m_pXp->_SetFilterWhitespaceCharData( m_fFilterWhitespaceCharData );
+    m_pXp->_SetFilterWhitespaceCharData( _FLexFiltersWhitespaceCharData() );
     { //B
       unique_ptr< _TyLexToken > pltokFirst;
       // For the first token we must check to see if we get an XMLDecl token since it is optional.
@@ -858,10 +867,14 @@ protected:
     {
       m_rgupEntityFrames.clear();
       m_dqPendingTokens.clear();
-      m_mapExternalEntityText.clear();
+      m_spMapExternalEntityText.reset();
     }
     m_nLexDepth = 0;
-    m_upDtd.reset();
+    m_fEntitiesAreContent = false;
+    m_fDtdDeclaresEntities = false;
+    m_fTokenLiteralLineEnds = false;
+    m_rgfFilteredWhiteSpace.clear();
+    m_spDtd.reset();
   }
 // The next token of the lexical analyzer - or of the text of an entity:
   // A reference in content to a general entity whose replacement text is not text alone - it has markup, or the entity
@@ -878,7 +891,7 @@ protected:
   {
     if constexpr ( _TyXmlTraits::s_kfSupportDTD )
     {
-      if ( ( m_pspStartAll == _pspStart ) && !!m_upDtd )
+      if ( ( m_pspStartAll == _pspStart ) && !!m_spDtd )
         return _FGetTokenOfContent( _rpltok, _ptidSkipBegin, _ptidSkipEnd );
     }
     return m_pXp->GetLexicalAnalyzer().FGetToken( _rpltok, _ptidSkipBegin, _ptidSkipEnd, _pspStart, false );
@@ -887,6 +900,7 @@ protected:
   {
     for ( ; ; )
     {
+      bool fLiteralLineEnds = false;
       if ( !m_dqPendingTokens.empty() )
       {
         // What we made of character data which had a reference - and the tokens which mark what an entity has.
@@ -916,8 +930,12 @@ protected:
         // The token as one of ours: with our user object - the entities are those of the document.
         _rpltok = make_unique< _TyLexToken >( m_pXp->GetUserObj(), pltokEntity->GetTokenId() );
         _rpltok->GetValue() = std::move( pltokEntity->GetValue() );
-        _rpltok->GetTransportCtxt() = pltokEntity->GetTransportCtxt();
+        _SetTransportCtxt( _rpltok->GetTransportCtxt(), pltokEntity->GetTransportCtxt() );
+        fLiteralLineEnds = rframe.m_fLiteralLineEnds;
+        if ( fLiteralLineEnds && ( s_knTokenCharData == _rpltok->GetTokenId() ) )
+          _FlagLiteralLineEnds( _rpltok->GetValue() ); // Before it is taken apart below: the parts are then flagged.
       }
+      m_fTokenLiteralLineEnds = fLiteralLineEnds;
       switch( _rpltok->GetTokenId() )
       {
         case s_knTokenSTag:
@@ -939,6 +957,38 @@ protected:
       }
       return true;
     }
+  }
+  // Make the transport context of a token of ours that of another token: of one of ours, or of a token of the text
+  //  of an entity - whose text is in memory.
+  //  - A variant of contexts has no assignment: it is made anew - as the type of context which the other is.
+  //  - A context which backs its token with a copy of the text ( a file's ) copies the text of the other.
+  template < class t_TyTransportCtxtSrc >
+  static void _SetTransportCtxt( _TyTransportCtxt & _rcxtDest, t_TyTransportCtxtSrc const & _rcxtSrc )
+  {
+    if constexpr ( !TFIsTransportVarCtxt_v< _TyTransportCtxt > )
+      _rcxtDest = _rcxtSrc;
+    else
+    if constexpr ( is_same_v< _TyTransportCtxt, t_TyTransportCtxtSrc > )
+    {
+      _TyTransportCtxt cxtCopy( _rcxtSrc );
+      _rcxtDest.swap( cxtCopy );
+    }
+    else
+      _rcxtDest.GetVariant().template emplace< t_TyTransportCtxtSrc >( _rcxtSrc );
+  }
+  // Flag the pieces of plain text of the value: see s_kdtfLiteralLineEnds.
+  static void _FlagLiteralLineEnds( _TyLexValue & _rval )
+  {
+    if ( !_rval.FHasTypedData() || _rval.template GetVal< _TyData >().FIsNull() )
+      return;
+    _rval.template GetVal< _TyData >().Apply(
+      []( _l_data_typed_range * _pdtrBegin, _l_data_typed_range * const _pdtrEnd )
+      {
+        for ( ; _pdtrEnd != _pdtrBegin; ++_pdtrBegin )
+          if ( s_kdtPlainText == DtGetType( _pdtrBegin->type() ) )
+            _pdtrBegin->m_nType |= s_kdtfLiteralLineEnds;
+      }
+    );
   }
   // If the character data has a reference to an entity whose text is to be included then set up to read that and return
   //  true: the token is then no longer here - what we made of it is among the pending tokens.
@@ -966,7 +1016,7 @@ protected:
       _rpltok->KGetStringView( svName, rgdtr[nPiece].GetRangeBase() );
       if ( rmapEntities.end() != rmapEntities.find( svName ) )
         continue; // Text alone: the reference remains a piece of the character data.
-      const xml_dtd_entity< _TyChar > * pEntity = m_upDtd->PGetGeneralEntity( svName );
+      const xml_dtd_entity< _TyChar > * pEntity = m_spDtd->PGetGeneralEntity( svName );
       if ( !pEntity )
         continue; // Not declared: whoever asks for the string of the character data is told.
       const string strName = StrConvertString< char >( svName );
@@ -1001,7 +1051,7 @@ protected:
       {
         // ( A token is not copied: one of ours for the same text. )
         pltokBefore = make_unique< _TyLexToken >( m_pXp->GetUserObj(), s_knTokenCharData );
-        pltokBefore->GetTransportCtxt() = _rpltok->GetTransportCtxt();
+        _SetTransportCtxt( pltokBefore->GetTransportCtxt(), _rpltok->GetTransportCtxt() );
         lambdaSetPieces( *pltokBefore, rgdtr.data(), rgdtr.data() + nPiece );
       }
       if ( nPiece + 1 < rgdtr.size() )
@@ -1031,7 +1081,10 @@ protected:
         upFrame->m_nLexDepth = m_nLexDepth;
         upFrame->m_pltokAfter = std::move( pltokAfter );
         upFrame->m_analyzer.emplaceTransport( svText.data(), svText.length() );
-        upFrame->m_analyzer.GetUserObj().SetFilterWhitespaceCharData( m_fFilterWhitespaceCharData );
+        upFrame->m_analyzer.GetUserObj().SetFilterWhitespaceCharData( _FLexFiltersWhitespaceCharData() );
+        // A #xD in the replacement text of an internal entity is one which a character reference put there: it is
+        //  not the end of a line of text which is read from somewhere ( 2.11 ) - see s_kdtfLiteralLineEnds.
+        upFrame->m_fLiteralLineEnds = pEntity->m_fInternal && ( _TyStrView::npos != svText.find( _TyChar( 0xD ) ) );
         m_rgupEntityFrames.push_back( std::move( upFrame ) );
       }
       m_dqPendingTokens.push_front( lambdaMarker( s_knTokenEntityContentBegin ) );
@@ -1068,8 +1121,11 @@ protected:
       _rsvText = _rentity.m_strValue;
       return true;
     }
-    typename _TyMapExternalEntityText::const_iterator cit = m_mapExternalEntityText.find( _rentity.m_strName );
-    if ( m_mapExternalEntityText.end() == cit )
+    if ( !m_spMapExternalEntityText )
+      m_spMapExternalEntityText = make_shared< _TyMapExternalEntityText >();
+    _TyMapExternalEntityText & rmapExternalEntityText = *m_spMapExternalEntityText;
+    typename _TyMapExternalEntityText::const_iterator cit = rmapExternalEntityText.find( _rentity.m_strName );
+    if ( rmapExternalEntityText.end() == cit )
     {
       if ( !m_pXp->GetExternalEntityResolver() )
         return false;
@@ -1077,7 +1133,8 @@ protected:
       if ( !m_pXp->GetExternalEntityResolver()( _rentity.m_externalId, _rentity.m_strBase, strText, strLocation ) )
         return false;
       xml_dtd_parser< _TyChar >::StripTextDecl( strText ); // The text declaration [77] is not part of the replacement text ( 4.3.1 ).
-      cit = m_mapExternalEntityText.emplace( _rentity.m_strName, std::move( strText ) ).first;
+      NormalizeLineEnds( strText ); // 2.11: the text is ours.
+      cit = rmapExternalEntityText.emplace( _rentity.m_strName, std::move( strText ) ).first;
     }
     _rsvText = cit->second;
     return true;
@@ -1089,17 +1146,29 @@ protected:
       _UpdateSkip();
     if ( !_pspStart )
       _pspStart = m_pspStartAll;
-    bool fGotToken = _FGetLexToken( _rpltok, &*m_rgSkipTokensCur.begin(), &*m_rgSkipTokensCur.begin() + m_nSkip, _pspStart );
-    if constexpr ( _TyXmlTraits::s_kfSupportDTD )
+    for ( ; ; )
     {
-      // The document type declaration is not a token of the DFA of the document: where it is that DFA finds no token.
-      // That is in the prolog - after the XML declaration and before the first tag - and there may be only one.
-      // We read it and what we return for it is a token whose value is its text: s_knTokenDoctypeDecl - which is then
-      //  one of the tokens of the prolog as a comment there is.
-      if ( !fGotToken && ( m_pspStartAll == _pspStart ) && !m_fGotFirstTag && !m_lContexts.empty() && !m_upDtd )
-        fGotToken = _FReadDoctypeDecl( _rpltok );
+      bool fGotToken = _FGetLexToken( _rpltok, &*m_rgSkipTokensCur.begin(), &*m_rgSkipTokensCur.begin() + m_nSkip, _pspStart );
+      if constexpr ( _TyXmlTraits::s_kfSupportDTD )
+      {
+        // The document type declaration is not a token of the DFA of the document: where it is that DFA finds no token.
+        // That is in the prolog - after the XML declaration and before the first tag - and there may be only one.
+        // We read it and what we return for it is a token whose value is its text: s_knTokenDoctypeDecl - which is then
+        //  one of the tokens of the prolog as a comment there is.
+        if ( !fGotToken && ( m_pspStartAll == _pspStart ) && !m_fGotFirstTag && !m_lContexts.empty() && !m_spDtd )
+          fGotToken = _FReadDoctypeDecl( _rpltok );
+      }
+      if constexpr ( _TyXmlTraits::s_kfValidating )
+      {
+        // What the user doesn't want - and the validator is to know of: see _FFilterTokenOfValidated().
+        if ( fGotToken && ( m_pspStartAll == _pspStart ) && _FFilterTokenOfValidated( *_rpltok ) )
+        {
+          _rpltok.reset();
+          continue;
+        }
+      }
+      return fGotToken;
     }
-    return fGotToken;
   }
   // Read the document type declaration [28] if that is what is here. Return false if nothing of the DTD is here - the
   //  end of the input for instance: then nothing was read.
@@ -1120,9 +1189,9 @@ protected:
     }
     if ( s_knTokenDtdDoctypeBegin != pltokDoctype->GetTokenId() )
       THROWXMLPARSEEXCEPTION( "Found markup in the prolog which is neither a document type declaration nor the document's element." );
-    m_upDtd = make_unique< _TyDtd >();
+    m_spDtd = make_shared< _TyDtd >();
     _TyStdStr strDoctypeText;
-    xml_dtd_parser< _TyChar > dtdParser( *m_upDtd );
+    xml_dtd_parser< _TyChar > dtdParser( *m_spDtd );
     // Standalone only if the XML declaration says so: m_fStandalone is true as well when it says nothing.
     dtdParser.SetStandalone( m_XMLDeclProperties.m_fHasStandalone && m_XMLDeclProperties.m_fStandalone );
     dtdParser.SetKeepDoctypeText( &strDoctypeText );
@@ -1131,7 +1200,24 @@ protected:
       dtdParser.SetExternalEntityResolver( m_pXp->GetExternalEntityResolver(), m_pXp->StrBaseLocation() );
     dtdParser.ParseDoctypeDecl( rAnalyzer, std::move( pltokDoctype ) );
     // The entities of the document are those which the DTD declares - with the predefined ones, which are there already.
-    m_upDtd->AddGeneralEntitiesTo( m_pXp->GetUserObj().GetEntityMap() );
+    m_spDtd->AddGeneralEntitiesTo( m_pXp->GetUserObj().GetEntityMap() );
+    // Those whose text is other within the value of an attribute - see _ProcessEntityReferencesOfAttrValues().
+    m_spDtd->AddGeneralEntitiesInAttributeValuesTo( m_pXp->GetUserObj().GetEntityMap(), m_pXp->GetUserObj().GetEntityMapAttrValues() );
+    m_fDtdDeclaresEntities = !m_spDtd->m_mapGeneralEntities.empty();
+    // Whether a reference in content may be to an entity whose text is content - or to one which may not be referenced
+    //  there: then nothing of the document is passed over unread - see _SkipOrReadToEndCurrentContext().
+    m_fEntitiesAreContent = false;
+    for ( auto const & rvtEntity : m_spDtd->m_mapGeneralEntities )
+    {
+      auto const & rmapEntities = m_pXp->GetUserObj().GetEntityMap();
+      if ( rmapEntities.end() != rmapEntities.find( rvtEntity.first ) )
+        continue; // Text alone.
+      if ( rvtEntity.second.m_fInternal || rvtEntity.second.FIsUnparsed() || !!m_pXp->GetExternalEntityResolver() )
+      {
+        m_fEntitiesAreContent = true;
+        break;
+      }
+    }
     // The token of the declaration. It was read as many tokens of the DTD so its text is not a piece of the document
     //  which a token of ours refers to: the value is a string.
     _rpltok = make_unique< _TyLexToken >( m_pXp->GetUserObj(), s_knTokenDoctypeDecl );
@@ -1234,6 +1320,7 @@ protected:
   }
   void _ProcessToken( unique_ptr< _TyLexToken > & _rpltok )
   {
+    _ValidateWhatWasFiltered(); // What came before this token and was passed over.
     // 1) If a tag then we need to process namespaces.
     // 2) If CharData or CDATASection then we may need to read a token ahead to see if we need to combine, etc.
     switch( _rpltok->GetTokenId() )
@@ -1251,7 +1338,9 @@ protected:
         _TyRgDefaultAttrs rgDefaultAttrs;
         if constexpr ( _TyXmlTraits::s_kfSupportDTD )
         {
-          if ( !!m_upDtd && !m_upDtd->m_mapAttLists.empty() )
+          if ( m_fDtdDeclaresEntities )
+            _ProcessEntityReferencesOfAttrValues( *_rpltok );
+          if ( !!m_spDtd && !m_spDtd->m_mapAttLists.empty() )
             _GetDefaultAttributes( *_rpltok, rgDefaultAttrs );
         }
         // The tag as it is written and the attributes which it has - their values as the declarations make them - are validated.
@@ -1320,17 +1409,20 @@ protected:
   }
   void _ProcessComment( _TyLexToken & _rltok )
   {
+    _ValidateCommentOrProcessingInstruction();
     _l_data_range drToken;
     _rltok.GetTokenDataRange( drToken );
     drToken.m_posBegin += 4; // <!--
     drToken.m_posEnd -= 3; // -->
     // REVIEW:<dbien>: Could strip whitespace off front and rear but...
     _rltok.template emplaceValue< _TyData >( drToken );
-    _ValidateCommentOrProcessingInstruction();
+    if ( m_fTokenLiteralLineEnds )
+      _FlagLiteralLineEnds( _rltok.GetValue() );
     _AppendContextContent( _rltok );
   }
   void _ProcessProcessingInstruction( _TyLexToken & _rltok )
   {
+    _ValidateCommentOrProcessingInstruction();
     // We may have some "meat" after the PITarget - or not.
     vtyDataPosition posMeatBegin = _rltok[vknProcessingInstruction_MeatIdx].template GetVal< vtyDataPosition >();
     if ( vkdpNullDataPosition == posMeatBegin )
@@ -1343,8 +1435,9 @@ protected:
       _l_data_range drToken;
       _rltok.GetTokenDataRange( drToken );
       _rltok[vknProcessingInstruction_MeatIdx].template emplaceArgs< _TyData >( posMeatBegin, drToken.end()-2, s_kdtPlainText, s_knTriggerPITargetMeatBegin ); // subtract "?>".
+      if ( m_fTokenLiteralLineEnds )
+        _FlagLiteralLineEnds( _rltok[vknProcessingInstruction_MeatIdx] );
     }
-    _ValidateCommentOrProcessingInstruction();
     _AppendContextContent( _rltok );
   }
   void _ProcessCDataSection( _TyLexToken & _rltok )
@@ -1355,6 +1448,8 @@ protected:
     drToken.m_posBegin += 9; // <![CDATA[
     drToken.m_posEnd -= 3; // ]]>
     _rltok.template emplaceValue< _TyData >( drToken );
+    if ( m_fTokenLiteralLineEnds )
+      _FlagLiteralLineEnds( _rltok.GetValue() );
     if constexpr ( _TyXmlTraits::s_kfValidating )
     {
       if ( !!m_upValidator )
@@ -1373,8 +1468,9 @@ protected:
       bool fError = !rdt.FContainsSingleDataRange() || ( rdt.DataRangeGetSingle().type() != s_kdtPlainText );
       if ( !fError )
       {
+        // ( The text as it is - not the string of the value, which there is no view of if it has a #xD: 2.11. )
         _TyStrView svData;
-        rVal.KGetStringView( _rltok, svData );
+        _rltok.KGetStringView( svData, rdt.DataRangeGetSingle().GetRangeBase() );
         fError = ( svData.length() != StrSpn( &svData[0], svData.length(), (const _TyChar *)str_array_cast<_TyChar>( STR_XML_WHITESPACE_TOKEN ) ) );
       }
       VerifyThrowSz( !fError, "Found non-whitespace CharData before first tag declaration." );
@@ -1386,6 +1482,142 @@ protected:
         m_upValidator->CharacterData( _FIsWhiteSpaceCharData( _rltok ) );
     }
     _AppendContextContent( _rltok ); // Push on current context.
+  }
+// What the user doesn't want of a document which is validated - comments, processing instructions, white space:
+  // A comment, a processing instruction or white space is content which an element may not have - one which is
+  //  declared EMPTY has none - so the validator is to know of them. Then the lexical analyzer doesn't pass over them
+  //  and doesn't filter: it gives us the tokens and we pass over them - _FFilterTokenOfValidated() - where we get
+  //  them, so that what we look ahead to is what it would be if the lexical analyzer had. The validator is told of
+  //  them when the next token is processed: by then it knows of everything which came before them - the end of an
+  //  element is known when it is left, which is after we have looked ahead beyond its end tag.
+  // Whether the lexical analyzer filters the character data which is white space - and never makes a token of it.
+  bool _FLexFiltersWhitespaceCharData() const
+  {
+    return m_fFilterWhitespaceCharData && !_TyXmlTraits::s_kfValidating;
+  }
+  // Whether the token is one which the user doesn't want: then the validator is to be told of it.
+  bool _FFilterTokenOfValidated( _TyLexToken const & _rltok )
+  {
+    switch( _rltok.GetTokenId() )
+    {
+      case s_knTokenComment:
+        if ( !m_fSkipComments )
+          return false;
+        m_rgfFilteredWhiteSpace.push_back( false );
+      break;
+      case s_knTokenProcessingInstruction:
+        if ( !m_fSkipPI )
+          return false;
+        m_rgfFilteredWhiteSpace.push_back( false );
+      break;
+      case s_knTokenCharData:
+        // What the lexical analyzer would have filtered: a single piece of plain text which is white space.
+        if ( !m_fFilterWhitespaceCharData || !_FIsFilteredWhiteSpaceCharData( _rltok ) )
+          return false;
+        m_rgfFilteredWhiteSpace.push_back( true );
+      break;
+      default:
+        return false;
+    }
+    return true;
+  }
+  void _ValidateWhatWasFiltered()
+  {
+    if constexpr ( _TyXmlTraits::s_kfValidating )
+    {
+      if ( m_rgfFilteredWhiteSpace.empty() )
+        return;
+      if ( !!m_upValidator && FInsideDocumentTag() )
+      {
+        for ( const bool kfWhiteSpace : m_rgfFilteredWhiteSpace )
+        {
+          if ( kfWhiteSpace )
+            m_upValidator->CharacterData( true );
+          else
+            m_upValidator->CommentOrProcessingInstruction();
+        }
+      }
+      m_rgfFilteredWhiteSpace.clear();
+    }
+  }
+  bool _FIsFilteredWhiteSpaceCharData( _TyLexToken const & _rltok ) const
+  {
+    const _TyLexValue & krval = _rltok.GetValue();
+    if ( !krval.FHasTypedData() )
+      return false;
+    const _TyData & krdt = krval.template GetVal< _TyData >();
+    if ( krdt.FIsNull() || !krdt.FContainsSingleDataRange() || ( s_kdtPlainText != DtGetType( krdt.DataRangeGetSingle().type() ) ) )
+      return false;
+    _TyStrView sv;
+    _rltok.KGetStringView( sv, krdt.DataRangeGetSingle().GetRangeBase() );
+    return sv.length() == StrSpn( sv.data(), sv.length(), (const _TyChar *)str_array_cast<_TyChar>( STR_XML_WHITESPACE_TOKEN ) );
+  }
+// The references to entities within the values of the attributes of a tag - 3.1, 3.3.3:
+  //  - WFC: No External Entity References [41]: not to an external entity - nor to an unparsed one ( 4.4.4 ).
+  //  - WFC: No < in Attribute Values [41]: the replacement text of the entity - and of those to which that refers - has no '<'.
+  //  - WFC: No Recursion [68].
+  //  - A reference to an entity whose text is other within the value of an attribute than in content - its white space is
+  //    spaces there - is flagged so: see s_kdtfEntityRefInAttrValue.
+  // A reference to an entity which is not declared is left for whoever asks for the value: that is told then.
+  // This is called before the names of the token are processed and only if the DTD declares general entities.
+  void _ProcessEntityReferencesOfAttrValues( _TyLexToken & _rltok )
+  {
+    _TyLexValue & rrgAttrs = _rltok[vknAttributesIdx];
+    const size_t knAttrs = rrgAttrs.GetSize();
+    auto const & rmapEntities = m_pXp->GetUserObj().GetEntityMap();
+    auto const & rmapEntitiesAttrValues = m_pXp->GetUserObj().GetEntityMapAttrValues();
+    for ( size_t nAttr = 0; nAttr < knAttrs; ++nAttr )
+    {
+      _TyLexValue & rvalValue = rrgAttrs[nAttr][vknAttr_ValueIdx];
+      if ( !rvalValue.FHasTypedData() )
+        continue;
+      _TyData & rdt = rvalValue.template GetVal< _TyData >();
+      if ( rdt.FIsNull() || rdt.FContainsSingleDataRange( s_kdtPlainText ) )
+        continue; // As nearly all are.
+      rdt.Apply(
+        [this,&_rltok,&rmapEntities,&rmapEntitiesAttrValues]( _l_data_typed_range * _pdtrBegin, _l_data_typed_range * const _pdtrEnd )
+        {
+          for ( ; _pdtrEnd != _pdtrBegin; ++_pdtrBegin )
+          {
+            if ( _pdtrBegin->FIsNull() || ( s_kdtEntityRef != DtGetType( _pdtrBegin->type() ) ) )
+              continue;
+            _TyStrView svName;
+            _rltok.KGetStringView( svName, _pdtrBegin->GetRangeBase() );
+            if ( rmapEntities.end() != rmapEntities.find( svName ) )
+            {
+              if ( !rmapEntitiesAttrValues.empty() && ( rmapEntitiesAttrValues.end() != rmapEntitiesAttrValues.find( svName ) ) )
+                _pdtrBegin->m_nType |= s_kdtfEntityRefInAttrValue;
+              continue;
+            }
+            const xml_dtd_entity< _TyChar > * pEntity = m_spDtd->PGetGeneralEntity( svName );
+            if ( !pEntity )
+              continue;
+            const string strName = StrConvertString< char >( svName );
+            if ( pEntity->FIsUnparsed() )
+              THROWXMLPARSEEXCEPTION( "The value of an attribute refers to the unparsed entity [%s].", strName.c_str() );
+            _TyStdStr strText;
+            switch( m_spDtd->EGetGeneralEntityTextInAttributeValue( svName, strText ) )
+            {
+              case exdeExternal:
+                THROWXMLPARSEEXCEPTION( "The value of an attribute refers to the external entity [%s] - or to an entity which refers to one.", strName.c_str() );
+              break;
+              case exdeMarkup:
+                THROWXMLPARSEEXCEPTION( "The value of an attribute refers to the entity [%s] and there is a '<' in its replacement text - or in that of an entity which it refers to.", strName.c_str() );
+              break;
+              case exdeRecursive:
+                THROWXMLPARSEEXCEPTION( "The entity [%s] contains a reference to itself.", strName.c_str() );
+              break;
+              case exdeNotDeclared:
+                THROWXMLPARSEEXCEPTION( "The entity [%s] - which the value of an attribute refers to - refers to an entity which is not declared.", strName.c_str() );
+              break;
+              default:
+                THROWXMLPARSEEXCEPTION( "The replacement text of the entity [%s] - which the value of an attribute refers to - is not well formed.", strName.c_str() );
+              break;
+            }
+          }
+        }
+      );
+    }
   }
   void _ProcessTagName( _TyLexValue & _rrgvalName )
   {
@@ -1574,7 +1806,7 @@ protected:
   void _GetDefaultAttributes( _TyLexToken & _rltok, _TyRgDefaultAttrs & _rrgDefaultAttrs )
   {
     const _TyLexValue & krvalTag = _rltok.GetValue();
-    const vector< xml_dtd_attdef< _TyChar > > * prgAttDefs = m_upDtd->PGetAttList( _SvNameAsWritten( _rltok, krvalTag[vknTagNameIdx] ) );
+    const vector< xml_dtd_attdef< _TyChar > > * prgAttDefs = m_spDtd->PGetAttList( _SvNameAsWritten( _rltok, krvalTag[vknTagNameIdx] ) );
     if ( !prgAttDefs )
       return;
     const _TyLexValue & krrgAttrs = krvalTag[vknAttributesIdx];
@@ -1674,9 +1906,9 @@ protected:
   {
     if ( !m_upValidator )
     {
-      m_upValidator = make_unique< _TyValidator >( m_upDtd.get() );
+      m_upValidator = make_unique< _TyValidator >( m_spDtd.get() );
       m_upValidator->SetThrowOnError( m_fThrowOnValidityError );
-      m_upValidator->SetStandalone( m_XMLDeclProperties.m_fHasStandalone && m_XMLDeclProperties.m_fStandalone && !!m_upDtd );
+      m_upValidator->SetStandalone( m_XMLDeclProperties.m_fHasStandalone && m_XMLDeclProperties.m_fStandalone && !!m_spDtd );
     }
     const _TyLexValue & krvalTag = _rltok.GetValue();
     const _TyLexValue & krrgAttrs = krvalTag[vknAttributesIdx];
@@ -1700,7 +1932,7 @@ protected:
           // VC: Standalone Document Declaration - what the value owes to declarations which are external:
           _ValidateStandaloneEntityReferences( _rltok, krvalValue );
           // If its type is declared so and without the type the value would be another - only white space was taken away, so by its length.
-          const xml_dtd_attdef< _TyChar > * pAttDef = m_upDtd->PGetAttDef( _SvNameAsWritten( _rltok, krvalTag[vknTagNameIdx] ), rattr.m_svName );
+          const xml_dtd_attdef< _TyChar > * pAttDef = m_spDtd->PGetAttDef( _SvNameAsWritten( _rltok, krvalTag[vknTagNameIdx] ), rattr.m_svName );
           if ( !!pAttDef && pAttDef->m_fDeclaredExternally && ( exdatCDATA != pAttDef->m_eType ) && krvalValue.FHasTypedData() )
           {
             _TyLexValue valAsCDATA( krvalValue.template GetVal< _TyData >() );
@@ -1747,7 +1979,7 @@ protected:
             continue;
           _TyStrView svEntity;
           _rltok.KGetStringView( svEntity, _pdtrBegin->GetRangeBase() );
-          const xml_dtd_entity< _TyChar > * pEntity = m_upDtd->PGetGeneralEntity( svEntity );
+          const xml_dtd_entity< _TyChar > * pEntity = m_spDtd->PGetGeneralEntity( svEntity );
           if ( !!pEntity && pEntity->m_fDeclaredExternally )
             m_upValidator->StandaloneViolation( "refers to the entity", svEntity );
         }
@@ -1787,7 +2019,7 @@ protected:
               auto citEntity = rmapEntities.find( sv );
               if ( rmapEntities.end() == citEntity )
               {
-                if ( !!m_upDtd && !!m_upDtd->PGetGeneralEntity( sv ) )
+                if ( !!m_spDtd && !!m_spDtd->PGetGeneralEntity( sv ) )
                 {
                   // Declared, and we don't have its text: what is within this element is not known.
                   m_fValidationIncomplete = true;
@@ -1816,10 +2048,16 @@ protected:
       return;
     m_fUpdateSkip = false;
     vtyTokenIdent * ptidCur = &*m_rgSkipTokensCur.begin();
-    if ( m_fSkipComments )
-      *ptidCur++ = s_knTokenComment;
-    if ( m_fSkipPI )
-      *ptidCur++ = s_knTokenProcessingInstruction;
+    // When the document is validated the lexical analyzer passes over nothing: a comment or a processing instruction
+    //  is content which the validator is to know of - an element which is declared EMPTY has none. We pass over them:
+    //  see _FFilterTokenOfValidated().
+    if ( !_TyXmlTraits::s_kfValidating )
+    {
+      if ( m_fSkipComments )
+        *ptidCur++ = s_knTokenComment;
+      if ( m_fSkipPI )
+        *ptidCur++ = s_knTokenProcessingInstruction;
+    }
     m_nSkip = ptidCur - &*m_rgSkipTokensCur.begin();
   }
   static constexpr size_t s_knMaxSkippedTokens = 32; // random number.
@@ -1861,7 +2099,9 @@ protected:
   _TyXMLDeclProperties m_XMLDeclProperties;
   // What the document type declaration declares - if the XML traits support the DTD and the document has one.
   // Not within this object: the validator - and the values which the DTD gives attributes - refer to it, and we may be moved.
-  unique_ptr< _TyDtd > m_upDtd;
+  // And not ours alone: tokens of the document refer to it, and they may be kept when we are gone - then it is kept
+  //  with them: see XMLDeclAcquireDocumentContext().
+  shared_ptr< _TyDtd > m_spDtd;
 // The text of general entities which is read as content - see _FGetLexToken():
   // The lexical analyzer of the text of an entity: the text is in memory. Its tokens are made tokens of ours.
   typedef xml_traits< _l_transport_fixedmem< _TyChar >, _TyXmlTraits::s_kfSupportDTD, _TyXmlTraits::s_kfValidating > _TyXmlTraitsEntity;
@@ -1872,10 +2112,11 @@ protected:
   struct _TEntityFrame
   {
     _TyStdStr m_strName; // The entity.
-    _TyStrView m_svText; // Its replacement text: in the DTD, or in m_mapExternalEntityText.
+    _TyStrView m_svText; // Its replacement text: in the DTD, or in the map of the text of the external entities.
     __XMLPLEX_NAMESPACE::_lexical_analyzer< t_TyLexTraitsFrame > m_analyzer;
     size_t m_nLexDepth{ 0 }; // How many elements we were within where the reference is.
     unique_ptr< _TyLexToken > m_pltokAfter; // The character data which followed the reference in its token.
+    bool m_fLiteralLineEnds{ false }; // See s_kdtfLiteralLineEnds.
   };
   // ( Only with XML traits which support the DTD is there any of this: otherwise the lexical analyzer of the entities is not made. )
   typedef _TEntityFrame< _TyLexTraitsEntity > _TyEntityFrame;
@@ -1883,8 +2124,12 @@ protected:
   _TyRgEntityFrames m_rgupEntityFrames; // The entities whose text we are within: the last is the one being read.
   deque< unique_ptr< _TyLexToken > > m_dqPendingTokens; // Tokens which are ours to give before the lexical analyzer is asked again.
   size_t m_nLexDepth{ 0 }; // How many elements the lexical analyzer is within.
+  bool m_fEntitiesAreContent{ false }; // The DTD declares entities whose text is read as content - see _SkipOrReadToEndCurrentContext().
+  bool m_fDtdDeclaresEntities{ false }; // It declares general entities at all - see _ProcessEntityReferencesOfAttrValues().
+  bool m_fTokenLiteralLineEnds{ false }; // The token which was last had is of text which is flagged s_kdtfLiteralLineEnds.
+  vector< bool > m_rgfFilteredWhiteSpace; // What was passed over since the last token - see _FFilterTokenOfValidated(): true for white space.
   typedef map< _TyStdStr, _TyStdStr, less<> > _TyMapExternalEntityText;
-  _TyMapExternalEntityText m_mapExternalEntityText; // The text of the external entities which were read.
+  shared_ptr< _TyMapExternalEntityText > m_spMapExternalEntityText; // The text of the external entities which were read - kept as the DTD is.
   static const _l_state_proto< _TyChar > * _PspStartAllEntity()
   {
     if constexpr ( is_same_v< _TyChar, char32_t > )
@@ -1907,18 +2152,21 @@ protected:
 // xml_read_cursor_var:
 // A variant that is able to hold multiple *character types* of same transports.
 // t_TyTpTransports: Is a tuple<> pack of transport types that the cursor will support.
-template < class t_TyTpTransports >
+// t_kfSupportDTD, t_kfValidating: as those of xml_traits<> - each of the cursors is one of XML traits which have them.
+template < class t_TyTpTransports, bool t_kfSupportDTD, bool t_kfValidating >
 class xml_read_cursor_var
 {
   typedef xml_read_cursor_var _TyThis;
 public:
   typedef t_TyTpTransports _TyTpTransports;
-  typedef MultiplexTuplePack_t< TGetXmlTraitsDefault, _TyTpTransports > _TyTpXmlTraits;
+  static constexpr bool s_kfSupportDTD = t_kfSupportDTD;
+  static constexpr bool s_kfValidating = t_kfValidating;
+  typedef MultiplexTuplePack_t< TGetXmlTraitsOf< t_kfSupportDTD, t_kfValidating >::template _TyGet, _TyTpTransports > _TyTpXmlTraits;
   // Define our variant type - there is no monostate for this (currently - we'll see if we need it).
   typedef MultiplexTuplePack_t< xml_read_cursor, _TyTpXmlTraits, variant > _TyVariant;
-  typedef xml_token_var< _TyTpTransports > _TyXmlTokenVar;
+  typedef xml_token_var< _TyTpTransports, t_kfSupportDTD > _TyXmlTokenVar;
   typedef optional< _TyXmlTokenVar > _TyOptXmlTokenVar;
-  typedef _xml_document_context_transport_var< _TyTpTransports > _TyXmlDocumentContextVar;
+  typedef _xml_document_context_transport_var< _TyTpTransports, t_kfSupportDTD, t_kfValidating > _TyXmlDocumentContextVar;
 
   ~xml_read_cursor_var() = default;
   xml_read_cursor_var() = default; // We have no monostate in our variant. We could still allow this, but I'd prefer not to. REVIEW<dbien>: Need it for the compile...
@@ -1953,6 +2201,64 @@ public:
   const _TyVariant & GetVariant() const
   {
     return m_varCursor;
+  }
+// The DTD and validation - see xml_read_cursor<>: what doesn't depend upon the type of character.
+  // ( The xml_dtd<> is of the type of character of the document: have it from the cursor of the variant. )
+  bool FHasDtd() const
+  {
+    return std::visit( _VisitHelpOverloadFCall {
+      []( auto & _tCursor ) -> bool
+      {
+        return _tCursor.FHasDtd();
+      }
+    }, m_varCursor );
+  }
+  bool FIsValid() const
+  {
+    return std::visit( _VisitHelpOverloadFCall {
+      []( auto & _tCursor ) -> bool
+      {
+        return _tCursor.FIsValid();
+      }
+    }, m_varCursor );
+  }
+  vector< string > const & RgValidityErrors() const
+  {
+    return std::visit( _VisitHelpOverloadFCall {
+      []( auto & _tCursor ) -> vector< string > const &
+      {
+        return _tCursor.RgValidityErrors();
+      }
+    }, m_varCursor );
+  }
+  // The violations of the declarations of the DTD themselves - none if there is no DTD.
+  vector< string > const & RgValidityErrorsOfDtd() const
+  {
+    return std::visit( _VisitHelpOverloadFCall {
+      []( auto & _tCursor ) -> vector< string > const &
+      {
+        static const vector< string > s_rgstrNone;
+        return _tCursor.FHasDtd() ? _tCursor.GetDtd().m_rgstrValidityErrors : s_rgstrNone;
+      }
+    }, m_varCursor );
+  }
+  bool FValidationIncomplete() const
+  {
+    return std::visit( _VisitHelpOverloadFCall {
+      []( auto & _tCursor ) -> bool
+      {
+        return _tCursor.FValidationIncomplete();
+      }
+    }, m_varCursor );
+  }
+  void SetThrowOnValidityError( bool _fThrowOnValidityError = true )
+  {
+    std::visit( _VisitHelpOverloadFCall {
+      [_fThrowOnValidityError]( auto & _tCursor )
+      {
+        _tCursor.SetThrowOnValidityError( _fThrowOnValidityError );
+      }
+    }, m_varCursor );
   }
   bool FInsideDocumentTag() const
   {

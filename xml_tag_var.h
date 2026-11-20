@@ -15,17 +15,17 @@
 
 __XMLP_BEGIN_NAMESPACE
 
-template < class t_TyTpTransports >
+template < class t_TyTpTransports, bool t_kfSupportDTD, bool t_kfValidating >
 class xml_tag_var
 {
   typedef xml_tag_var _TyThis;
-  friend xml_document_var< t_TyTpTransports >;
+  friend xml_document_var< t_TyTpTransports, t_kfSupportDTD, t_kfValidating >;
 public:
   typedef t_TyTpTransports _TyTpTransports;
-  typedef MultiplexTuplePack_t< TGetXmlTraitsDefault, _TyTpTransports > _TyTpXmlTraits;
+  typedef MultiplexTuplePack_t< TGetXmlTraitsOf< t_kfSupportDTD, t_kfValidating >::template _TyGet, _TyTpTransports > _TyTpXmlTraits;
   // The content of a tag is a series of tokens and tags.
-  typedef xml_token_var< _TyTpTransports > _TyXmlTokenVar;
-  typedef xml_read_cursor_var< _TyTpTransports > _TyReadCursorVar;
+  typedef xml_token_var< _TyTpTransports, t_kfSupportDTD > _TyXmlTokenVar;
+  typedef xml_read_cursor_var< _TyTpTransports, t_kfSupportDTD, t_kfValidating > _TyReadCursorVar;
   // We may contain tokens which are not shared objects, or tags which are shared for the purpose of
   //  using weak pointer to point to the parent xml_tag. It should allow subtrees to be stored safely
   //  outside of management by the xml_document container. Because we store a pointer to our parent
@@ -37,7 +37,7 @@ public:
   typedef SharedWeakPtr< _TyUPtrThis, allocator< _TyUPtrThis >, uint32_t, false > _TyWeakThis;
   typedef std::variant< _TyStrongThis, _TyXmlTokenVar > _TyVariant;
   typedef std::vector< _TyVariant > _TyRgTokens;
-  typedef _xml_document_context_transport_var< _TyTpTransports > _TyXmlDocumentContextVar;
+  typedef _xml_document_context_transport_var< _TyTpTransports, t_kfSupportDTD, t_kfValidating > _TyXmlDocumentContextVar;
 
   virtual ~xml_tag_var() = default;
   xml_tag_var() = default;
@@ -194,11 +194,11 @@ protected:
 
 // xml_document_var:
 // This contains the root xml_tag_var as well as the namespace URI and Prefix maps and the user object.
-template < class t_TyTpTransports >
-class xml_document_var : public xml_tag_var< t_TyTpTransports >
+template < class t_TyTpTransports, bool t_kfSupportDTD, bool t_kfValidating >
+class xml_document_var : public xml_tag_var< t_TyTpTransports, t_kfSupportDTD, t_kfValidating >
 {
   typedef xml_document_var _TyThis;
-  typedef xml_tag_var< t_TyTpTransports > _TyBase;
+  typedef xml_tag_var< t_TyTpTransports, t_kfSupportDTD, t_kfValidating > _TyBase;
 protected:
    using _TyBase::_AcquireContent;
    using _TyBase::_WriteContent;
@@ -208,9 +208,9 @@ public:
   using typename _TyBase::_TyWeakThis;
   using typename _TyBase::_TyStrongThis;
   typedef t_TyTpTransports _TyTpTransports;
-  typedef MultiplexTuplePack_t< TGetXmlTraitsDefault, _TyTpTransports > _TyTpXmlTraits;
-  typedef xml_read_cursor_var< _TyTpTransports > _TyReadCursorVar;
-  typedef _xml_document_context_transport_var< _TyTpTransports > _TyXmlDocumentContextVar;
+  typedef MultiplexTuplePack_t< TGetXmlTraitsOf< t_kfSupportDTD, t_kfValidating >::template _TyGet, _TyTpTransports > _TyTpXmlTraits;
+  typedef xml_read_cursor_var< _TyTpTransports, t_kfSupportDTD, t_kfValidating > _TyReadCursorVar;
+  typedef _xml_document_context_transport_var< _TyTpTransports, t_kfSupportDTD, t_kfValidating > _TyXmlDocumentContextVar;
 
   xml_document_var() = default;
   xml_document_var( xml_document_var const & ) = default;
