@@ -24,6 +24,7 @@ void CheckDuplicateTokenAttrs( bool _fStrict, const t_TyLexToken & _rltok, bool 
   typedef typename _TyLexToken::_TyValue _TyLexValue;
   typedef typename _TyLexValue::_TyChar _TyChar;
   typedef basic_string_view< _TyChar > _TyStrView;
+  typedef basic_string< _TyChar > _TyStdStr;
   typedef xml_namespace_value_wrap< _TyChar > _TyXmlNamespaceValueWrap;
   // The default init allocator allows us to resize without initializing the elements...
   // Then we don't have to interact with the vector at all as we fill it...
@@ -70,10 +71,12 @@ void CheckDuplicateTokenAttrs( bool _fStrict, const t_TyLexToken & _rltok, bool 
     [&_rltok,&fLessThan]( const _TyLexValue *& _rlpt, const _TyLexValue *& _rrpt ) -> bool
     {
       // First compare the names:
-      _TyStrView svNameLeft;
-      (*_rlpt)[vknNameIdx].KGetStringView( _rltok, svNameLeft );
-      _TyStrView svNameRight;
-      (*_rrpt)[vknNameIdx].KGetStringView( _rltok, svNameRight );
+      // ( A name may be a string - that of an attribute which the DTD gave the tag is - and of another type of
+      //  character than the token's when the token is a copy of one of a document of that type: then it is converted. )
+      _TyStrView svNameLeft, svNameRight;
+      _TyStdStr strNameLeft, strNameRight;
+      (void)_rltok.FGetStringViewOrString( svNameLeft, strNameLeft, (*_rlpt)[vknNameIdx] );
+      (void)_rltok.FGetStringViewOrString( svNameRight, strNameRight, (*_rrpt)[vknNameIdx] );
       strong_ordering iComp = svNameLeft <=> svNameRight;
       if ( 0 == iComp )
       {
@@ -105,7 +108,8 @@ void CheckDuplicateTokenAttrs( bool _fStrict, const t_TyLexToken & _rltok, bool 
     const _TyLexValue & rvattrCur = **ppDupeCur;
     const _TyLexValue & rvnsCur = rvattrCur[vknNamespaceIdx];
     _TyStrView svAttrName;
-    rvattrCur[vknNameIdx].KGetStringView( _rltok, svAttrName );
+    _TyStdStr strAttrName;
+    (void)_rltok.FGetStringViewOrString( svAttrName, strAttrName, rvattrCur[vknNameIdx] );
     if ( rvnsCur.template FIsA<bool>() )
     {
       // no-namespace attribute:

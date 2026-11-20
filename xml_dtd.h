@@ -231,6 +231,9 @@ public:
   // A reference to a parameter entity which wasn't read came before other declarations: the entity and attribute-list
   //  declarations after it were not processed ( 5.1 ).
   bool m_fStoppedProcessingDeclarations{ false };
+  // The internal subset has a reference to a parameter entity. Then - as when there is an external subset - an entity
+  //  which is referenced and not declared is a matter of validity and not of well-formedness ( 4.1 WFC: Entity Declared ).
+  bool m_fHasParameterEntityReferences{ false };
   // The external subset [30] was read - see xml_dtd_parser<>::SetExternalEntityResolver(): if the document type
   //  declaration has an external identifier and this is false then not all of the declarations are known.
   bool m_fExternalSubsetRead{ false };
@@ -332,12 +335,17 @@ public:
   //  values of attributes are replaced. An entity which is in the map already is left as it is - so the predefined
   //  entities are what they are whatever is declared ( 4.6 ).
   // Those which don't stand for text alone are not added: a reference to one is then to an unknown entity.
+  // _fInternalOnly: only those which are declared in the internal subset - not in the text of a parameter entity: in
+  //  a document which is declared standalone the others are not declared as far as a reference is concerned ( 4.1
+  //  WFC: Entity Declared ).
   template < class t_TyEntityMap >
-  void AddGeneralEntitiesTo( t_TyEntityMap & _rmap ) const
+  void AddGeneralEntitiesTo( t_TyEntityMap & _rmap, bool _fInternalOnly = false ) const
   {
     _TyStdStr strText;
     for ( typename _TyMapEntities::value_type const & rvt : m_mapGeneralEntities )
     {
+      if ( _fInternalOnly && rvt.second.m_fDeclaredExternally )
+        continue;
       if ( ( _rmap.end() == _rmap.find( rvt.first ) ) && FGetGeneralEntityText( rvt.first, strText ) )
         _rmap.emplace( rvt.first, strText );
     }
@@ -876,12 +884,17 @@ public:
       *m_pstrDoctypeText += _SvTokenText( *_rrupToken ); // See SetKeepDoctypeText().
     _TyValueToken vtok;
     vtok.m_tid = _rrupToken->GetTokenId();
-    if ( m_fUseXMLNamespaces && ( s_knTokenProcessingInstruction == vtok.m_tid ) )
+    if ( s_knTokenProcessingInstruction == vtok.m_tid )
     {
       // "<?" and the target: up to white space or the "?>".
       const _TyStrView svPI = _SvTokenText( *_rrupToken );
       const size_t knPosEndTarget = svPI.find_first_of( str_array_cast< _TyChar >( " \t\r\n?" ), 2 );
-      _CheckNoColon( svPI.substr( 2, ( _TyStrView::npos == knPosEndTarget ) ? _TyStrView::npos : ( knPosEndTarget - 2 ) ), "the target of a processing instruction" );
+      const _TyStrView svTarget = svPI.substr( 2, ( _TyStrView::npos == knPosEndTarget ) ? _TyStrView::npos : ( knPosEndTarget - 2 ) );
+      // [17]: the target is not "xml" - however it is written.
+      if ( ( 3 == svTarget.length() ) && ( ( _TyChar( 'x' ) == svTarget[0] ) || ( _TyChar( 'X' ) == svTarget[0] ) ) &&
+           ( ( _TyChar( 'm' ) == svTarget[1] ) || ( _TyChar( 'M' ) == svTarget[1] ) ) && ( ( _TyChar( 'l' ) == svTarget[2] ) || ( _TyChar( 'L' ) == svTarget[2] ) ) )
+        THROWXMLPARSEEXCEPTION( "The DTD is not well formed: the target of a processing instruction may not be \"xml\" - an XML declaration or a text declaration may only be where an entity begins." );
+      _CheckNoColon( svTarget, "the target of a processing instruction" );
     }
     switch( vtok.m_tid )
     {
@@ -960,6 +973,8 @@ public:
   // [28a] DeclSep ::= PEReference: the replacement text of the parameter entity is declarations.
   _TyValue DeclSep_PEReference( _TyValue & _rvReference )
   {
+    if ( !m_fExternal && !m_nParameterEntityDepth )
+      m_rdtd.m_fHasParameterEntityReferences = true;
     _IncludeParameterEntity( _rvReference.StrToken() );
     return _TyValue();
   }
@@ -1108,9 +1123,15 @@ public:
         {
           case exdeOk:
           break;
-          case exdeNotDeclared: // 4.1 Entity Declared: well-formedness for a standalone document and otherwise validity.
+          case exdeNotDeclared:
+            // 4.1 Entity Declared - the entity is to be declared before the default which refers to it. For a reference
+            //  which is in the internal subset this is a matter of well-formedness if the document is standalone or has
+            //  no external subset and no reference to a parameter entity - which is known at the end of the
+            //  declarations: see _EndOfDeclarations(). Otherwise it is a matter of validity.
             if ( m_fStandalone )
               THROWXMLPARSEEXCEPTION( "The DTD is not well formed: the default value of attribute [%s] refers to an entity which is not declared.", strName.c_str() );
+            if ( !m_fExternal && !m_nParameterEntityDepth && m_strAttributeOfUndeclaredEntity.empty() )
+              m_strAttributeOfUndeclaredEntity = strName;
             _ValidityError( "The default value of attribute [%s] refers to an entity which is not declared.", ad.m_strName );
           break;
           case exdeExternal: // WFC: No External Entity References.
@@ -1743,6 +1764,9 @@ protected:
   // ( Not if some of them were not read: what they refer to may be in what wasn't. )
   void _EndOfDeclarations()
   {
+    // 4.1 WFC: Entity Declared - for the default of an attribute of the internal subset: see where it is noted.
+    if ( !m_strAttributeOfUndeclaredEntity.empty() && !m_rdtd.m_optExternalId.has_value() && !m_rdtd.m_fHasParameterEntityReferences )
+      THROWXMLPARSEEXCEPTION( "The DTD is not well formed: the default value of attribute [%s] refers to an entity which is not declared - before it.", m_strAttributeOfUndeclaredEntity.c_str() );
     if ( m_rdtd.FAllDeclarationsRead() )
       m_rdtd.CheckDeclarations();
   }
@@ -1812,6 +1836,8 @@ public:
     VerifyThrowSz( size_t( analyzer.GetStream().PosTokenStart() ) == _svText.length(), "There is text after the '>' which ends the document type declaration." );
   }
 protected:
+  // It is to be a text declaration [77]: '<?xml' VersionInfo? EncodingDecl S? '?>' - the encoding is required, there
+  //  is no "standalone" and the version is that of the document, which is 1.0 for us. Throws if it isn't one.
   static void _StripTextDecl( _TyStdStr & _rstrText )
   {
     static const char s_kszBegin[] = "<?xml";
@@ -1821,17 +1847,71 @@ protected:
     for ( size_t n = 0; n < knLenBegin; ++n )
       if ( _rstrText[n] != _TyChar( s_kszBegin[n] ) )
         return;
-    const _TyChar chAfter = _rstrText[knLenBegin];
-    if ( ( _TyChar( 0x20 ) != chAfter ) && ( _TyChar( 0x9 ) != chAfter ) && ( _TyChar( 0xd ) != chAfter ) && ( _TyChar( 0xa ) != chAfter ) )
+    auto FIsS = []( _TyChar _ch ) { return ( _TyChar( 0x20 ) == _ch ) || ( _TyChar( 0x9 ) == _ch ) || ( _TyChar( 0xd ) == _ch ) || ( _TyChar( 0xa ) == _ch ); };
+    if ( !FIsS( _rstrText[knLenBegin] ) )
       return; // A processing instruction whose target begins so.
-    for ( size_t n = knLenBegin; n + 1 < _rstrText.length(); ++n )
+    const _TyChar rgchEnd[] = { _TyChar( '?' ), _TyChar( '>' ), 0 };
+    const size_t knPosEnd = _rstrText.find( rgchEnd, knLenBegin );
+    VerifyThrowSz( _TyStdStr::npos != knPosEnd, "The text declaration of an external entity doesn't end." );
+    const _TyStrView sv( _rstrText.data() + knLenBegin, knPosEnd - knLenBegin ); // What is between "<?xml" and "?>".
+    size_t nPos = 0;
+    auto FSkipS = [&]() -> bool
     {
-      if ( ( _TyChar( '?' ) == _rstrText[n] ) && ( _TyChar( '>' ) == _rstrText[n+1] ) )
-      {
-        _rstrText.erase( 0, n + 2 );
-        return;
-      }
+      const size_t knPosBefore = nPos;
+      while ( ( nPos < sv.length() ) && FIsS( sv[nPos] ) )
+        ++nPos;
+      return nPos > knPosBefore;
+    };
+    auto FKeyword = [&]( const char * _psz ) -> bool
+    {
+      const size_t knLen = strlen( _psz );
+      if ( sv.length() - nPos < knLen )
+        return false;
+      for ( size_t n = 0; n < knLen; ++n )
+        if ( sv[nPos + n] != _TyChar( _psz[n] ) )
+          return false;
+      nPos += knLen;
+      return true;
+    };
+    // Eq and a quoted value.
+    auto FValue = [&]( _TyStrView & _rsvValue ) -> bool
+    {
+      (void)FSkipS();
+      if ( ( nPos >= sv.length() ) || ( _TyChar( '=' ) != sv[nPos] ) )
+        return false;
+      ++nPos;
+      (void)FSkipS();
+      if ( ( nPos >= sv.length() ) || ( ( _TyChar( '"' ) != sv[nPos] ) && ( _TyChar( '\'' ) != sv[nPos] ) ) )
+        return false;
+      const size_t knPosQuoteEnd = sv.find( sv[nPos], nPos + 1 );
+      if ( _TyStrView::npos == knPosQuoteEnd )
+        return false;
+      _rsvValue = sv.substr( nPos + 1, knPosQuoteEnd - nPos - 1 );
+      nPos = knPosQuoteEnd + 1;
+      return true;
+    };
+    bool fS = FSkipS();
+    _TyStrView svValue;
+    if ( FKeyword( "version" ) )
+    {
+      VerifyThrowSz( FValue( svValue ), "The text declaration of an external entity is not well formed: its version." );
+      VerifyThrowSz( ( 3 == svValue.length() ) && ( _TyChar( '1' ) == svValue[0] ) && ( _TyChar( '.' ) == svValue[1] ) && ( _TyChar( '0' ) == svValue[2] ),
+        "The text declaration of an external entity has a version which is not 1.0 - that of the document." );
+      fS = FSkipS();
     }
+    VerifyThrowSz( fS && FKeyword( "encoding" ) && FValue( svValue ), "The text declaration of an external entity is not well formed: it is to have an encoding declaration - after its version, if it has one." );
+    // [81] EncName ::= [A-Za-z] ([A-Za-z0-9._] | '-')*
+    bool fEncName = !svValue.empty();
+    for ( size_t n = 0; fEncName && ( n < svValue.length() ); ++n )
+    {
+      const _TyChar ch = svValue[n];
+      const bool kfLetter = ( ( ch >= _TyChar( 'A' ) ) && ( ch <= _TyChar( 'Z' ) ) ) || ( ( ch >= _TyChar( 'a' ) ) && ( ch <= _TyChar( 'z' ) ) );
+      fEncName = kfLetter || ( !!n && ( ( ( ch >= _TyChar( '0' ) ) && ( ch <= _TyChar( '9' ) ) ) || ( _TyChar( '.' ) == ch ) || ( _TyChar( '_' ) == ch ) || ( _TyChar( '-' ) == ch ) ) );
+    }
+    VerifyThrowSz( fEncName, "The text declaration of an external entity is not well formed: the name of its encoding." );
+    (void)FSkipS();
+    VerifyThrowSz( nPos == sv.length(), "The text declaration of an external entity is not well formed: it has more than a version and an encoding." );
+    _rstrText.erase( 0, knPosEnd + 2 );
   }
   void _ValidityError( const char * _pszFormat, _TyStdStr const & _rstrName )
   {
@@ -1845,6 +1925,7 @@ protected:
   bool m_fUseXMLNamespaces{ false }; // See SetUseXMLNamespaces().
   bool m_fExternal{ false }; // Parsing the external subset or an external parameter entity.
   size_t m_nParameterEntityDepth{ 0 }; // Within the replacement text of this many parameter entities.
+  string m_strAttributeOfUndeclaredEntity; // An attribute of the internal subset whose default refers to an entity which is not declared - see _EndOfDeclarations().
   _TyStdStr * m_pstrDoctypeText{ nullptr }; // See SetKeepDoctypeText().
   _TyExternalEntityResolver m_resolver; // See SetExternalEntityResolver().
   vector< _TyStdStr > m_rgstrBase; // The locations of the entities which we are within - the document first: the last is the base.

@@ -463,8 +463,10 @@ public:
     {
       if ( !!_pfIsAttrNamespaceDecl )
       {
+        // ( The name may be a string of another type of character - see CheckDuplicateTokenAttrs(). )
         _TyStrView svName;
-        _rrgval[vknNameIdx].KGetStringView( m_tokToken, svName );
+        _TyStdStr strName;
+        (void)m_tokToken.FGetStringViewOrString( svName, strName, _rrgval[vknNameIdx] );
         *_pfIsAttrNamespaceDecl = svName.starts_with( str_array_cast< _TyChar >("xmlns") );
       }
       return true;

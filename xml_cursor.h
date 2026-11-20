@@ -849,6 +849,9 @@ protected:
     // Now "prime the pump" by reading the read-ahead token and then call _ReadTokenContent().
     VerifyThrow( _FGetToken( m_pltokLookahead ) );
     _ReadTokenContent();
+    // [1] document ::= prolog element Misc*: what follows the prolog is the start tag of the document element.
+    VerifyThrowSz( !!m_pltokLookahead && ( ( s_knTokenSTag == m_pltokLookahead->GetTokenId() ) || ( s_knTokenEmptyElemTag == m_pltokLookahead->GetTokenId() ) ),
+      "The document has no document element: what follows its prolog is not a start tag." );
   }
   void _InitNamespaceMap()
   {
@@ -978,6 +981,11 @@ protected:
     else
       _rcxtDest.GetVariant().template emplace< t_TyTransportCtxtSrc >( _rcxtSrc );
   }
+  // The document is declared standalone - only if its XML declaration says so: m_fStandalone is true as well when it says nothing.
+  bool _FStandalone() const
+  {
+    return m_XMLDeclProperties.m_fHasStandalone && m_XMLDeclProperties.m_fStandalone;
+  }
   // Flag the pieces of plain text of the value: see s_kdtfLiteralLineEnds.
   static void _FlagLiteralLineEnds( _TyLexValue & _rval )
   {
@@ -1022,6 +1030,9 @@ protected:
       if ( !pEntity )
         continue; // Not declared: whoever asks for the string of the character data is told.
       const string strName = StrConvertString< char >( svName );
+      // WFC: Entity Declared [68] - of a document which is declared standalone.
+      if ( pEntity->m_fDeclaredExternally && _FStandalone() )
+        THROWXMLPARSEEXCEPTION( "The document is declared standalone and refers to the entity [%s] - which is not declared in its internal subset.", strName.c_str() );
       // WFC: Parsed Entity [68].
       if ( pEntity->FIsUnparsed() )
         THROWXMLPARSEEXCEPTION( "The unparsed entity [%s] is referenced in content.", strName.c_str() );
@@ -1160,6 +1171,14 @@ protected:
         if ( !fGotToken && ( m_pspStartAll == _pspStart ) && !m_fGotFirstTag && !m_lContexts.empty() && !m_spDtd )
           fGotToken = _FReadDoctypeDecl( _rpltok );
       }
+      if ( !fGotToken && ( m_pspStartAll == _pspStart ) )
+      {
+        // No token: the document ends here - or what is here is nothing which a document may have. The lexical analyzer
+        //  says which when it is asked to: it throws unless it is at the end of what it reads.
+        m_pXp->GetStream().ResetToTokenStart();
+        unique_ptr< _TyLexToken > pltokNone;
+        (void)m_pXp->GetLexicalAnalyzer().FGetToken( pltokNone, nullptr, nullptr, m_pspStartAll, true );
+      }
       if constexpr ( _TyXmlTraits::s_kfValidating )
       {
         // What the user doesn't want - and the validator is to know of: see _FFilterTokenOfValidated().
@@ -1203,7 +1222,9 @@ protected:
       dtdParser.SetExternalEntityResolver( m_pXp->GetExternalEntityResolver(), m_pXp->StrBaseLocation() );
     dtdParser.ParseDoctypeDecl( rAnalyzer, std::move( pltokDoctype ) );
     // The entities of the document are those which the DTD declares - with the predefined ones, which are there already.
-    m_spDtd->AddGeneralEntitiesTo( m_pXp->GetUserObj().GetEntityMap() );
+    // ( In a document which is declared standalone those which are declared externally are not declared for a reference:
+    //  4.1 WFC: Entity Declared - a reference to one is an error as one to an entity which is not declared at all. )
+    m_spDtd->AddGeneralEntitiesTo( m_pXp->GetUserObj().GetEntityMap(), _FStandalone() );
     // Those whose text is other within the value of an attribute - see _ProcessEntityReferencesOfAttrValues().
     m_spDtd->AddGeneralEntitiesInAttributeValuesTo( m_pXp->GetUserObj().GetEntityMap(), m_pXp->GetUserObj().GetEntityMapAttrValues() );
     m_fDtdDeclaresEntities = !m_spDtd->m_mapGeneralEntities.empty();
@@ -1254,6 +1275,9 @@ protected:
       if ( !fGotToken )
         break;
     }
+    // [1], [27]: after the document element there are only comments, processing instructions and white space.
+    if ( FInEpilog() && !!m_pltokLookahead )
+      THROWXMLPARSEEXCEPTION( "There is markup after the document element which may not be there: only comments, processing instructions and white space may follow it." );
   }
   bool _FAtTailContext() const
   {
@@ -1334,6 +1358,8 @@ protected:
       case s_knTokenSTag:
       case s_knTokenEmptyElemTag:
       {
+        // [1] document ::= prolog element Misc*: there is one document element.
+        VerifyThrowSz( !( m_fGotFirstTag && ( 1 == m_lContexts.size() ) ), "The document has a second document element: there is to be one." );
         m_fGotFirstTag = true;
         // The attributes which the tag doesn't have and which the DTD gives a default value: found before the names of
         //  the tag are processed below - and those which declare a namespace declare it now so that it is there for them.
@@ -1428,18 +1454,21 @@ protected:
   void _ProcessProcessingInstruction( _TyLexToken & _rltok )
   {
     _ValidateCommentOrProcessingInstruction();
-    if ( m_fUseXMLNamespaces )
-    {
-      // Namespaces in XML, 6: the target of a processing instruction has no colon.
+    {//B
       const _TyLexValue & krvalTarget = _rltok[vknProcessingInstruction_PITargetIdx];
       if ( krvalTarget.FHasTypedData() && !krvalTarget.template GetVal< _TyData >().FIsNull() )
       {
         _TyStrView svTarget;
         _rltok.KGetStringView( svTarget, krvalTarget.template GetVal< _TyData >().DataRangeGetSingle().GetRangeBase() );
-        if ( _TyStrView::npos != svTarget.find( _TyChar( ':' ) ) )
+        // [17]: the target is not "xml" - however it is written: an XML declaration is only at the beginning of the document.
+        if ( ( 3 == svTarget.length() ) && ( ( _TyChar( 'x' ) == svTarget[0] ) || ( _TyChar( 'X' ) == svTarget[0] ) ) &&
+             ( ( _TyChar( 'm' ) == svTarget[1] ) || ( _TyChar( 'M' ) == svTarget[1] ) ) && ( ( _TyChar( 'l' ) == svTarget[2] ) || ( _TyChar( 'L' ) == svTarget[2] ) ) )
+          THROWXMLPARSEEXCEPTION( "The target of a processing instruction may not be \"xml\": an XML declaration may only be at the beginning of the document." );
+        // Namespaces in XML, 6: the target of a processing instruction has no colon.
+        if ( m_fUseXMLNamespaces && ( _TyStrView::npos != svTarget.find( _TyChar( ':' ) ) ) )
           THROWXMLPARSEEXCEPTION( "The document is not namespace-well-formed: the target [%s] of a processing instruction has a colon.", StrConvertString< char >( svTarget ).c_str() );
       }
-    }
+    }//EB
     // We may have some "meat" after the PITarget - or not.
     vtyDataPosition posMeatBegin = _rltok[vknProcessingInstruction_MeatIdx].template GetVal< vtyDataPosition >();
     if ( vkdpNullDataPosition == posMeatBegin )
@@ -1610,6 +1639,9 @@ protected:
             if ( !pEntity )
               continue;
             const string strName = StrConvertString< char >( svName );
+            // WFC: Entity Declared [68] - of a document which is declared standalone.
+            if ( pEntity->m_fDeclaredExternally && _FStandalone() )
+              THROWXMLPARSEEXCEPTION( "The document is declared standalone and the value of an attribute refers to the entity [%s] - which is not declared in its internal subset.", strName.c_str() );
             if ( pEntity->FIsUnparsed() )
               THROWXMLPARSEEXCEPTION( "The value of an attribute refers to the unparsed entity [%s].", strName.c_str() );
             _TyStdStr strText;
@@ -2122,7 +2154,10 @@ protected:
                   fWhiteSpace = false;
                 continue;
               }
-              sv = citEntity->second;
+              // The replacement text of the entity as it is - not what its references stand for: a reference to a
+              //  character is not white space whatever the character is, in the text of an entity as elsewhere.
+              const xml_dtd_entity< _TyChar > * pEntityOfMap = !m_spDtd ? nullptr : m_spDtd->PGetGeneralEntity( sv );
+              sv = !pEntityOfMap ? _TyStrView( citEntity->second ) : _TyStrView( pEntityOfMap->m_strValue );
             }
             break;
             default:
