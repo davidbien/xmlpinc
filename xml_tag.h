@@ -157,6 +157,11 @@ public:
 
   void RegisterPrefixUri( const _TyStdStr & _rstrPrefix, const _TyStdStr & _rstrUri, bool _fIsNamespaceDecl )
   {
+    // The prefix "xml" is bound by definition ( Namespaces in XML 1.0, 3 ): a use of it needs no declaration - and none
+    //  is added for it, which would make the tag another than it was. A declaration of it which is written is kept.
+    static constexpr auto s_krgchXml = str_array_cast< typename _TyStdStr::value_type >( "xml" );
+    if ( !_fIsNamespaceDecl && ( _rstrPrefix == s_krgchXml.c_str() ) )
+      return;
     // The namespace tree must correspond to the set of namespace declarations in the corresponding tags.
     // If we map to the same (prefix,uri) in this tag as already existed then we can prune the namespace declaration.
     // If we are not pruning then we must add even redundant namespace declarations to the namespace tree since they are
@@ -374,6 +379,7 @@ protected:
           return false;
         }
         m_fNextTag = _rxrc.FNextTag( &(*m_spXmlTag)->m_opttokTag, false ); // we have already processed the namespaces.
+        (*m_spXmlTag)->m_strEndTagSpace = _rxrc.SvEndTagSpace(); // Its end tag was the last read.
         (*m_spXmlParent)->_AcquireContent( std::move( m_spXmlTag ) );
         Assert( !m_spXmlTag );
         if ( !m_fNextTag )
@@ -587,6 +593,7 @@ protected:
     typedef xml_writer< t_TyXmlTransportOut > _TyXmlWriter;
     typedef typename _TyXmlWriter::_TyXmlWriteTag _TyXmlWriteTag;
     _TyXmlWriteTag xwtTag( _rxw.StartTag( *m_opttokTag ) );
+    xwtTag.SetEndTagSpace( basic_string_view< typename _TyStdStr::value_type >( m_strEndTagSpace ) );
     // Just write the tag right away - the tag will be ended when the lifetime of xwtTag ends.    
     xwtTag.Commit();
     _WriteContent( _rxw ); // recurse, potentially.
@@ -613,6 +620,7 @@ protected:
   }
   typedef optional< _TyXmlToken > _TyOptXmlToken; // Need this because token is not default constructible.
   _TyOptXmlToken m_opttokTag; // The token corresponding to the tag. This is either an XMLDecl token or just a normal tag.
+  _TyStdStr m_strEndTagSpace; // The white space before the '>' of its end tag as it was read - see xml_read_cursor<>::SvEndTagSpace().
   _TyRgTokens m_rgTokens; // The content for this token.
   _TyWeakThis m_wpParent;
   _TyStrongNamespaceTreeNode m_spNamespaceTreeNode; // The nearest namespace declaration above us.
@@ -739,6 +747,7 @@ public:
       }//EB
       (*spXmlDocument)->FromXmlStream( _rxrc, spXmlDocument, xticCurContext );
       bool fNextTag = _rxrc.FNextTag( &(*spXmlDocument)->m_opttokTag, false );
+      (*spXmlDocument)->m_strEndTagSpace = _rxrc.SvEndTagSpace(); // Its end tag was the last read.
       Assert( !fNextTag || !fStartedInProlog ); // If we started in the middle of an XML then we might see that there is a next tag.
       _AcquireContent( std::move( spXmlDocument ) );
     }//EB

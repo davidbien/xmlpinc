@@ -107,6 +107,7 @@ public:
         _TyStrongThis spXmlTag( std::in_place_t(), make_unique< _TyThis >( &_rspThis ) );
         (*spXmlTag)->FromXmlStream( _rxrc, spXmlTag );
         fNextTag = _rxrc.FNextTag( &(*spXmlTag)->m_opttokTag );
+        (*spXmlTag)->m_strEndTagSpace = _rxrc.StrEndTagSpace(); // Its end tag was the last read.
         _AcquireContent( std::move( spXmlTag ) );
         if ( !fNextTag )
         {
@@ -154,6 +155,7 @@ protected:
       [this,&_rxw]( const auto & _tXmlToken ) -> void
       {
         _TyXmlWriteTag xwtTag( _rxw.StartTag( _tXmlToken ) );
+        xwtTag.SetEndTagSpace( std::string_view( m_strEndTagSpace ) );
         // Just write the tag right away - the tag will be ended when the lifetime of xwtTag ends.    
         xwtTag.Commit();
         _WriteContent( _rxw ); // recurse, potentially.
@@ -188,6 +190,7 @@ protected:
   }
   typedef optional< _TyXmlTokenVar > _TyOptXmlTokenVar; // Need this because token is not default constructible.
   _TyOptXmlTokenVar m_opttokTag; // The token corresponding to the tag. This is either an XMLDecl token or a tag.
+  std::string m_strEndTagSpace; // The white space before the '>' of its end tag as it was read - see xml_read_cursor<>::SvEndTagSpace().
   _TyRgTokens m_rgTokens; // The content for this token.
   _TyWeakThis m_wpParent;
 };
@@ -276,6 +279,7 @@ public:
       }//EB
       (*spXmlDocument)->FromXmlStream( _rxrc, spXmlDocument );
       bool fNextTag = _rxrc.FNextTag( &(*spXmlDocument)->m_opttokTag );
+      (*spXmlDocument)->m_strEndTagSpace = _rxrc.StrEndTagSpace(); // Its end tag was the last read.
       Assert( !fNextTag || !fStartedInProlog ); // If we started in the middle of an XML then we might see that there is a next tag.
       _AcquireContent( std::move( spXmlDocument ) );
     }//EB

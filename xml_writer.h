@@ -123,7 +123,21 @@ public:
     m_pxwWriter->_EndTag( this );
     // this has been deleted as of this statement.
   }
+  // The white space before the '>' of the end tag [42] - "</name  >" - as the tag was read: see
+  //  xml_read_cursor<>::SvEndTagSpace(). It is written only if an end tag is.
+  template < class t_TyCharSpace >
+  void SetEndTagSpace( basic_string_view< t_TyCharSpace > _svSpace )
+  {
+    m_strEndTagSpace.clear();
+    for ( t_TyCharSpace ch : _svSpace )
+      m_strEndTagSpace += _TyChar( ch ); // White space: the same in each encoding.
+  }
+  basic_string< _TyChar > const & RStrEndTagSpace() const
+  {
+    return m_strEndTagSpace;
+  }
 protected:
+  basic_string< _TyChar > m_strEndTagSpace;
   _TyXmlWriter * m_pxwWriter;
   _TyXmlToken m_xtkToken; // This is always a tag token. It really doesn't matter if the id is s_knTokenSTag or s_knTokenEmptyElemTag.
   bool m_fCommitted{false}; // Committed yet?
@@ -227,6 +241,12 @@ public:
   void SetDetectReferences( EDetectReferences _edrDetectReferences = edrDetectReferencesCount )
   {
     m_pwcxt->SetDetectReferences( _edrDetectReferences );
+  }
+  // See xml_write_context<>::SetEndTagSpace().
+  template < class t_TyCharSpace >
+  void SetEndTagSpace( basic_string_view< t_TyCharSpace > _svSpace )
+  {
+    m_pwcxt->SetEndTagSpace( _svSpace );
   }
   EDetectReferences GetDetectReferences() const
   {
@@ -552,6 +572,7 @@ public:
       else
       {
         bool fNextTag = _rxrc.FNextTag();
+        m_lContexts.back().SetEndTagSpace( _rxrc.SvEndTagSpace() ); // Its end tag was the last read.
         _EndTag( &m_lContexts.back() );
         if ( fNextTag )
         {
@@ -679,6 +700,7 @@ public:
         if ( !fSkipCurrentTag )
         {
           // Otherwise the above was just skipping this current tag - we didn't start a tag above and thus we shouldn't end a tag here.
+          m_lContexts.back().SetEndTagSpace( _rxrc.SvEndTagSpace() ); // Its end tag was the last read.
           _EndTag( &m_lContexts.back() );
           if ( fNextTag )
           {
@@ -855,6 +877,8 @@ public:
     if ( m_fHaveUnendedTag )
     {
       m_fHaveUnendedTag = false;
+      _WriteTransportRaw( m_strUnendedTagSpace.data(), m_strUnendedTagSpace.length() ); // See _CommitTag().
+      m_strUnendedTagSpace.clear();
       if ( _fWithContent )
         _WriteTransportRaw( _TyMarkupTraits::s_kszTagEnd, StaticStringLen( _TyMarkupTraits::s_kszTagEnd ) );
       else
@@ -876,6 +900,7 @@ public:
       // We have already validate the tag name so we can just write it:
       _WriteTransportRaw( _TyMarkupTraits::s_kszEndTagBegin, StaticStringLen( _TyMarkupTraits::s_kszEndTagBegin ) );
       _WriteName( _pwcxEnd->GetToken(), _pwcxEnd->GetToken()[vknTagNameIdx] );
+      _WriteTransportRaw( _pwcxEnd->RStrEndTagSpace().data(), _pwcxEnd->RStrEndTagSpace().length() );
       _WriteTransportRaw( _TyMarkupTraits::s_kszTagEnd, StaticStringLen( _TyMarkupTraits::s_kszTagEnd ) );
     }
     m_lContexts.pop_back();
@@ -945,6 +970,7 @@ protected:
     m_setEntitiesOfSource.clear();
     m_pvUserObjSource = nullptr;
     m_fHaveUnendedTag = false;
+    m_strUnendedTagSpace.clear();
     if ( m_fWriteXMLDecl )
       _WriteXmlDecl();
     m_lContexts.emplace_back( this, m_xdcxtDocumentContext.GetUserObj(), s_knTokenXMLDecl  ); // create the XMLDecl pseudo-tag.
@@ -1007,11 +1033,15 @@ protected:
     m_fWroteFirstTag = true;
     const _TyLexValue & rvalRoot = _rtok.GetValue();
     _WriteName( _rtok, rvalRoot[vknTagNameIdx] );
+    // The white space of the tag as it was written - if it was read.
+    _TyTagSpaces tagSpaces;
+    _GetTagSpaces( _rtok, tagSpaces );
+    m_strUnendedTagSpace = tagSpaces.m_strBeforeEnd;
     // Move through all attributes writing each.
     const _TyLexValue & rrgAttrs = rvalRoot[vknAttributesIdx];
     size_t nAttrs = rrgAttrs.GetSize();
     rrgAttrs.GetValueArray().ApplyContiguous( 0, nAttrs,
-      [this,&_rtok,_edrDetectReferences]( const _TyLexValue * _pvBegin, const _TyLexValue * _pvEnd )
+      [this,&_rtok,_edrDetectReferences,&tagSpaces]( const _TyLexValue * _pvBegin, const _TyLexValue * _pvEnd )
       {
         for ( const _TyLexValue * pvCur = _pvBegin; _pvEnd != pvCur; ++pvCur )
         {
@@ -1019,10 +1049,28 @@ protected:
           const bool kfAttrDefaultValue = FIsAttrDefaultValue( (*pvCur)[vknAttr_ValueIdx] );
           if ( kfAttrDefaultValue && !FWriteDefaultedAttributes() )
             continue;
-          _WriteTransportRaw( _TyMarkupTraits::s_kszSpace, StaticStringLen( _TyMarkupTraits::s_kszSpace ) );
           const _TyLexValue & rvCur = *pvCur;
+          // The attribute as it was written - found by where its name is: one which wasn't has a space before it.
+          const typename _TyTagSpaces::_TyAttr * pattrSpaces = nullptr;
+          if ( tagSpaces.m_fHave && !kfAttrDefaultValue && rvCur[vknNameIdx].FHasTypedData() )
+          {
+            const vtyDataPosition kposName = rvCur[vknNameIdx].template GetVal< _l_data<> >().DataRangeGetSingle().begin();
+            for ( typename _TyTagSpaces::_TyAttr const & rattr : tagSpaces.m_rgAttrs )
+              if ( rattr.m_posName == kposName )
+              {
+                pattrSpaces = &rattr;
+                break;
+              }
+          }
+          if ( !!pattrSpaces )
+            _WriteTransportRaw( pattrSpaces->m_strBefore.data(), pattrSpaces->m_strBefore.length() );
+          else
+            _WriteTransportRaw( _TyMarkupTraits::s_kszSpace, StaticStringLen( _TyMarkupTraits::s_kszSpace ) );
           _WriteName( _rtok, rvCur );
-          _WriteTransportRaw( _TyMarkupTraits::s_kszEqualSign, StaticStringLen( _TyMarkupTraits::s_kszEqualSign ) );
+          if ( !!pattrSpaces )
+            _WriteTransportRaw( pattrSpaces->m_strEq.data(), pattrSpaces->m_strEq.length() );
+          else
+            _WriteTransportRaw( _TyMarkupTraits::s_kszEqualSign, StaticStringLen( _TyMarkupTraits::s_kszEqualSign ) );
           // The tag itself specifies whether it wants double or single quotes.
           bool fUseDoubleQuote = rvCur[vknAttr_FDoubleQuoteIdx].template GetVal< bool >();
           _WriteTransportRaw( fUseDoubleQuote ? _TyMarkupTraits::s_kszDoubleQuote : _TyMarkupTraits::s_kszSingleQuote, StaticStringLen( _TyMarkupTraits::s_kszSingleQuote ) );
@@ -1040,6 +1088,81 @@ protected:
     );
     // we don't write any ending since we don't know yet which ending we should write. This also lets us
     //  know what we need to do when we are ending a tag.
+  }
+  // The white space within a start tag as it was written: before each attribute and around its '=' - S? '=' S? [25] -
+  //  and before the end of the tag. A tag which was read has all of its text: its token keeps it, from its '<' to its
+  //  '>', whatever the transport - the text is in memory, or the token has a copy of it ( _l_transport_backed_ctxt ).
+  //  The pieces of the tag are positions in that text. An attribute which isn't in the text - the DTD gave it, or it
+  //  was added - has a space before it and nothing around its '='.
+  struct _TyTagSpaces
+  {
+    struct _TyAttr
+    {
+      vtyDataPosition m_posName; // Where its name begins.
+      _TyStdStr m_strBefore; // S [40], [44].
+      _TyStdStr m_strEq; // Eq [25].
+    };
+    vector< _TyAttr > m_rgAttrs;
+    _TyStdStr m_strBeforeEnd; // S? before the '>' or the "/>".
+    bool m_fHave{ false }; // The text of the tag was had - and is a tag as we know them.
+  };
+  template < class t_TyXmlToken >
+  static void _GetTagSpaces( t_TyXmlToken const & _rtok, _TyTagSpaces & _rts )
+  {
+    typedef typename t_TyXmlToken::_TyChar _TyCharTok;
+    auto const & rltok = _rtok.GetLexToken();
+    _l_data_range dr;
+    rltok.GetTokenDataRange( dr );
+    if ( dr.FIsNull() || ( dr.end() <= dr.begin() ) )
+      return; // Not read: made.
+    basic_string_view< _TyCharTok > sv;
+    rltok.KGetStringView( sv, dr );
+    if ( ( sv.length() < 3 ) || ( _TyCharTok( '<' ) != sv[0] ) )
+      return;
+    auto FIsS = []( _TyCharTok _ch ) { return ( _TyCharTok( 0x20 ) == _ch ) || ( _TyCharTok( 0x9 ) == _ch ) || ( _TyCharTok( 0xd ) == _ch ) || ( _TyCharTok( 0xa ) == _ch ); };
+    // The white space and the '=' are characters of ASCII: the same in each encoding.
+    auto StrOf = []( basic_string_view< _TyCharTok > _svPart )
+    {
+      _TyStdStr str;
+      str.reserve( _svPart.length() );
+      for ( _TyCharTok ch : _svPart )
+        str += _TyChar( ch );
+      return str;
+    };
+    const size_t knLen = sv.length();
+    size_t n = 1;
+    while ( ( n < knLen ) && !FIsS( sv[n] ) && ( _TyCharTok( '>' ) != sv[n] ) && ( _TyCharTok( '/' ) != sv[n] ) )
+      ++n; // The name of the tag.
+    for ( ; ; )
+    {
+      const size_t knPosSpace = n;
+      while ( ( n < knLen ) && FIsS( sv[n] ) )
+        ++n;
+      if ( n >= knLen )
+        return;
+      if ( ( _TyCharTok( '>' ) == sv[n] ) || ( _TyCharTok( '/' ) == sv[n] ) )
+      {
+        _rts.m_strBeforeEnd = StrOf( sv.substr( knPosSpace, n - knPosSpace ) );
+        _rts.m_fHave = true;
+        return;
+      }
+      typename _TyTagSpaces::_TyAttr attr;
+      attr.m_posName = dr.begin() + vtyDataPosition( n );
+      attr.m_strBefore = StrOf( sv.substr( knPosSpace, n - knPosSpace ) );
+      while ( ( n < knLen ) && !FIsS( sv[n] ) && ( _TyCharTok( '=' ) != sv[n] ) )
+        ++n; // The name of the attribute.
+      const size_t knPosEq = n;
+      while ( ( n < knLen ) && ( _TyCharTok( '"' ) != sv[n] ) && ( _TyCharTok( '\'' ) != sv[n] ) )
+        ++n;
+      if ( n >= knLen )
+        return;
+      attr.m_strEq = StrOf( sv.substr( knPosEq, n - knPosEq ) );
+      const size_t knPosClose = sv.find( sv[n], n + 1 ); // The value has no character which is its quote.
+      if ( basic_string_view< _TyCharTok >::npos == knPosClose )
+        return;
+      n = knPosClose + 1;
+      _rts.m_rgAttrs.push_back( std::move( attr ) );
+    }
   }
   // Write characters of the value of an attribute which may be written as they are. But a tab or an end of line would be
   //  a space to whoever reads it ( 3.3.3 ): those are written as references to them so that the value which is read is
@@ -1677,8 +1800,9 @@ protected:
                   // A reference is written as it is if whoever reads what we write knows the entity: it is one of ours -
                   //  the predefined ones are - or it is one which the document which was read declares and we have
                   //  written the document type declaration, where it does so. Otherwise that declaration is not
-                  //  being written: we write the text which the entity stands for.
-                  if ( !m_fWroteDoctypeDecl && !m_setEntitiesOfSource.empty() )
+                  //  being written: we write the text which the entity stands for. A reference whose text isn't known
+                  //  - see s_kdtfEntityRefNotIncluded - is written as it is: there is nothing else to write.
+                  if ( !m_fWroteDoctypeDecl && !m_setEntitiesOfSource.empty() && !( s_kdtfEntityRefNotIncluded & pdtrCur->type() ) )
                   {
                     _TyStdStr strEntityName;
                     ConvertString( strEntityName, svEntityRef );
@@ -1736,6 +1860,7 @@ protected:
   set< _TyStdStr, std::less<> > m_setEntitiesOfSource;
   const void * m_pvUserObjSource{nullptr}; // The user object from which we last had them.
   bool m_fHaveUnendedTag{false};
+  _TyStdStr m_strUnendedTagSpace; // The white space which was before the end of that tag - see _CommitTag().
 };
 
 // xml_writer_var:

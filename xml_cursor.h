@@ -426,6 +426,13 @@ public:
   {
     return m_fUseXMLNamespaces;
   }
+  // The white space before the '>' of the end tag [42] which was read last - "</name  >": each call to FNextTag() which
+  //  ends an element reads its end tag last, so after it this is that element's. So that a document can be written as
+  //  it was read.
+  _TyStrView SvEndTagSpace() const
+  {
+    return m_strEndTagSpace;
+  }
   bool FFilterWhitespaceCharData() const
   {
     return m_fFilterWhitespaceCharData;
@@ -1032,9 +1039,27 @@ protected:
         nchEntityText += citEntityOfMap->second.length();
         continue; // Text alone: the reference remains a piece of the character data.
       }
+      // The text of the entity is not included: the reference remains - in the token and in the pieces we have of it.
+      auto lambdaNotIncluded = [&]()
+      {
+        rgdtr[nPiece].m_nType |= s_kdtfEntityRefNotIncluded;
+        size_t nPieceOfToken = 0;
+        rval.template GetVal< _TyData >().Apply(
+          [nPiece,&nPieceOfToken]( _l_data_typed_range * _pdtrBegin, _l_data_typed_range * const _pdtrEnd )
+          {
+            for ( ; _pdtrEnd != _pdtrBegin; ++_pdtrBegin, ++nPieceOfToken )
+              if ( nPiece == nPieceOfToken )
+                _pdtrBegin->m_nType |= s_kdtfEntityRefNotIncluded;
+          }
+        );
+      };
       const xml_dtd_entity< _TyChar > * pEntity = m_spDtd->PGetGeneralEntity( svName );
       if ( !pEntity )
-        continue; // Not declared: whoever asks for the string of the character data is told.
+      {
+        _EntityNotDeclared( svName, "character data" );
+        lambdaNotIncluded();
+        continue;
+      }
       const string strName = StrConvertString< char >( svName );
       // WFC: Entity Declared [68] - of a document which is declared standalone.
       if ( pEntity->m_fDeclaredExternally && _FStandalone() )
@@ -1044,7 +1069,10 @@ protected:
         THROWXMLPARSEEXCEPTION( "The unparsed entity [%s] is referenced in content.", strName.c_str() );
       _TyStrView svText;
       if ( !_FGetEntityText( *pEntity, svText ) )
-        continue; // An external entity which is not read.
+      {
+        lambdaNotIncluded(); // An external entity which is not read.
+        continue;
+      }
       // WFC: No Recursion [68].
       for ( auto const & rupFrame : m_rgupEntityFrames )
         if ( _TyStrView( rupFrame->m_strName ) == svName )
@@ -1253,6 +1281,15 @@ protected:
     // Those whose text is other within the value of an attribute - see _ProcessEntityReferencesOfAttrValues().
     m_spDtd->AddGeneralEntitiesInAttributeValuesTo( m_pXp->GetUserObj().GetEntityMap(), m_pXp->GetUserObj().GetEntityMapAttrValues() );
     m_fDtdDeclaresEntities = !m_spDtd->m_mapGeneralEntities.empty();
+    // The references which we don't look at as we read - see xml_user_obj<>::m_setEntitiesWithoutText.
+    {//B
+      auto & ruo = m_pXp->GetUserObj();
+      ruo.m_fEntitiesNotDeclaredHaveNoText = _FEntityNotDeclaredIsOfValidity();
+      ruo.m_setEntitiesWithoutText.clear();
+      for ( auto const & rvtEntity : m_spDtd->m_mapGeneralEntities )
+        if ( !rvtEntity.second.m_fInternal && !rvtEntity.second.FIsUnparsed() && !( rvtEntity.second.m_fDeclaredExternally && _FStandalone() ) )
+          ruo.m_setEntitiesWithoutText.insert( rvtEntity.first );
+    }//EB
     // Whether a reference in content may be to an entity whose text is content - or to one which may not be referenced
     //  there: then nothing of the document is passed over unread - see _SkipOrReadToEndCurrentContext().
     m_fEntitiesAreContent = false;
@@ -1393,7 +1430,7 @@ protected:
         _TyRgDefaultAttrs rgDefaultAttrs;
         if constexpr ( _TyXmlTraits::s_kfSupportDTD )
         {
-          if ( m_fDtdDeclaresEntities )
+          if ( !!m_spDtd && ( m_fDtdDeclaresEntities || _TyXmlTraits::s_kfValidating ) )
             _ProcessEntityReferencesOfAttrValues( *_rpltok );
           if ( !!m_spDtd && !m_spDtd->m_mapAttLists.empty() )
             _GetDefaultAttributes( *_rpltok, rgDefaultAttrs );
@@ -1452,13 +1489,64 @@ protected:
     _TyStrView svTagEnd;
     _rltok.KGetStringView( svTagEnd, rvalTagEnd[vknNameIdx] );
     VerifyThrowSz( svTagStart == svTagEnd, "Start tag[%s] doesn't match end tag[%s]", StrConvertString<char>( svTagStart ).c_str(), StrConvertString<char>( svTagEnd ).c_str() );
+    // The white space before its '>' - ETag [42] - as it was written: see SvEndTagSpace().
+    m_strEndTagSpace.clear();
+    {//B
+      _l_data_range drTag;
+      _rltok.GetTokenDataRange( drTag );
+      _TyStrView svTag;
+      _rltok.KGetStringView( svTag, drTag );
+      const size_t knLenBefore = 2; // "</" - and the name, which has no white space, is before what we find.
+      const _TyChar kchBeforeEnd = ( svTag.length() > 3 ) ? svTag[ svTag.length() - 2 ] : _TyChar( 0 );
+      if ( ( _TyChar( 0x20 ) == kchBeforeEnd ) || ( _TyChar( 0x9 ) == kchBeforeEnd ) || ( _TyChar( 0xd ) == kchBeforeEnd ) || ( _TyChar( 0xa ) == kchBeforeEnd ) )
+      {
+        // Back from the '>' over the white space: the name has none.
+        size_t nPos = svTag.length() - 1;
+        while ( ( nPos > knLenBefore ) && ( ( _TyChar( 0x20 ) == svTag[nPos-1] ) || ( _TyChar( 0x9 ) == svTag[nPos-1] ) || ( _TyChar( 0xd ) == svTag[nPos-1] ) || ( _TyChar( 0xa ) == svTag[nPos-1] ) ) )
+          --nPos;
+        m_strEndTagSpace = svTag.substr( nPos, svTag.length() - 1 - nPos );
+      }
+    }//EB
     // The context is always popped later in FNextTag().
     _TyLexToken ltokEat( std::move( _rltok ) ); // eat the token.
+  }
+  // A reference to an entity which is not declared - 4.1 Entity Declared. In a document whose declarations are all where
+  //  we read them - it has no external subset and its internal subset no reference to a parameter entity - or which is
+  //  declared standalone it is an error ( WFC ). Otherwise the entity may be declared where we didn't read and it is a
+  //  matter of validity ( VC ): the reference remains, and its text is not included - see s_kdtfEntityRefNotIncluded.
+  bool _FEntityNotDeclaredIsOfValidity() const
+  {
+    return !_FStandalone() && ( m_spDtd->m_optExternalId.has_value() || m_spDtd->m_fHasParameterEntityReferences );
+  }
+  void _EntityNotDeclared( _TyStrView _svName, const char * _pszWhere )
+  {
+    if ( !_FEntityNotDeclaredIsOfValidity() )
+      THROWXMLPARSEEXCEPTION( "The %s refers to the entity [%s] which is not declared.", _pszWhere, StrConvertString< char >( _svName ).c_str() );
+    if constexpr ( _TyXmlTraits::s_kfValidating )
+    {
+      if ( !!m_upValidator )
+        m_upValidator->EntityNotDeclared( _svName );
+    }
   }
   void _ProcessXMLDecl( _TyLexToken & _rltok )
   {
     // Pull the info we want out of it to store in the cursor.
     m_XMLDeclProperties.FromXMLDeclToken( _rltok );
+    // 4.3.3: the document is in the encoding which it declares - unless whoever opened it said not to hold it to that.
+    if ( m_XMLDeclProperties.m_fHasEncoding && ( !m_pXp || m_pXp->FCheckDeclaredEncoding() ) )
+    {
+      typedef typename _TyXmlTraits::_TyTransport _TyTransport;
+      EFileCharacterEncoding efceRead = EfceOfCharType< _TyChar >();
+      bool fByteOrderKnown = ( 1 == sizeof( _TyChar ) );
+      if constexpr ( requires { { _TyTransport::GetSupportedCharacterEncoding() } -> std::convertible_to< EFileCharacterEncoding >; } )
+      {
+        efceRead = _TyTransport::GetSupportedCharacterEncoding();
+        fByteOrderKnown = true;
+      }
+      VerifyThrowSz( FDeclaredEncodingAgrees( _TyStrView( m_XMLDeclProperties.m_strEncoding ), efceRead, fByteOrderKnown ),
+        "The XML declaration names the encoding [%s] but the document is read as %s: a document is to be in the encoding it declares - "
+        "xml_parser<>::SetCheckDeclaredEncoding( false ) reads it nonetheless.", StrConvertString< char >( m_XMLDeclProperties.m_strEncoding ).c_str(), PszCharacterEncodingShort( efceRead ) );
+    }
     Assert( !m_lContexts.size() );
     // Even if the caller is ignoring the XMLDecl we will start the root context with it if it is present.
     _PushNewContext( _rltok ); // Push on current context. There will be no current context so one will be created.
@@ -1664,7 +1752,11 @@ protected:
             }
             const xml_dtd_entity< _TyChar > * pEntity = m_spDtd->PGetGeneralEntity( svName );
             if ( !pEntity )
+            {
+              _EntityNotDeclared( svName, "value of an attribute" );
+              _pdtrBegin->m_nType |= s_kdtfEntityRefNotIncluded;
               continue;
+            }
             const string strName = StrConvertString< char >( svName );
             // WFC: Entity Declared [68] - of a document which is declared standalone.
             if ( pEntity->m_fDeclaredExternally && _FStandalone() )
@@ -2248,6 +2340,7 @@ protected:
   bool m_fCheckDuplicateAttrs{true};
   // If this is true then we will process namespaces, otherwise we will still show the prefixes but not apply XML Namespace validation and logic.
   bool m_fUseXMLNamespaces{true};
+  _TyStdStr m_strEndTagSpace; // See SvEndTagSpace().
   // This option allows the user to either see the prefixes that are present in the attr names or see just the names.
   bool m_fIncludePrefixesInAttrNames{true};
   // If m_fStrict then we will not be lenient in cases that may be ambiguous wrt to the XML Specifications.
@@ -2419,6 +2512,19 @@ public:
       []( auto & _tCursor ) -> bool
       {
         return _tCursor.FUseXMLNamespaces();
+      }
+    }, m_varCursor );
+  }
+  // See xml_read_cursor<>::SvEndTagSpace(): white space - the same characters whatever the character type.
+  std::string StrEndTagSpace() const
+  {
+    return std::visit( _VisitHelpOverloadFCall {
+      []( auto & _tCursor ) -> std::string
+      {
+        std::string str;
+        for ( auto ch : _tCursor.SvEndTagSpace() )
+          str += char( ch );
+        return str;
       }
     }, m_varCursor );
   }

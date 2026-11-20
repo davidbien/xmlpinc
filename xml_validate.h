@@ -292,6 +292,12 @@ public:
   }
   // VC: Standalone Document Declaration - what whoever reads the document finds: a reference to an entity which is
   //  declared externally, an attribute whose value is another by its type which is declared externally.
+  // VC: Entity Declared [68] - a reference to an entity which is not declared, where that is a matter of validity: see
+  //  xml_read_cursor<>::_EntityNotDeclared().
+  void EntityNotDeclared( _TyStrView _svName )
+  {
+    _Error( "The entity [%s] is referenced and is not declared.", _StrName( _svName ).c_str() );
+  }
   void StandaloneViolation( const char * _pszWhat, _TyStrView _svName )
   {
     _Error( "The document is declared standalone and %s [%s] - which is declared externally.", _pszWhat, _StrName( _svName ).c_str() );

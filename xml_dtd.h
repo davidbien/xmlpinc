@@ -254,6 +254,51 @@ struct xml_dtd_notation
   xml_dtd_external_id< t_TyChar > m_externalId;
 };
 
+// What an item of a DTD is - see xml_dtd_item.
+enum EXmlDtdItem : uint8_t
+{
+  exdiElementDecl, // [45]
+  exdiAttlistDecl, // [52]
+  exdiEntityDecl, // [70]
+  exdiNotationDecl, // [82]
+  exdiProcessingInstruction, // [16]
+  exdiComment, // [15]
+  exdiParameterEntityReference, // [28a] DeclSep: a reference between declarations - what its text has follows it, in that entity.
+  exdiEXmlDtdItemCount
+};
+// An item of a DTD as it was read: a markup declaration [29], a processing instruction, a comment or a reference to a
+//  parameter entity between declarations. A DTD has them in the order in which they were read - xml_dtd<>::m_rgItems:
+//  the internal subset, with what the text of each parameter entity has where it is referenced, and then the external
+//  subset. The processing instructions are for the application ( 2.6 ) - and with the positions a DTD may be written
+//  again: each item which is not changed as the text it was.
+template < class t_TyChar >
+struct xml_dtd_item
+{
+  typedef basic_string< t_TyChar > _TyStdStr;
+  EXmlDtdItem m_eItem{ exdiEXmlDtdItemCount };
+  // What is declared - the element type of an element type declaration or of an attribute-list declaration, the name of
+  //  an entity or of a notation; the parameter entity which is referenced; the target of a processing instruction.
+  _TyStdStr m_strName;
+  bool m_fParameterEntity{ false }; // exdiEntityDecl: what is declared is a parameter entity.
+  // exdiProcessingInstruction: what is after the target and the white space which follows it, up to the "?>".
+  // exdiComment: what is between the "<!--" and the "-->". The ends of lines are normalized ( 2.11 ).
+  _TyStdStr m_strData;
+  // The text which it is in: that of the parameter entity m_strEntity - or if that is empty that of the external subset
+  //  if m_fExternalSubset and otherwise the document type declaration of the document.
+  _TyStdStr m_strEntity;
+  bool m_fExternalSubset{ false };
+  // Where in that text it is: the position of its first character and its length. In the document the position is
+  //  from the "<!DOCTYPE" - the text which the cursor keeps of the document type declaration. In the text of an entity
+  //  or of the external subset it is in the text as it is read: with its ends of lines normalized. A declaration which
+  //  ends in the text of another entity than it begins in ( which is not valid ) has a length of zero.
+  size_t m_nPos{ 0 };
+  size_t m_nLength{ 0 };
+  bool FInDocument() const
+  {
+    return m_strEntity.empty() && !m_fExternalSubset;
+  }
+};
+
 // xml_dtd: The declarations of a document type.
 template < class t_TyChar >
 class xml_dtd
@@ -283,6 +328,9 @@ public:
   _TyMapEntities m_mapGeneralEntities;
   _TyMapEntities m_mapParameterEntities;
   _TyMapNotations m_mapNotations;
+  // Each declaration, processing instruction, comment and reference to a parameter entity between declarations, in
+  //  the order in which they were read - see xml_dtd_item.
+  vector< xml_dtd_item< _TyChar > > m_rgItems;
   // The validity constraints which the declarations themselves don't meet - see the top of this file.
   vector< string > m_rgstrValidityErrors;
   // A reference to a parameter entity which wasn't read came before other declarations: the entity and attribute-list
@@ -949,6 +997,7 @@ public:
   {
     const bool fExternalSave = m_fExternal;
     m_fExternal = true;
+    _ItemTextEnter itemText( *this, _TyStdStr(), true, 0 );
     _ParseText( _svText, ns_xmlpdtd::s_knEntry_extSubset );
     m_fExternal = fExternalSave;
   }
@@ -959,6 +1008,7 @@ public:
   {
     if ( !!m_pstrDoctypeText && !m_fExternal && !m_nParameterEntityDepth )
       *m_pstrDoctypeText += _SvTokenText( *_rrupToken ); // See SetKeepDoctypeText().
+    _RecordItem( *_rrupToken );
     _TyValueToken vtok;
     vtok.m_tid = _rrupToken->GetTokenId();
     if ( s_knTokenProcessingInstruction == vtok.m_tid )
@@ -1597,13 +1647,14 @@ protected:
         m_rparser.m_rgstrBase.push_back( std::move( strLocation ) );
         m_rparser.m_fExternal = true;
       }
-      m_rgupFrames.push_back( std::move( upFrame ) );
+      m_rparser._ItemTextPush( m_rgupFrames.emplace_back( std::move( upFrame ) )->m_strEntity, false, 1 );
       m_fFrameChanged = true;
     }
     void _PopFrame()
     {
       Assert( m_rgupFrames.size() > 1 );
       _TyTextFrame & rframe = *m_rgupFrames.back();
+      m_rparser._ItemTextPop();
       if ( rframe.m_fExternalEntity )
       {
         m_rparser.m_fExternal = rframe.m_fExternalSave;
@@ -1782,6 +1833,7 @@ protected:
         m_r.m_setParameterEntitiesActive.erase( m_rstrName );
       }
     } leave{ *this, _rstrName, kfExternalEntity, kfExternalSave };
+    _ItemTextEnter itemText( *this, _rstrName, false, 0 );
     // An external entity may begin with a text declaration - as the external subset may: [78], [30].
     _ParseText( strText, kfExternalEntity ? ns_xmlpdtd::s_knEntry_extSubset : ns_xmlpdtd::s_knEntry_extSubsetDecl );
   }
@@ -2028,6 +2080,155 @@ protected:
     m_rdtd.m_rgstrValidityErrors.push_back( std::move( str ) );
   }
 
+  // The items of the DTD - see xml_dtd<>::m_rgItems. A token which begins an item adds it; the declaration which is
+  //  being read has its name from the first name after the token which begins it and its end from its '>'.
+  template < class t_TyLexToken >
+  void _RecordItem( t_TyLexToken const & _rtok )
+  {
+    typedef xml_dtd_item< _TyChar > _TyItem;
+    const vtyTokenIdent tid = _rtok.GetTokenId();
+    _l_data_range dr;
+    _rtok.GetTokenDataRange( dr );
+    _TyItem * pitemDeclaration = ( m_nItemDeclaration < m_rdtd.m_rgItems.size() ) ? &m_rdtd.m_rgItems[ m_nItemDeclaration ] : nullptr;
+    EXmlDtdItem eItem = exdiEXmlDtdItemCount;
+    switch ( tid )
+    {
+      case s_knTokenDtdDoctypeBegin:
+        if ( m_rgItemTexts.empty() )
+          m_posDoctype = dr.begin(); // The positions of the items of the document are from here.
+      return;
+      case s_knTokenDtdElementBegin:
+        eItem = exdiElementDecl;
+      break;
+      case s_knTokenDtdAttlistBegin:
+        eItem = exdiAttlistDecl;
+      break;
+      case s_knTokenDtdEntityBegin:
+        eItem = exdiEntityDecl;
+      break;
+      case s_knTokenDtdNotationBegin:
+        eItem = exdiNotationDecl;
+      break;
+      case s_knTokenProcessingInstruction:
+        eItem = exdiProcessingInstruction;
+      break;
+      case s_knTokenComment:
+        eItem = exdiComment;
+      break;
+      case s_knTokenDtdPEReference:
+        if ( !!pitemDeclaration )
+          return; // Within a declaration: not an item.
+        eItem = exdiParameterEntityReference;
+      break;
+      case s_knTokenDtdName:
+        if ( !!pitemDeclaration && pitemDeclaration->m_strName.empty() )
+          pitemDeclaration->m_strName = _SvTokenText( _rtok );
+      return;
+      case s_knTokenDtdPercent:
+        if ( !!pitemDeclaration && ( exdiEntityDecl == pitemDeclaration->m_eItem ) && pitemDeclaration->m_strName.empty() )
+          pitemDeclaration->m_fParameterEntity = true;
+      return;
+      case s_knTokenDtdGreater:
+        if ( !!pitemDeclaration )
+        {
+          if ( m_nItemTextDeclaration == _NItemText() )
+            pitemDeclaration->m_nLength = _NItemPos( dr.end() ) - pitemDeclaration->m_nPos;
+          m_nItemDeclaration = size_t( -1 );
+        }
+      return;
+      default:
+      return;
+    }
+    _TyItem & ritem = m_rdtd.m_rgItems.emplace_back();
+    ritem.m_eItem = eItem;
+    ritem.m_nPos = _NItemPos( dr.begin() );
+    if ( !m_rgItemTexts.empty() )
+    {
+      ritem.m_strEntity = m_rgItemTexts.back().m_strEntity;
+      ritem.m_fExternalSubset = m_rgItemTexts.back().m_fExternalSubset;
+    }
+    switch ( eItem )
+    {
+      case exdiProcessingInstruction:
+      case exdiComment:
+      case exdiParameterEntityReference:
+      {
+        ritem.m_nLength = size_t( dr.end() - dr.begin() );
+        const _TyStrView sv = _SvTokenText( _rtok );
+        if ( exdiParameterEntityReference == eItem )
+          ritem.m_strName = sv.substr( 1, sv.length() - 2 ); // '%' Name ';'
+        else
+        if ( exdiComment == eItem )
+          ritem.m_strData = sv.substr( 4, sv.length() - 7 ); // "<!--" ... "-->"
+        else
+        {
+          // "<?" PITarget ( S ... )? "?>"
+          const _TyStrView svInner = sv.substr( 2, sv.length() - 4 );
+          const size_t knPosEndTarget = svInner.find_first_of( str_array_cast< _TyChar >( " \t\r\n" ) );
+          ritem.m_strName = svInner.substr( 0, knPosEndTarget );
+          if ( _TyStrView::npos != knPosEndTarget )
+          {
+            const size_t knPosData = svInner.find_first_not_of( str_array_cast< _TyChar >( " \t\r\n" ), knPosEndTarget );
+            if ( _TyStrView::npos != knPosData )
+              ritem.m_strData = svInner.substr( knPosData );
+          }
+        }
+        if ( _FNormalizeLineEnds() )
+          NormalizeLineEnds( ritem.m_strData );
+      }
+      break;
+      default:
+        m_nItemDeclaration = m_rdtd.m_rgItems.size() - 1;
+        m_nItemTextDeclaration = _NItemText();
+      break;
+    }
+  }
+  // The text which we are within - for the items: see xml_dtd_item<>::m_strEntity. _nPosAdjust: what is before the
+  //  text in what is read.
+  struct _TyItemText
+  {
+    _TyStdStr m_strEntity;
+    bool m_fExternalSubset{ false };
+    size_t m_nPosAdjust{ 0 };
+    size_t m_nText{ 0 }; // Which text this is: each has a number of its own.
+  };
+  void _ItemTextPush( _TyStdStr const & _rstrEntity, bool _fExternalSubset, size_t _nPosAdjust )
+  {
+    m_rgItemTexts.push_back( _TyItemText{ _rstrEntity, _fExternalSubset, _nPosAdjust, ++m_nItemTextsEntered } );
+  }
+  void _ItemTextPop()
+  {
+    Assert( !m_rgItemTexts.empty() );
+    if ( !m_rgItemTexts.empty() )
+      m_rgItemTexts.pop_back();
+  }
+  struct _ItemTextEnter
+  {
+    _TyThis & m_r;
+    _ItemTextEnter( _TyThis & _r, _TyStdStr const & _rstrEntity, bool _fExternalSubset, size_t _nPosAdjust )
+      : m_r( _r )
+    {
+      m_r._ItemTextPush( _rstrEntity, _fExternalSubset, _nPosAdjust );
+    }
+    ~_ItemTextEnter()
+    {
+      m_r._ItemTextPop();
+    }
+    _ItemTextEnter( _ItemTextEnter const & ) = delete;
+    _ItemTextEnter & operator =( _ItemTextEnter const & ) = delete;
+  };
+  // The number of the text which is being read - zero: the document.
+  size_t _NItemText() const
+  {
+    return m_rgItemTexts.empty() ? 0 : m_rgItemTexts.back().m_nText;
+  }
+  // The position of an item in the text which it is in - see xml_dtd_item<>::m_nPos.
+  size_t _NItemPos( vtyDataPosition _pos ) const
+  {
+    const vtyDataPosition kposBase = m_rgItemTexts.empty() ? m_posDoctype : vtyDataPosition( m_rgItemTexts.back().m_nPosAdjust );
+    return ( _pos >= kposBase ) ? size_t( _pos - kposBase ) : 0;
+  }
+
   _TyDtd & m_rdtd;
   bool m_fStandalone{ false }; // The document is declared to be standalone.
   bool m_fUseXMLNamespaces{ false }; // See SetUseXMLNamespaces().
@@ -2039,6 +2240,12 @@ protected:
   _TyExternalEntityResolver m_resolver; // See SetExternalEntityResolver().
   vector< _TyStdStr > m_rgstrBase; // The locations of the entities which we are within - the document first: the last is the base.
   set< _TyStdStr, less<> > m_setParameterEntitiesActive; // Those whose replacement text is being parsed.
+  // The items of the DTD - see _RecordItem().
+  vector< _TyItemText > m_rgItemTexts; // The texts which we are within, other than the document's.
+  size_t m_nItemTextsEntered{ 0 }; // How many texts have been entered: each has a number.
+  vtyDataPosition m_posDoctype{ 0 }; // The position of the "<!DOCTYPE" of the document.
+  size_t m_nItemDeclaration{ size_t( -1 ) }; // The item of the declaration which is being read - none if none is.
+  size_t m_nItemTextDeclaration{ 0 }; // The text in which that declaration began.
 };
 
 __XMLP_END_NAMESPACE

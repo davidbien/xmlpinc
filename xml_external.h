@@ -60,8 +60,22 @@ inline std::string _StrDeclaredEncoding( const uint8_t * _pby, size_t _nby )
 //  encoding which its text declaration names - and without any of those it is UTF-8.
 // Supported: UTF-8, UTF-16 and UTF-32 of either byte order, ISO-8859-1 and US-ASCII.
 // Throws if the bytes are in an encoding which isn't supported or are not good in the encoding which they are in.
+// The encoding which the text declaration at the beginning of text which is decoded already declares - as it is
+//  written; empty if there is none or it declares none.
+template < class t_TyCharText >
+std::string _StrDeclaredEncodingOfText( std::basic_string_view< t_TyCharText > _sv )
+{
+  std::string strBytes;
+  const size_t knLen = (std::min)( _sv.length(), size_t( 256 ) );
+  strBytes.reserve( knLen );
+  for ( size_t n = 0; n < knLen; ++n )
+    strBytes += ( _sv[n] < t_TyCharText( 0x80 ) ) ? char( _sv[n] ) : '?';
+  return _StrDeclaredEncoding( (const uint8_t *)strBytes.data(), strBytes.length() );
+}
+// _fCheckDeclaredEncoding: the encoding which a text declaration names is that which the bytes are in - 4.3.3. A
+//  text declaration naming UTF-8 of an entity in UTF-16 is an error unless this is false.
 template < class t_TyChar >
-void DecodeExternalEntity( const uint8_t * _pby, size_t _nby, std::basic_string< t_TyChar > & _rstrText )
+void DecodeExternalEntity( const uint8_t * _pby, size_t _nby, std::basic_string< t_TyChar > & _rstrText, bool _fCheckDeclaredEncoding = true )
 {
   _rstrText.clear();
   if ( !_nby )
@@ -117,6 +131,12 @@ void DecodeExternalEntity( const uint8_t * _pby, size_t _nby, std::basic_string<
       if ( ( efceUTF16LE == efce ) != kfNativeLittleEndian )
         for ( char16_t & rch : str16 )
           rch = char16_t( ( uint16_t( rch ) >> 8 ) | ( uint16_t( rch ) << 8 ) );
+      if ( _fCheckDeclaredEncoding )
+      {
+        const std::string strEncoding = _StrDeclaredEncodingOfText( std::u16string_view( str16 ) );
+        VerifyThrowSz( strEncoding.empty() || FDeclaredEncodingAgrees( std::string_view( strEncoding ), efce ),
+          "The external entity is in %s but its text declaration names the encoding [%s].", PszCharacterEncodingShort( efce ), strEncoding.c_str() );
+      }
       ConvertString( _rstrText, str16 );
     }
     break;
@@ -132,6 +152,12 @@ void DecodeExternalEntity( const uint8_t * _pby, size_t _nby, std::basic_string<
           const uint32_t u = uint32_t( rch );
           rch = char32_t( ( u >> 24 ) | ( ( u >> 8 ) & 0xff00 ) | ( ( u << 8 ) & 0xff0000 ) | ( u << 24 ) );
         }
+      if ( _fCheckDeclaredEncoding )
+      {
+        const std::string strEncoding = _StrDeclaredEncodingOfText( std::u32string_view( str32 ) );
+        VerifyThrowSz( strEncoding.empty() || FDeclaredEncodingAgrees( std::string_view( strEncoding ), efce ),
+          "The external entity is in %s but its text declaration names the encoding [%s].", PszCharacterEncodingShort( efce ), strEncoding.c_str() );
+      }
       ConvertString( _rstrText, str32 );
     }
     break;
@@ -156,6 +182,8 @@ struct xml_file_entity_options
   bool m_fAllowNetworkPaths{ false };
   // A file which is larger than this is not read. Zero: no limit.
   std::uintmax_t m_nbyMaxFile{ 64 * 1024 * 1024 };
+  // The encoding which the text declaration of a file names is that which the file is in - see DecodeExternalEntity().
+  bool m_fCheckDeclaredEncoding{ true };
 };
 
 // FReadExternalEntityFile:
@@ -242,7 +270,7 @@ bool FReadExternalEntityFileWithOptions( xml_dtd_external_id< t_TyChar > const &
   if ( !ifs )
     return false;
   const std::string strBytes( ( std::istreambuf_iterator< char >( ifs ) ), std::istreambuf_iterator< char >() );
-  DecodeExternalEntity( (const uint8_t *)strBytes.data(), strBytes.size(), _rstrText );
+  DecodeExternalEntity( (const uint8_t *)strBytes.data(), strBytes.size(), _rstrText, _roptions.m_fCheckDeclaredEncoding );
   const std::u8string strLocation = pathEntity.lexically_normal().generic_u8string();
   _rstrLocation.clear();
   if ( !strLocation.empty() )

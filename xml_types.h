@@ -18,6 +18,10 @@
 #include <map>
 #endif
 #include <algorithm>
+#include <bit>
+#include <string>
+#include <string_view>
+#include "_strutil.h"
 #include "upslist.h"
 #include "xml_ns.h"
 #include "_l_types.h"
@@ -51,10 +55,64 @@ static const vtyDataType s_kdtfLiteralLineEnds = 0x40000000;
 //  attribute and the text of the entity is other there than it is in content - its white space is spaces ( 3.3.3 ).
 //  The cursor sets this - see xml_user_obj<>::GetEntityMapAttrValues().
 static const vtyDataType s_kdtfEntityRefInAttrValue = 0x20000000;
+// A flag in the type of data of a reference to an entity ( s_kdtEntityRef ): the text of the entity is not included -
+//  it isn't known. The entity is not declared where that is a matter of validity ( 4.1 VC: Entity Declared ), or it is
+//  an external entity which wasn't read ( 4.4.3 ). The string which is had from the value has nothing in its place;
+//  the reference is still what is in the document and is what is written. The cursor sets this.
+static const vtyDataType s_kdtfEntityRefNotIncluded = 0x10000000;
 // The type of data without the flags.
 inline constexpr vtyDataType DtGetType( vtyDataType _dt )
 {
-  return _dt & ~( s_kdtfAttrTokenized | s_kdtfLiteralLineEnds | s_kdtfEntityRefInAttrValue );
+  return _dt & ~( s_kdtfAttrTokenized | s_kdtfLiteralLineEnds | s_kdtfEntityRefInAttrValue | s_kdtfEntityRefNotIncluded );
+}
+
+// The encoding declaration [80] of an XML declaration or a text declaration names an encoding which the text that was
+//  read may be in - 4.3.3: it is a fatal error for an entity to be in an encoding other than the one it declares.
+// _svDeclared: the name as it is written - names are compared without regard to case ( 4.3.3 ). _efce: the encoding
+//  which was read. _fByteOrderKnown: whether the byte order of UTF-16 or UTF-32 was known - when the text was given to
+//  us in memory already in the order of this machine it isn't, and "UTF-16LE" or "UTF-16BE" may be either.
+// The parser reads UTF-8, UTF-16 and UTF-32: US-ASCII is UTF-8 as well, being a part of it. ISO-10646-UCS-2 and
+//  ISO-10646-UCS-4 are the names the specification gives for UTF-16 ( of the characters there were ) and UTF-32.
+template < class t_TyChar >
+bool FDeclaredEncodingAgrees( basic_string_view< t_TyChar > _svDeclared, EFileCharacterEncoding _efce, bool _fByteOrderKnown = true )
+{
+  string strLower;
+  strLower.reserve( _svDeclared.length() );
+  for ( t_TyChar ch : _svDeclared )
+  {
+    if ( ( ch < t_TyChar( 0x20 ) ) || ( ch > t_TyChar( 0x7e ) ) )
+      return false; // [81]: the name of an encoding is Latin letters, digits, '.', '_' and '-'.
+    strLower += ( ( ch >= t_TyChar( 'A' ) ) && ( ch <= t_TyChar( 'Z' ) ) ) ? char( ch - t_TyChar( 'A' ) + 'a' ) : char( ch );
+  }
+  switch ( _efce )
+  {
+    case efceUTF8:
+      return ( strLower == "utf-8" ) || ( strLower == "us-ascii" ) || ( strLower == "ascii" );
+    case efceUTF16LE:
+    case efceUTF16BE:
+      return ( strLower == "utf-16" ) || ( strLower == "iso-10646-ucs-2" ) ||
+        ( ( strLower == "utf-16le" ) && ( !_fByteOrderKnown || ( efceUTF16LE == _efce ) ) ) ||
+        ( ( strLower == "utf-16be" ) && ( !_fByteOrderKnown || ( efceUTF16BE == _efce ) ) );
+    case efceUTF32LE:
+    case efceUTF32BE:
+      return ( strLower == "utf-32" ) || ( strLower == "iso-10646-ucs-4" ) ||
+        ( ( strLower == "utf-32le" ) && ( !_fByteOrderKnown || ( efceUTF32LE == _efce ) ) ) ||
+        ( ( strLower == "utf-32be" ) && ( !_fByteOrderKnown || ( efceUTF32BE == _efce ) ) );
+    default:
+      return false;
+  }
+}
+// The encoding of text in memory of the character type t_TyChar - in the byte order of this machine.
+template < class t_TyChar >
+constexpr EFileCharacterEncoding EfceOfCharType()
+{
+  if constexpr ( 1 == sizeof( t_TyChar ) )
+    return efceUTF8;
+  else
+  if constexpr ( 2 == sizeof( t_TyChar ) )
+    return ( std::endian::native == std::endian::little ) ? efceUTF16LE : efceUTF16BE;
+  else
+    return ( std::endian::native == std::endian::little ) ? efceUTF32LE : efceUTF32BE;
 }
 
 // xml_dtd_limits:

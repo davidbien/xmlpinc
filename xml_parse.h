@@ -108,6 +108,7 @@ public:
     m_strBaseLocation.swap( _r.m_strBaseLocation );
     std::swap( m_fUseXMLNamespaces, _r.m_fUseXMLNamespaces );
     std::swap( m_limitsDtd, _r.m_limitsDtd );
+    std::swap( m_fCheckDeclaredEncoding, _r.m_fCheckDeclaredEncoding );
   }
 
 // What a document may have the parser do by its document type declaration - see xml_dtd_limits in xml_types.h: whether
@@ -141,6 +142,20 @@ public:
   bool FUseXMLNamespaces() const
   {
     return m_fUseXMLNamespaces;
+  }
+
+// The encoding which the XML declaration of the document names: it is a fatal error for a document to be in an encoding
+//  other than the one it declares ( 4.3.3 ) - and so it is here unless this says not. The encoding which is read is
+//  that of the byte order mark, or of how the first characters are written, or of the character type of the memory
+//  which is given: UTF-8, UTF-16 or UTF-32. Not checking it is for documents which are known to be misdeclared - e.g.
+//  "ISO-8859-1" of one that is all ASCII. To be set before the document is opened.
+  void SetCheckDeclaredEncoding( bool _fCheckDeclaredEncoding = true )
+  {
+    m_fCheckDeclaredEncoding = _fCheckDeclaredEncoding;
+  }
+  bool FCheckDeclaredEncoding() const
+  {
+    return m_fCheckDeclaredEncoding;
   }
 
 // External entities - with XML traits which support the DTD: the external subset of the DTD and its external parameter
@@ -504,6 +519,7 @@ protected:
   _TyStdStr m_strBaseLocation; // See SetBaseLocation().
   bool m_fUseXMLNamespaces{ true }; // See SetUseXMLNamespaces().
   xml_dtd_limits m_limitsDtd; // See SetDtdLimits().
+  bool m_fCheckDeclaredEncoding{ true }; // See SetCheckDeclaredEncoding().
 };
 
 // The implementation currently assumes that if you are using a xml_parser_var with three character types and sharing the switch-endian stuff as below as in _xml_var_get_var_transport.
@@ -612,6 +628,16 @@ public:
   {
     return m_fUseXMLNamespaces;
   }
+  // Whether the encoding which the XML declaration names is held against that which is read - see
+  //  xml_parser<>::SetCheckDeclaredEncoding(): to be set before the document is opened.
+  void SetCheckDeclaredEncoding( bool _fCheckDeclaredEncoding = true )
+  {
+    m_fCheckDeclaredEncoding = _fCheckDeclaredEncoding;
+  }
+  bool FCheckDeclaredEncoding() const
+  {
+    return m_fCheckDeclaredEncoding;
+  }
   // This will open the file with transport t_tempTyTransport<>
   _TyReadCursorVar OpenFile( const char * _pszFileName )
     requires( !s_kfIsVariantTransport )
@@ -665,6 +691,7 @@ protected:
     typedef typename t_TyParser::_TyChar _TyCharParser;
     _rParser.SetUseXMLNamespaces( m_fUseXMLNamespaces );
     _rParser.SetDtdLimits( m_limitsDtd );
+    _rParser.SetCheckDeclaredEncoding( m_fCheckDeclaredEncoding );
     xml_external_entity_resolver< _TyCharParser > const & rresolver = std::get< xml_external_entity_resolver< _TyCharParser > >( m_tpResolvers );
     if ( !!rresolver )
       _rParser.SetExternalEntityResolver( rresolver );
@@ -995,6 +1022,7 @@ protected:
   optional< xml_file_entity_options > m_optFileEntityOptions;
   bool m_fUseXMLNamespaces{ true };
   xml_dtd_limits m_limitsDtd;
+  bool m_fCheckDeclaredEncoding{ true };
   tuple< xml_external_entity_resolver< char8_t >, xml_external_entity_resolver< char16_t >, xml_external_entity_resolver< char32_t > > m_tpResolvers;
   string m_strBaseLocation;
 };

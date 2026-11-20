@@ -15,6 +15,7 @@
 // A good example is where a piece of text may represent a hexidecimal number, etc. The translator in the overridden
 //  user object would translate and also potentially check for overflow, etc.
 
+#include <set>
 #include "_util.h"
 #include "_l_chrtr.h"
 #include "xml_ns.h"
@@ -161,6 +162,13 @@ public:
   //  replacement text of an entity is spaces there ( 3.3.3 ). Only those are here - for any other entity the text is
   //  that of the entity map - and this is looked in only for a reference which is flagged s_kdtfEntityRefInAttrValue.
   _TyEntityMap m_mapEntitiesAttrValues;
+  // The references which the cursor doesn't look at as it reads - it doesn't when the DTD declares nothing which a
+  //  reference could make it do anything for - are found when the string is had: one to an entity which isn't in the
+  //  entity map has nothing in its place if its text isn't known ( see s_kdtfEntityRefNotIncluded ) - an external
+  //  entity of m_setEntitiesWithoutText or, if m_fEntitiesNotDeclaredHaveNoText, one which isn't declared. Otherwise it
+  //  is an error: 4.1 WFC: Entity Declared. The cursor sets these when it reads the DTD.
+  std::set< _TyStdStr, std::less<> > m_setEntitiesWithoutText;
+  bool m_fEntitiesNotDeclaredHaveNoText{ false };
   
   // Then this is true then when s_knTokenCharData is received it is check for be entirely composed of whitespace
   // and if so it is ignored entirely and not retunred to the xml parser.
@@ -180,6 +188,8 @@ public:
     _TyBase::swap( _r );
     m_mapEntities.swap( _r.m_mapEntities );
     m_mapEntitiesAttrValues.swap( _r.m_mapEntitiesAttrValues );
+    m_setEntitiesWithoutText.swap( _r.m_setEntitiesWithoutText );
+    std::swap( m_fEntitiesNotDeclaredHaveNoText, _r.m_fEntitiesNotDeclaredHaveNoText );
   }
   _TyEntityMap & GetEntityMapAttrValues()
   {
@@ -223,6 +233,8 @@ public:
                         { _TyStdStr( str_array_cast<_TyChar>("gt") ), _TyStdStr( str_array_cast<_TyChar>(">") ) } };
     }
     m_mapEntitiesAttrValues.clear();
+    m_setEntitiesWithoutText.clear();
+    m_fEntitiesNotDeclaredHaveNoText = false;
     _TyBase::ClearParamEntities();
   }
   template < class t_TyStream >
@@ -563,6 +575,9 @@ public:
   template < class t_TyTransportCtxt >
   const _TyStdStr & RStrLookupEntity( _l_data_typed_range const & _rdr, t_TyTransportCtxt const & _rcxt ) const
   {
+    static const _TyStdStr s_kstrNone; // See s_kdtfEntityRefNotIncluded.
+    if ( !!( s_kdtfEntityRefNotIncluded & _rdr.type() ) )
+      return s_kstrNone;
     _TyStrView sv;
     _rcxt.GetStringView( sv, _rdr );
     if ( !!( s_kdtfEntityRefInAttrValue & _rdr.type() ) )
@@ -574,7 +589,11 @@ public:
     }
     typename _TyEntityMap::const_iterator cit = m_mapEntities.find( sv );
     if ( m_mapEntities.end() == cit )
-      THROWXMLPARSEEXCEPTION( "Can't find entity [%s].", StrConvertString<char>( sv ).c_str() );
+    {
+      if ( m_fEntitiesNotDeclaredHaveNoText || m_setEntitiesWithoutText.contains( sv ) )
+        return s_kstrNone;
+      THROWXMLPARSEEXCEPTION( "Can't find entity [%s]: there is a reference to it and it is not declared - or its text isn't to be had.", StrConvertString<char>( sv ).c_str() );
+    }
     return cit->second;
   }
   _TyStrView _SvLookupEntity( _TyStrView const & _rsv ) const
