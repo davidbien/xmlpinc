@@ -203,53 +203,42 @@ public:
     VerifyThrow( _rval.FHasTypedData() );
     m_tokToken.KGetStringView( _rsv, _rval );
   }
-  // Tag methods:
-  // Set the tag name and potentially the namespace.
-  // 1) If _pszTagName contains a colon:
-  //  a) If we are using namespaces then the _rcxtDoc will contain a namespace map otherwise not.
-  //  b) If we are using namespaces then check that the prefix refers to either an active namespace or the namespace passed in _ppuNamespace.
-  //     If _xml_output_format<>::m_fIncludePrefixesInAttrNames then we won't excide any prefix and colon off the front of the tag name,
-  //     and we'll add the prefix to the front if it isn't present.
-  //  c) If we aren't using namespaces then we just leave things like they are. Note that we cannot read names with two colons in them in this impl.
-  //  If _ppuNamespace is passed and a prefix is present on _pcTagName then they must match. Use another call to add another namespace separately - the
-  //    idea is that _ppuNamespace is the namespace of the tag.
-  template < class t_TyChar >
-  void SetTagName( _TyXmlDocumentContext & _rcxtDoc, const t_TyChar * _pcTagName, size_t _stLenTag = 0, TGetPrefixUri< t_TyChar > const * _ppuNamespace = nullptr )
+  // Tag methods - for a tag which is made rather than read: see xml_writer<>::StartTag().
+  // The name of the tag - and so the namespace which it is in, when namespaces are used. The name is then a qualified
+  //  name ( Namespaces in XML [7] ) and:
+  //  1) With (_svPrefix,_svUri): the tag is in that namespace - which is declared on the tag unless it is the one in scope
+  //     for the prefix. A prefix which the name has is to be _svPrefix; a name without one is given it.
+  //  2) With _rxnvw: the tag is in that namespace, which is to be in scope. Its prefix is that of the name likewise.
+  //  3) Otherwise the tag is in the namespace in scope for the prefix of the name - it is an error if there is none - or,
+  //     for a name without one, in the default namespace if one is in scope ( 6.2 ).
+  // Without namespaces the name is a Name [5]: a colon is a character of it as any other.
+  // The strings may be of any type of character: they are converted to ours.
+  template < class t_TyCharName >
+  void SetTagName( _TyXmlDocumentContext & _rcxtDoc, basic_string_view< t_TyCharName > _svName )
   {
-    AssertValid();
-    VerifyThrowSz( !_ppuNamespace || _rcxtDoc.FHasNamespaceMap(), "Namespace are not being used but a namespace (prefix,uri) was passed in." );
     _InitTag();
-    Assert( _pcTagName );
-    if ( !_stLenTag )
-      _stLenTag = StrNLen(  _pcTagName );
-    VerifyThrow( _stLenTag );
-    // Translate everything to our output character type before processing further.
-    TGetConversionBuffer_t< t_TyChar, _TyChar > cbufName;
-    _TyStrView svTagName = StrViewConvertString( _pcTagName, _stLenTag, cbufName );
-    TGetConversionBuffer_t< t_TyChar, _TyChar > cbufPrefix, cbufUri;
-    _TyStrView svPrefix, svUri;
-    if ( _ppuNamespace )
-    {
-      svPrefix = StrViewConvertString( _ppuNamespace->first, cbufPrefix );
-      svUri = StrViewConvertString( _ppuNamespace->first, cbufUri );
-    }
-    _SetTagName( _rcxtDoc, svTagName, _ppuNamespace ? &svPrefix : nullptr, _ppuNamespace ? &svUri : nullptr );
+    TGetConversionBuffer_t< t_TyCharName, _TyChar > cbufName;
+    _SetTagName( _rcxtDoc, _SvConvert( _svName, cbufName ), nullptr, nullptr );
   }
-  // Set the tag them given a namespace reference that is already sussed - i.e. no lookups are necessary to add the namespace.
-  template < class t_TyChar >
-  void SetTagName( _TyXmlDocumentContext & _rcxtDoc, _TyXmlNamespaceValueWrap const & _rnsvw, const t_TyChar * _pcTagName, size_t _stLenTag = 0 )
+  template < class t_TyCharName, class t_TyCharPrefix, class t_TyCharUri >
+  void SetTagName( _TyXmlDocumentContext & _rcxtDoc, basic_string_view< t_TyCharName > _svName, basic_string_view< t_TyCharPrefix > _svPrefix, basic_string_view< t_TyCharUri > _svUri )
   {
-    AssertValid();
-    VerifyThrowSz( _rcxtDoc.FHasNamespaceMap(), "Namespace are not being used but a _TyXmlNamespaceValueWrap was passed in." );
+    VerifyThrowSz( _rcxtDoc.FHasNamespaceMap(), "Namespaces are not used but a namespace was given for the tag." );
     _InitTag();
-    Assert( _pcTagName );
-    if ( !_stLenTag )
-      _stLenTag = StrNLen(  _pcTagName );
-    VerifyThrow( _stLenTag );
-    // Translate everything to our output character type before processing further.
-    TGetConversionBuffer_t< t_TyChar, _TyChar > cbufName;
-    _TyStrView svTagName = StrViewConvertString( _pcTagName, _stLenTag, cbufName );
-    _SetTagName( _rcxtDoc, svTagName, nullptr, nullptr, &_rnsvw );
+    TGetConversionBuffer_t< t_TyCharName, _TyChar > cbufName;
+    TGetConversionBuffer_t< t_TyCharPrefix, _TyChar > cbufPrefix;
+    TGetConversionBuffer_t< t_TyCharUri, _TyChar > cbufUri;
+    const _TyStrView svPrefix = _SvConvert( _svPrefix, cbufPrefix );
+    const _TyStrView svUri = _SvConvert( _svUri, cbufUri );
+    _SetTagName( _rcxtDoc, _SvConvert( _svName, cbufName ), &svPrefix, &svUri );
+  }
+  template < class t_TyCharName >
+  void SetTagName( _TyXmlDocumentContext & _rcxtDoc, _TyXmlNamespaceValueWrap const & _rxnvw, basic_string_view< t_TyCharName > _svName )
+  {
+    VerifyThrowSz( _rcxtDoc.FHasNamespaceMap(), "Namespaces are not used but a namespace was given for the tag." );
+    _InitTag();
+    TGetConversionBuffer_t< t_TyCharName, _TyChar > cbufName;
+    _SetTagName( _rcxtDoc, _SvConvert( _svName, cbufName ), nullptr, nullptr, &_rxnvw );
   }
   // Add the namespace to the set of attributes.
   void DeclareNamespace( _TyXmlDocumentContext & _rcxtDoc, _TyXmlNamespaceValueWrap && _rrxnvw )
@@ -257,7 +246,8 @@ public:
     Assert( _rrxnvw.FIsAttributeNamespaceDeclaration() && _rrxnvw.FIsNamespaceReference() ); // yep.
     _TyLexValue & rvalAttrNew = _DeclareNewAttr( _rcxtDoc );
     {//B - attr name
-      _TyStdStr & rstrAttrName = rvalAttrNew[vknNameIdx].template emplaceArgs< _TyStdStr >( _TyMarkupTraits::s_kszXmlnsEtc, StaticStringLen( _TyMarkupTraits::s_kszXmlnsEtc ) );
+      // xmlns:prefix - or xmlns for the default namespace.
+      _TyStdStr & rstrAttrName = rvalAttrNew[vknNameIdx].template emplaceArgs< _TyStdStr >( _TyMarkupTraits::s_kszXmlnsEtc, StaticStringLen( _TyMarkupTraits::s_kszXmlnsEtc ) - ( _rrxnvw.RStringPrefix().empty() ? 1 : 0 ) );
       rstrAttrName += _rrxnvw.RStringPrefix();
     }//EB
     // attr value: URI: We can use a string view on the URI from the URI map.
@@ -267,112 +257,54 @@ public:
     ++GetValue()[vknTagNameIdx][vknTagName_NNamespaceDeclsIdx].template GetVal<vtySignedLvalueInt>();
   }
 
-#if 0 // These are incomplete but will be completed
-  // Add the namespace _rpuNamespace to this tag.
-  // If the URI is the current URI for the given prefix then we don't add a namespace decl attribute.
-  // Regardless we return a reference to the (prefix,uri) namespace.
-  // Note that if the prefix for this namespace matches the prefix of the tag (which must already refer to an existing)
-  //  namespace, then this namespace will overwrite the tag's namespace (as it appropriate).
-  // Note as well that we will not check for duplicate namespaces here but only on tag output since that will be faster overall.
-  // So, as such, a user may declare multiple tags with the same prefix and different URIs and the tag may change namespaces multiple
-  //  tinmes but the error won't be thrown until we actually write the tag.
-  template < class t_TyChar >
-  _TyXmlNamespaceValueWrap AddNamespace( _TyXmlDocumentContext & _rcxtDoc, TGetPrefixUri< t_TyChar > const & _rpuNamespace )
+  // Declare the namespace (_svPrefix,_svUri) on this tag - unless it is the one in scope for the prefix, when there is
+  //  nothing to declare. The empty prefix is the default namespace - and with the empty URI that undeclares it ( 6.2 ).
+  // A declaration applies to the tag which it is on: the tag and its attributes of the prefix are in the namespace.
+  // What is returned refers to the namespace: it may be given to attributes and to the tags within this one - while it
+  //  is in scope.
+  template < class t_TyCharPrefix, class t_TyCharUri >
+  _TyXmlNamespaceValueWrap AddNamespace( _TyXmlDocumentContext & _rcxtDoc, basic_string_view< t_TyCharPrefix > _svPrefix, basic_string_view< t_TyCharUri > _svUri )
   {
-    Assert( FIsTag() );
-    VerifyThrow( FIsTag() && !GetValue().FIsNull() ); // We should have already called SetTagName().
-    // First translate to the character set of the token:
-    TGetConversionBuffer_t< t_TyChar, _TyChar > cbufPrefix, cbufUri;
-    _TyStrView svPrefix = StrViewConvertString( _rpuNamespace.first, cbufPrefix );
-    _TyStrView svUri = StrViewConvertString( _rpuNamespace.first, cbufUri );
-    AddNamespace( _rcxtDoc, svPrefix, svUri );
-  }
-  _TyXmlNamespaceValueWrap AddNamespace( _TyXmlDocumentContext & _rcxtDoc, _TyStrView const & _rsvPrefix, _TyStrView const & _rsvUri )
-  {
-    // Take care of the various potential errors all in one go:
-    VerifyThrowSz( _rcxtDoc.FHasNamespaceMap() && ( !_rsvUri.empty() || _rsvPrefix.empty() ), "Either namespaces not enabled, or passing an empty URI for a non-empty prefix (which is not allowed)." );
-    _TyXmlNamespaceValueWrap xnvw = _rcxtDoc.GetNamespaceValueWrap( _rsvPrefix, _rsvUri );
-    // If this is a namespace declaraion then we need to add it to the set of attributes for this tag:
+    VerifyThrow( FIsTag() && !GetValue().FIsNull() ); // The tag has its name.
+    VerifyThrowSz( _rcxtDoc.FHasNamespaceMap(), "Namespaces are not used - a namespace may not be declared." );
+    TGetConversionBuffer_t< t_TyCharPrefix, _TyChar > cbufPrefix;
+    TGetConversionBuffer_t< t_TyCharUri, _TyChar > cbufUri;
+    const _TyStrView svPrefix = _SvConvert( _svPrefix, cbufPrefix );
+    const _TyStrView svUri = _SvConvert( _svUri, cbufUri );
+    VerifyThrowSz( svPrefix.empty() || ( NLenNCName( svPrefix ) == svPrefix.length() ), "The prefix [%s] is not an NCName.", StrConvertString< char >( svPrefix ).c_str() );
+    VerifyThrowSz( svPrefix != _SvXmlns(), "The prefix xmlns is not declared ( Namespaces in XML 3 )." );
+    VerifyThrowSz( svUri != _TyStrView( _TyMarkupTraits::s_kszXmlnsUri, StaticStringLen( _TyMarkupTraits::s_kszXmlnsUri ) ), "The namespace of xmlns is not declared ( Namespaces in XML 3 )." );
+    VerifyThrowSz( ( svUri != _TyStrView( _TyMarkupTraits::s_kszXmlUri, StaticStringLen( _TyMarkupTraits::s_kszXmlUri ) ) ) || ( svPrefix == _TyStrView( _TyMarkupTraits::s_kszXmlPrefix, StaticStringLen( _TyMarkupTraits::s_kszXmlPrefix ) ) ),
+      "The namespace of the prefix xml is not bound to another prefix ( Namespaces in XML 3 )." );
+    // A tag declares a prefix once.
+    _TyLexValue const & rrgvalAttrs = GetValue()[vknAttributesIdx];
+    for ( size_t nAttr = 0; nAttr < rrgvalAttrs.GetSize(); ++nAttr )
+    {
+      _TyLexValue const & rvalNS = rrgvalAttrs[nAttr][vknNamespaceIdx];
+      if ( rvalNS.template FIsA< _TyXmlNamespaceValueWrap >() && rvalNS.template GetVal< _TyXmlNamespaceValueWrap >().FIsNamespaceDeclaration() )
+        VerifyThrowSz( rvalNS.template GetVal< _TyXmlNamespaceValueWrap >().RStringPrefix() != svPrefix, "The prefix [%s] is declared on this tag already.", StrConvertString< char >( svPrefix ).c_str() );
+    }
+    _TyXmlNamespaceValueWrap xnvw = _rcxtDoc.GetNamespaceValueWrap( enrtStandaloneReference, &svPrefix, &svUri );
     if ( xnvw.FIsNamespaceDeclaration() )
     {
-      _DeclareNamespace( _rcxtDoc, std::move( xnvw ), enrtTagNameReference ); // If xnvw ends up modifying anything it will be a tag.
-      Assert( xnvw.FIsNamespaceReference() ); // Pass in a declaration, return a reference.
+      _DeclareNamespace( _rcxtDoc, std::move( xnvw ), enrtStandaloneReference ); // Leaves a reference to it in xnvw.
+      _RebindNames( xnvw );
     }
-    // Now check to see if the tag has a namespace and if it matches the new prefix and if so update it.
-    if ( GetValue()[vknTagNameIdx][vknNamespaceIdx].FIsBool() )
-    {
-      // Then if this is a default namespace then it applies to the tag:
-      if ( _rsvPrefix.empty() )
-        GetValue()[vknTagNameIdx][vknNamespaceIdx].emplaceVal( std::move( xnvw ) );
-    }
-    else
-    {
-      _TyXmlNamespaceValueWrap & rxnvw = GetValue()[vknTagNameIdx][vknNamespaceIdx].GetVal< _TyXmlNamespaceValueWrap >();
-      if ( rxnvw.RStringPrefix() == _rsvPrefix )
-        rxnvw.swap( xnvw ); // fastest.
-      Assert( !rxnvw.FIsNamespaceDeclaration() ); // should never be the case.
-    }
+    return xnvw;
   }
-#endif //incomplete
-  // Add an attribute to this tag token.
-  // To apply a namespace to an attribute get a _TyXmlNamespaceValueWrap by calling AddNamespace() or get the namespace from
-  //  a tag. The default (empty prefix) namespace cannot be applied to an attribute and we will throw if it is attempted.
-  // The attribute name is validated within this method. The attribute value is not validated until output at which point
-  //  it may be segmented into a string of references interleaved with Attribute CharData.
-  // So technically we needn't convert the value to the xml_token's character type here but it is cleaner to do so.
-  template < class t_TyChar >
-  void AddAttribute(  _TyXmlDocumentContext & _rcxtDoc, const t_TyChar * _pcAttrName, size_t _stLenAttrName = (numeric_limits< size_t >::max)(),
-                      const t_TyChar * _pcAttrValue = nullptr, size_t _stLenAttrValue = (numeric_limits< size_t >::max)(),
+  // Add an attribute. When namespaces are used its name is a qualified name: an attribute with a prefix is in the
+  //  namespace in scope for the prefix - or in that of _pxnvw, whose prefix it is then to be. One without is in no
+  //  namespace - unless _pxnvw, or the default namespace for attributes, gives it one: the name is then given its prefix.
+  //  ( The default namespace isn't that of an attribute - 6.2: the namespace of an attribute is that of its prefix. )
+  // A namespace is declared by AddNamespace() - not as an attribute.
+  // The value is the characters of the value: it is checked, and what must be is escaped, when it is written.
+  template < class t_TyCharName, class t_TyCharValue >
+  void AddAttribute(  _TyXmlDocumentContext & _rcxtDoc, basic_string_view< t_TyCharName > _svName, basic_string_view< t_TyCharValue > _svValue,
                       const _TyXmlNamespaceValueWrap * _pxnvw = nullptr )
   {
-    if ( (numeric_limits< size_t >::max)() == _stLenAttrName )
-      _stLenAttrName = StrNLen( _pcAttrName );
-    else
-      Assert( StrNLen( _pcAttrName, _stLenAttrName ) == _stLenAttrName ); // no embedded nulls.
-    VerifyThrowSz( _stLenAttrName, "Empty attribute name." );
-    if ( _pcAttrValue )
-    {
-      if ( (numeric_limits< size_t >::max)() == _stLenAttrValue )
-        _stLenAttrValue = StrNLen( _pcAttrValue );
-      else
-        Assert( StrNLen( _pcAttrValue, _stLenAttrValue ) == _stLenAttrValue ); // no embedded nulls.
-    }
-    // Convert encodings if necessary:
-    TGetConversionBuffer_t< t_TyChar, _TyChar > cbufName, cbufValue;
-    _TyStrView svName = StrViewConvertString( _pcAttrName, _stLenAttrName, cbufName );
-    _TyStrView svValue = StrViewConvertString( _pcAttrValue, _stLenAttrValue, cbufValue );
-    _AddAttribute( _rcxtDoc, svName, svValue, _pxnvw );
-  }
-  template < class t_TyStrViewOrString >
-  void AddAttribute(  _TyXmlDocumentContext & _rcxtDoc, t_TyStrViewOrString const & _strName,
-                      t_TyStrViewOrString const & _strValue, const _TyXmlNamespaceValueWrap * _pxnvw = nullptr )
-  {
-    AddAttribute( _rcxtDoc, &_strName[0], _strName.length(), &_strValue[0], _strValue.length(), _pxnvw );
-  }
-  // We can only support printf formatting for the stdc supported character types which are char and wchar_t at this point.
-  // Methods are not available for characters not of these sizes.
-  template < class t_TyChar >
-  void FormatAttribute( _TyXmlDocumentContext & _rcxtDoc, const t_TyChar * _pcAttrName, size_t _stLenAttrName,
-                        const t_TyChar * _pcAttrValue, size_t _stLenAttrValue,
-                        const _TyXmlNamespaceValueWrap * _pxnvw, ... )
-    requires( TAreSameSizeTypes_v< t_TyChar, char > || TAreSameSizeTypes_v< t_TyChar, wchar_t > )
-  {
-    va_list ap;
-    va_start( ap, _pxnvw );
-    FormatAttributeVArg( _rcxtDoc, _pcAttrName, _stLenAttrName, _pcAttrValue, _pxnvw, ap );
-    va_end( ap );
-  }
-  template < class t_TyChar >
-  void FormatAttributeVArg( _TyXmlDocumentContext & _rcxtDoc, const t_TyChar * _pcAttrName, size_t _stLenAttrName,
-                            const t_TyChar * _pcAttrValue, size_t _stLenAttrValue,
-                            const _TyXmlNamespaceValueWrap * _pxnvw, va_list _ap )
-    requires( TAreSameSizeTypes_v< t_TyChar, char > || TAreSameSizeTypes_v< t_TyChar, wchar_t > )
-  {
-    typedef conditional_t< TAreSameSizeTypes_v< t_TyChar, char >, char, wchar_t > _TyChar;
-    typedef basic_string< _TyChar > _TyString;
-    _TyString strValue;
-    VPrintfStdStr( strValue, _stLenAttrValue, _pcAttrValue, _ap );
-    AddAttribute( _rcxtDoc, _pcAttrName, _stLenAttrName, &strValue[0], strValue.length(), _pxnvw );
+    TGetConversionBuffer_t< t_TyCharName, _TyChar > cbufName;
+    TGetConversionBuffer_t< t_TyCharValue, _TyChar > cbufValue;
+    _AddAttribute( _rcxtDoc, _SvConvert( _svName, cbufName ), _SvConvert( _svValue, cbufValue ), _pxnvw );
   }
   // This method for internal use.
   void _FixupNamespaceDeclarations( _TyXmlDocumentContext & _rcxtDoc, typename _TyXmlDocumentContext::_TyTokenCopyContext & _rctxtTokenCopy )
@@ -474,148 +406,218 @@ public:
     return false;
   }
 protected:
-  void _InitTag( _TyXmlDocumentContext & _rcxtDoc )
+  // A string of another type of character as ours - in _rbuf if it is converted.
+  template < class t_TyCharFrom, class t_TyBuffer >
+  static _TyStrView _SvConvert( basic_string_view< t_TyCharFrom > _sv, t_TyBuffer & _rbuf )
+  {
+    if ( _sv.empty() )
+      return _TyStrView();
+    return StrViewConvertString( _sv.data(), _sv.length(), _rbuf );
+  }
+  static _TyStrView _SvXmlns()
+  {
+    return _TyStrView( _TyMarkupTraits::s_kszXmlnsEtc, StaticStringLen( _TyMarkupTraits::s_kszXmlnsEtc ) - 1 ); // Without its ':'.
+  }
+  // A tag which is made: (name,namespace,count of namespace declarations) and the array of attributes.
+  void _InitTag()
   {
     VerifyThrow( FIsTag() );
     _TyLexValue & rval = GetValue();
-    if ( rval.FIsNull() )
-    {
-      // Set up tag structure: leave the array of attributes as null for now.
-      rval.SetSize( 2 ); // (tag,rgattr)
-      _TyLexValue & rvalTag = rval[vknTagNameIdx];
-      //( name, namespaceWrapper, nNamespaceDecls )
-      rvalTag.SetSize( 2 );
-      rvalTag.emplace_back( size_t(0) ); // Set number of namespace decls.
-      rval[vknAttributesIdx].SetArray(); // make second element an empty array of attributes.
-    }
+    VerifyThrowSz( rval.FIsNull(), "The name of a tag is set once." );
+    rval.SetSize( vknTagArrayCount );
+    _TyLexValue & rvalTag = rval[vknTagNameIdx];
+    rvalTag.SetSize( vknTagName_ArrayCount );
+    rvalTag[vknTagName_NNamespaceDeclsIdx].emplaceVal( vtySignedLvalueInt( 0 ) );
+    rval[vknAttributesIdx].SetArray();
   }
-  // Test for a valid qualified name and return the position of the colon or zero if no colon.
-  // Throw if we encounter an error.
-  size_t _NColonValidQualifiedName( const _TyChar * _pcNameTest, size_t _nLenName )
+public:
+  // The names of XML - the writer checks names with these as well.
+  // The length of the NCName [4] which _sv begins with - zero if it begins with none.
+  static size_t NLenNCName( _TyStrView const & _sv )
   {
-    const _TyStateProto * const kpspNCNameStart = PspGetNCNameStart< _TyChar >();
-    const _TyChar * pcMatch = _l_match< _TyChar >::PszMatch( kpspNCNameStart, _pcNameTest, _nLenName );
-    size_t nPosColon = *pcMatch == _TyChar(':') ? ( pcMatch - _pcNameTest ) : 0;
-    if ( nPosColon )
-      pcMatch = _l_match< _TyChar >::PszMatch( kpspNCNameStart, pcMatch + 1, _nLenName - nPosColon - 1 );
-    VerifyThrowSz( ( pcMatch - _pcNameTest ) == _nLenName, "Invalid characters found in qaulified name[%s]", StrConvertString< char >( _pcNameTest, _nLenName ).c_str() );
+    if ( _sv.empty() )
+      return 0;
+    const _TyChar * pcMatch = _l_match< _TyChar >::PszMatch( PspGetNCNameStart< _TyChar >(), _sv.data(), _sv.length() );
+    return !pcMatch ? 0 : size_t( pcMatch - _sv.data() );
+  }
+  // A qualified name [7] - Prefix ':' LocalPart, or LocalPart: the position of its colon - zero if it has none. Throws if
+  //  it isn't one.
+  static size_t NColonQualifiedName( _TyStrView const & _svName )
+  {
+    const size_t knLenFirst = NLenNCName( _svName );
+    size_t nPosColon = 0;
+    bool fValid = !!knLenFirst;
+    if ( fValid && ( knLenFirst < _svName.length() ) )
+    {
+      nPosColon = knLenFirst;
+      fValid = ( _TyChar(':') == _svName[ nPosColon ] ) && ( nPosColon + 1 < _svName.length() ) &&
+        ( NLenNCName( _svName.substr( nPosColon + 1 ) ) == _svName.length() - nPosColon - 1 );
+    }
+    VerifyThrowSz( fValid, "[%s] is not a qualified name.", StrConvertString< char >( _svName ).c_str() );
     return nPosColon;
   }
-  void _SetTagName( _TyXmlDocumentContext & _rcxtDoc, _TyStrView & _rsvTagName, _TyStrView * _psvPrefix, _TyStrView * _psvUri, _TyXmlNamespaceValueWrap const * _pxnvw = nullptr )
+  // A Name [5] - for when namespaces aren't used: NCNames and colons. What follows a colon may begin with any NameChar
+  //  [4a] - it is matched as an NCName after a NameStartChar. Throws if it isn't one.
+  static void ValidateName( _TyStrView const & _svName )
+  {
+    bool fValid = !_svName.empty();
+    _TyStdStr strPiece;
+    for ( size_t nPos = 0; fValid; )
+    {
+      const size_t knPosColon = _svName.find( _TyChar(':'), nPos );
+      const _TyStrView svPiece = _svName.substr( nPos, ( _TyStrView::npos == knPosColon ) ? _TyStrView::npos : ( knPosColon - nPos ) );
+      if ( !svPiece.empty() )
+      {
+        if ( !nPos )
+          fValid = ( NLenNCName( svPiece ) == svPiece.length() );
+        else
+        {
+          strPiece.assign( 1, _TyChar('_') );
+          strPiece += svPiece;
+          fValid = ( NLenNCName( strPiece ) == strPiece.length() );
+        }
+      }
+      if ( _TyStrView::npos == knPosColon )
+        break;
+      nPos = knPosColon + 1;
+    }
+    VerifyThrowSz( fValid, "[%s] is not a name.", StrConvertString< char >( _svName ).c_str() );
+  }
+protected:
+  // See SetTagName(): _psvPrefix and _psvUri are given together - or _pxnvw - or neither.
+  void _SetTagName( _TyXmlDocumentContext & _rcxtDoc, _TyStrView const & _rsvTagName, _TyStrView const * _psvPrefix, _TyStrView const * _psvUri, _TyXmlNamespaceValueWrap const * _pxnvw = nullptr )
   {
     Assert( !_psvPrefix == !_psvUri );
-    size_t nPosColon = _NColonValidQualifiedName( &_rsvTagName[0], _rsvTagName.length() );
     _TyLexValue & rvalTag = GetValue()[vknTagNameIdx];
     _TyLexValue & rvalNS = rvalTag[vknNamespaceIdx];
-    if ( _rcxtDoc.FHasNamespaceMap() && ( _psvPrefix || _pxnvw || nPosColon || _rcxtDoc.HasDefaultNamespace() ) )
+    if ( !_rcxtDoc.FHasNamespaceMap() )
     {
-      // If a prefix was present in the name then it must match either a currently active prefix or the prefix passed in in _ppuNamespace.
-      _TyStrView svPrefix( &_rsvTagName[0], nPosColon );
-      if ( nPosColon )
-      {
-        VerifyThrowSz(  ( !_psvPrefix && !_pxnvw ) || 
-                        ( !!_psvPrefix && ( *_psvPrefix == svPrefix ) ) ||
-                        ( !!_pxnvw && ( _pxnvw->RStringPrefix() == svPrefix ) ), "Tag prefix(when present) must match passed (prefix,URI)." );
-        if ( !_psvPrefix && !_pxnvw )
-        { // Use the same codepath below.
-          Assert( !_psvUri );
-          _psvPrefix = &svPrefix;
-        }
-      }
-
-      if ( !_pxnvw )
-      {
-        // Get the namespace value wrap. If this represents a reference to an existing current (prefix,uri)
-        //  pair then we needn't declare the namespace attribute - with no loss of generality.
-        _TyXmlNamespaceValueWrap xnvw = _rcxtDoc.GetNamespaceValueWrap( _psvPrefix, _psvUri );
-        if ( xnvw.FIsNamespaceDeclaration() )
-        {
-          // Then we must declare the namespace as an attribute, this will
-          //  add one to the number of namespace decls associated with this element.
-          _DeclareNamespace( _rcxtDoc, std::move( xnvw ), enrtTagNameReference );
-          Assert( xnvw.FIsNamespaceReference() ); // Pass in a declaration, return a reference.
-        }
-        rvalNS.emplaceVal( std::move( xnvw ) );
-      }
-      else
-      {
-        if ( !_pxnvw->FIsNamespaceDeclaration() ) // We know that a namespace declaration is an active namespace.
-        { // check to see that the URI is the active namespace for the given prefix.
-          VerifyThrowSz( _rcxtDoc.FIsActiveNamespace( *_pxnvw ), "Trying to use an inactive namespace as the current namespace." );
-          // Note that we could allow this to switch the namespace as well - it's a matter of design.
-        }
-        // Update the tag's reference to the namespace:
-        rvalNS.emplaceVal( _pxnvw->ShedReference( enrtTagNameReference ) );
-      }
+      ValidateName( _rsvTagName );
+      rvalNS.emplaceVal( false );
+      rvalTag[vknNameIdx].template emplaceArgs< _TyStdStr >( _rsvTagName );
+      return;
+    }
+    const size_t knPosColon = NColonQualifiedName( _rsvTagName );
+    const _TyStrView svPrefixOfName( _rsvTagName.data(), knPosColon );
+    VerifyThrowSz( svPrefixOfName != _SvXmlns(), "A tag doesn't have the prefix xmlns ( Namespaces in XML 3 )." );
+    if ( !!_pxnvw )
+    {
+      VerifyThrowSz( !knPosColon || ( svPrefixOfName == _pxnvw->RStringPrefix() ), "The prefix of the tag [%s] is not that of the namespace which was given for it.", StrConvertString< char >( _rsvTagName ).c_str() );
+      VerifyThrowSz( _rcxtDoc.FIsActiveNamespace( *_pxnvw ), "The namespace which was given for the tag [%s] is not in scope.", StrConvertString< char >( _rsvTagName ).c_str() );
+      rvalNS.emplaceVal( _pxnvw->ShedReference( enrtTagNameReference ) );
     }
     else
+    if ( !!_psvPrefix )
     {
-      // The tag is in no namespace:
-      rvalNS.emplaceVal( false );
+      VerifyThrowSz( !knPosColon || ( svPrefixOfName == *_psvPrefix ), "The prefix of the tag [%s] is not that of the namespace which was given for it.", StrConvertString< char >( _rsvTagName ).c_str() );
+      VerifyThrowSz( _psvPrefix->empty() || ( NLenNCName( *_psvPrefix ) == _psvPrefix->length() ), "The prefix [%s] is not an NCName.", StrConvertString< char >( *_psvPrefix ).c_str() );
+      _TyXmlNamespaceValueWrap xnvw = _rcxtDoc.GetNamespaceValueWrap( enrtTagNameReference, _psvPrefix, _psvUri );
+      if ( xnvw.FIsNamespaceDeclaration() )
+        _DeclareNamespace( _rcxtDoc, std::move( xnvw ), enrtTagNameReference ); // Leaves a reference to it in xnvw.
+      rvalNS.emplaceVal( std::move( xnvw ) );
     }
-    _SetName( _rcxtDoc.FIncludePrefixesInAttrNames(), _rcxtDoc, _rsvTagName, nPosColon, *_psvPrefix, rvalTag[vknNameIdx] );
-    // I think we are done... whew!
+    else
+    if ( knPosColon )
+      rvalNS.emplaceVal( _rcxtDoc.GetNamespaceValueWrap( enrtTagNameReference, svPrefixOfName ) ); // Throws if the prefix isn't in scope.
+    else
+    {
+      _TyXmlNamespaceValueWrap xnvwDefault;
+      if ( _rcxtDoc.FHasDefaultNamespace( &xnvwDefault ) )
+        rvalNS.emplaceVal( std::move( xnvwDefault ) );
+      else
+        rvalNS.emplaceVal( false );
+    }
+    const _TyStrView svPrefix = rvalNS.FIsBool() ? _TyStrView() : _TyStrView( rvalNS.template GetVal< _TyXmlNamespaceValueWrap >().RStringPrefix() );
+    _SetName( _rcxtDoc.FIncludePrefixesInAttrNames(), _rsvTagName, knPosColon, svPrefix, rvalTag[vknNameIdx] );
+  }
+  // The namespace which _rxnvw refers to was just declared on this tag: the tag and its attributes of its prefix are in it.
+  void _RebindNames( _TyXmlNamespaceValueWrap const & _rxnvw )
+  {
+    _TyStrView svPrefix( _rxnvw.RStringPrefix() );
+    _TyLexValue & rvalNSTag = GetValue()[vknTagNameIdx][vknNamespaceIdx];
+    // A tag in no namespace has no prefix: the default namespace is then its namespace. ( One whose URI is empty is no
+    //  namespace: xmlns="" - 6.2. )
+    if ( rvalNSTag.FIsBool() ? svPrefix.empty() : ( rvalNSTag.template GetVal< _TyXmlNamespaceValueWrap >().RStringPrefix() == svPrefix ) )
+    {
+      if ( _rxnvw.RStringUri().empty() )
+        rvalNSTag.emplaceVal( false );
+      else
+        rvalNSTag.emplaceVal( _rxnvw.ShedReference( enrtTagNameReference ) );
+    }
+    if ( svPrefix.empty() )
+      return; // Not that of an attribute.
+    _TyLexValue & rrgvalAttrs = GetValue()[vknAttributesIdx];
+    for ( size_t nAttr = 0; nAttr < rrgvalAttrs.GetSize(); ++nAttr )
+    {
+      _TyLexValue & rvalNS = rrgvalAttrs[nAttr][vknNamespaceIdx];
+      if ( !rvalNS.template FIsA< _TyXmlNamespaceValueWrap >() || rvalNS.template GetVal< _TyXmlNamespaceValueWrap >().FIsAttributeNamespaceDeclaration() )
+        continue;
+      if ( rvalNS.template GetVal< _TyXmlNamespaceValueWrap >().RStringPrefix() == svPrefix )
+        rvalNS.emplaceVal( _rxnvw.ShedReference( enrtAttrNameReference ) );
+    }
   }
   const _TyXmlNamespaceValueWrap * _PGetDefaultAttributeNamespace( _TyXmlDocumentContext & _rcxtDoc, const _TyXmlNamespaceValueWrap * _pxnvw ) const
   {
     return !_pxnvw ? ( _rcxtDoc.FHasDefaultAttributeNamespace() ? &_rcxtDoc.GetDefaultAttributeNamespace() : nullptr ) : _pxnvw;
   }
+  // See AddAttribute(). Everything is checked before the attribute is added: if this throws the tag is as it was.
   void _AddAttribute( _TyXmlDocumentContext & _rcxtDoc, _TyStrView const & _rsvName, _TyStrView const & _rsvValue, const _TyXmlNamespaceValueWrap * _pxnvw )
   {
-    const _TyXmlNamespaceValueWrap * pxnvwDefaulted = _PGetDefaultAttributeNamespace( _pxnvw );
-    VerifyThrow( FIsTag() && !GetValue().FIsNull() && ( !pxnvwDefaulted || _rcxtDoc.FHasNamespaceMap() ) );
-    size_t nPosColon = _NColonValidQualifiedName( &_rsvName[0], _rsvName.length() );
-    _TyLexValue & rvalAttrNew = _DeclareNewAttr( _rcxtDoc );
-    _TyLexValue & rvalNS = rvalAttrNew[vknNamespaceIdx];
-    _TyStrView svPrefix( &_rsvName[0], nPosColon );
-    if ( _rcxtDoc.FHasNamespaceMap() && ( nPosColon || pxnvwDefaulted ) )
+    VerifyThrow( FIsTag() && !GetValue().FIsNull() ); // The tag has its name.
+    if ( !_rcxtDoc.FHasNamespaceMap() )
     {
-      // As with the tag declaration: If a prefix is present then it should match the 
-      if ( !pxnvwDefaulted )
-        rvalNS.emplaceVal( _rcxtDoc.GetNamespaceValueWrap( svPrefix ) );
-      else
-      {
-        VerifyThrowSz( !nPosColon || ( svPrefix == pxnvwDefaulted->RStringPrefix() ), "Prefix(when present) must match passed namespace(when present) object's prefix." );
-        VerifyThrowSz( pxnvwDefaulted->FIsNamespaceDeclaration() || _rcxtDoc.FIsActiveNamespace( *pxnvwDefaulted ), "Trying to use an inactive namespace as the current namespace." );
-        rvalNS.emplaceVal( pxnvwDefaulted->ShedReference( enrtAttrNameReference ) );
-      }
-      // Now make sure that this isn't a default namespace because there is no way to indicate that on an attribute name...
-      VerifyThrowSz( !rvalNS.template GetVal< _TyXmlNamespaceValueWrap >().RStringPrefix().empty(), "Attempt to apply the default namespace to an attribute name. That don't feng shui." );
+      VerifyThrowSz( !_pxnvw, "Namespaces are not used but a namespace was given for the attribute." );
+      ValidateName( _rsvName );
+      _TyLexValue & rvalAttrNew = _DeclareNewAttr( _rcxtDoc );
+      rvalAttrNew[vknNamespaceIdx].emplaceVal( false );
+      rvalAttrNew[vknNameIdx].template emplaceArgs< _TyStdStr >( _rsvName );
+      rvalAttrNew[vknAttr_ValueIdx].template emplaceArgs< _TyStdStr >( _rsvValue );
+      return;
+    }
+    const size_t knPosColon = NColonQualifiedName( _rsvName );
+    const _TyStrView svPrefixOfName( _rsvName.data(), knPosColon );
+    VerifyThrowSz( ( knPosColon ? svPrefixOfName : _rsvName ) != _SvXmlns(), "A namespace is declared by AddNamespace() - [%s] is not added as an attribute.", StrConvertString< char >( _rsvName ).c_str() );
+    const _TyXmlNamespaceValueWrap * pxnvw = ( !_pxnvw && !knPosColon ) ? _PGetDefaultAttributeNamespace( _rcxtDoc, nullptr ) : _pxnvw;
+    _TyXmlNamespaceValueWrap xnvw; // Null: the attribute is in no namespace.
+    if ( !!pxnvw )
+    {
+      VerifyThrowSz( !knPosColon || ( svPrefixOfName == pxnvw->RStringPrefix() ), "The prefix of the attribute [%s] is not that of the namespace which was given for it.", StrConvertString< char >( _rsvName ).c_str() );
+      VerifyThrowSz( !pxnvw->RStringPrefix().empty(), "The attribute [%s] is not in the default namespace - the namespace of an attribute is that of its prefix.", StrConvertString< char >( _rsvName ).c_str() );
+      VerifyThrowSz( _rcxtDoc.FIsActiveNamespace( *pxnvw ), "The namespace which was given for the attribute [%s] is not in scope.", StrConvertString< char >( _rsvName ).c_str() );
+      xnvw = pxnvw->ShedReference( enrtAttrNameReference );
     }
     else
-    {
-      rvalNS.emplaceVal( false ); // the attribute is in no namespace.
-    }
-    // Now we need to set the name appropriately according to the current options.
-    _SetName( true, _rcxtDoc, _rsvName, nPosColon, svPrefix, rvalAttrNew[vknNameIdx] );
-    // Now just set in the value - we don't validate it until we write it out - since validating it and writing it go hand in hand.
+    if ( knPosColon )
+      xnvw = _rcxtDoc.GetNamespaceValueWrap( enrtAttrNameReference, svPrefixOfName ); // Throws if the prefix isn't in scope.
+    const _TyStrView svPrefix = xnvw.FIsNull() ? _TyStrView() : _TyStrView( xnvw.RStringPrefix() );
+    _TyLexValue & rvalAttrNew = _DeclareNewAttr( _rcxtDoc );
+    if ( xnvw.FIsNull() )
+      rvalAttrNew[vknNamespaceIdx].emplaceVal( false );
+    else
+      rvalAttrNew[vknNamespaceIdx].emplaceVal( std::move( xnvw ) );
+    _SetName( _rcxtDoc.FIncludePrefixesInAttrNames(), _rsvName, knPosColon, svPrefix, rvalAttrNew[vknNameIdx] );
     rvalAttrNew[vknAttr_ValueIdx].template emplaceArgs< _TyStdStr >( _rsvValue );
   }
-  void _SetName( bool _fIncludePrefixInName, _TyStrView const & _rsvName, size_t _nPosColon, _TyStrView const & _rsvPrefix, _TyLexValue & _rvalName )
+  // The name as it is kept: with its prefix - or without it, when the namespace has it - see FIncludePrefixesInAttrNames().
+  // _rsvPrefix: the prefix of the namespace of the name.
+  static void _SetName( bool _fIncludePrefixInName, _TyStrView const & _rsvName, size_t _nPosColon, _TyStrView const & _rsvPrefix, _TyLexValue & _rvalName )
   {
-    // Now set the name according to whether we should include prefixes or not:
     if ( _fIncludePrefixInName == !_nPosColon )
     {
       if ( _nPosColon )
-        _rvalName.template emplaceArgs< _TyStdStr >( &_rsvName[0] + _nPosColon + 1, _rsvName.length() - _nPosColon - 1 );
+        _rvalName.template emplaceArgs< _TyStdStr >( _rsvName.data() + _nPosColon + 1, _rsvName.length() - _nPosColon - 1 );
       else
-      if ( !_rsvPrefix.empty() ) // no prefix for default namespace.
+      if ( !_rsvPrefix.empty() )
       {
-        _TyStdStr & rstrTagName = _rvalName.template emplaceArgs< _TyStdStr >( _rsvPrefix );
-        rstrTagName += _TyChar( ':');
-        rstrTagName += _rsvName;
+        _TyStdStr & rstrName = _rvalName.template emplaceArgs< _TyStdStr >( _rsvPrefix );
+        rstrName += _TyChar( ':' );
+        rstrName += _rsvName;
       }
       else
-      {
-        Assert( !_nPosColon );
         _rvalName.template emplaceArgs< _TyStdStr >( _rsvName );
-      }
     }
     else
-    {
-      // name is already in correct format:
-      _rvalName.template emplaceArgs< _TyStdStr >( _rsvName );
-    }
+      _rvalName.template emplaceArgs< _TyStdStr >( _rsvName ); // As it is to be.
   }
   // Declare a new attribute and fill it with the appropriate defaults.
   _TyLexValue & _DeclareNewAttr( _TyXmlDocumentContext & _rcxtDoc )
@@ -634,7 +636,8 @@ protected:
     Assert( _rrxnvw.FIsNamespaceDeclaration() );
     _TyLexValue & rvalAttrNew = _DeclareNewAttr( _rcxtDoc );
     {//B - attr name
-      _TyStdStr & rstrAttrName = rvalAttrNew[vknNameIdx].template emplaceArgs< _TyStdStr >( _TyMarkupTraits::s_kszXmlnsEtc, StaticStringLen( _TyMarkupTraits::s_kszXmlnsEtc ) );
+      // xmlns:prefix - or xmlns for the default namespace.
+      _TyStdStr & rstrAttrName = rvalAttrNew[vknNameIdx].template emplaceArgs< _TyStdStr >( _TyMarkupTraits::s_kszXmlnsEtc, StaticStringLen( _TyMarkupTraits::s_kszXmlnsEtc ) - ( _rrxnvw.RStringPrefix().empty() ? 1 : 0 ) );
       rstrAttrName += _rrxnvw.RStringPrefix();
     }//EB
     // attr value: URI: We can use a string view on the URI from the URI map.

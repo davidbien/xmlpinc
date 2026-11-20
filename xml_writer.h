@@ -36,12 +36,55 @@
 //       We'll have to think about how to do this.         
 
 #include <set>
+#include <charconv>
+#include <concepts>
 #include "xml_output_tokens.h"
 #include "xml_attr_default.h"
 #include "xml_dtd.h"
 #include "_l_match.h"
 
 __XMLP_BEGIN_NAMESPACE
+
+// The strings which the writer is given for what it makes - and the tags which it makes are: a string, a string view or a
+//  null-terminated string ( null is the empty string ) of any type of character. char is UTF-8 and wchar_t is UTF-16 or
+//  UTF-32 as it is on the platform: each is had as the type of character of its size.
+template < class t_TyChar >
+concept CXmlCharArg = is_same_v< t_TyChar, char > || is_same_v< t_TyChar, wchar_t > || is_same_v< t_TyChar, char8_t > ||
+  is_same_v< t_TyChar, char16_t > || is_same_v< t_TyChar, char32_t >;
+template < class t_TyChar >
+using TXmlCharOfSize_t = conditional_t< sizeof( t_TyChar ) == sizeof( char8_t ), char8_t, conditional_t< sizeof( t_TyChar ) == sizeof( char16_t ), char16_t, char32_t > >;
+template < CXmlCharArg t_TyChar >
+basic_string_view< TXmlCharOfSize_t< t_TyChar > > SvXmlStrArg( const t_TyChar * _psz )
+{
+  typedef TXmlCharOfSize_t< t_TyChar > _TyCharXml;
+  if ( !_psz )
+    return basic_string_view< _TyCharXml >();
+  return basic_string_view< _TyCharXml >( (const _TyCharXml *)_psz, basic_string_view< t_TyChar >( _psz ).length() );
+}
+template < CXmlCharArg t_TyChar, class t_TyTraits, class t_TyAllocator >
+basic_string_view< TXmlCharOfSize_t< t_TyChar > > SvXmlStrArg( basic_string< t_TyChar, t_TyTraits, t_TyAllocator > const & _rstr )
+{
+  return basic_string_view< TXmlCharOfSize_t< t_TyChar > >( (const TXmlCharOfSize_t< t_TyChar > *)_rstr.data(), _rstr.length() );
+}
+template < CXmlCharArg t_TyChar, class t_TyTraits >
+basic_string_view< TXmlCharOfSize_t< t_TyChar > > SvXmlStrArg( basic_string_view< t_TyChar, t_TyTraits > _sv )
+{
+  return basic_string_view< TXmlCharOfSize_t< t_TyChar > >( (const TXmlCharOfSize_t< t_TyChar > *)_sv.data(), _sv.length() );
+}
+template < class t_TyStr >
+concept CXmlStrArg = requires( t_TyStr const & _rstr ) { SvXmlStrArg( _rstr ); };
+// A token - of a tag which was read: see xml_writer<>::StartTag().
+template < class t_TyXmlToken >
+concept CXmlTokenArg = requires( remove_cvref_t< t_TyXmlToken > const & _rtok ) { _rtok.FIsTag(); _rtok.GetLexToken(); };
+// A number which is the value of an attribute - not a character.
+template < class t_TyNumber >
+concept CXmlNumberArg = ( std::integral< t_TyNumber > && !CXmlCharArg< t_TyNumber > ) || std::floating_point< t_TyNumber >;
+// A Char [2].
+inline bool FIsXmlChar( char32_t _uc )
+{
+  return ( 0x9 == _uc ) || ( 0xA == _uc ) || ( 0xD == _uc ) || ( ( _uc >= 0x20 ) && ( _uc <= 0xD7FF ) ) ||
+    ( ( _uc >= 0xE000 ) && ( _uc <= 0xFFFD ) ) || ( ( _uc >= 0x10000 ) && ( _uc <= 0x10FFFF ) );
+}
 
 enum EDetectReferences
 {
@@ -98,6 +141,25 @@ public:
   {
     return m_edrDetectReferences;
   }
+  // The document context of the writer - that of the tokens which it makes.
+  auto & GetDocumentContext()
+  {
+    return m_pxwWriter->m_xdcxtDocumentContext;
+  }
+  bool FCommitted() const
+  {
+    return m_fCommitted;
+  }
+  // Whether the end of the tag is an end tag when nothing is written within it - <name></name> rather than <name/>: as
+  //  it was read - s_knTokenSTag - unless it is set.
+  void SetFullEnd( bool _fFullEnd )
+  {
+    m_optfFullEnd = _fFullEnd;
+  }
+  bool FFullEnd() const
+  {
+    return m_optfFullEnd.has_value() ? *m_optfFullEnd : ( s_knTokenSTag == m_xtkToken.GetTokenId() );
+  }
   const _TyXmlToken & GetToken() const
   {
     return m_xtkToken;
@@ -141,6 +203,7 @@ protected:
   _TyXmlWriter * m_pxwWriter;
   _TyXmlToken m_xtkToken; // This is always a tag token. It really doesn't matter if the id is s_knTokenSTag or s_knTokenEmptyElemTag.
   bool m_fCommitted{false}; // Committed yet?
+  optional< bool > m_optfFullEnd; // See SetFullEnd().
   EDetectReferences m_edrDetectReferences{ edrDetectReferencesCount }; // User can override this inside of xml_write_tag.
 };
 
@@ -262,87 +325,97 @@ public:
   _TyXmlNamespaceValueWrap GetNamespaceReference() const
   {
     Assert( FHasNamespace() ); // We will throw in the variant accessing the value wrap if it isn't there.
-    return m_pwcxt->GetToken().GetNamespaceReference();
+    return m_pwcxt->GetToken().GetNamespaceReference( enrtStandaloneReference );
   }
-  // Add the namespace and return a reference to it that can be used to apply it to attributes.
-  // The namespace will only be declared as an attribute if it has to be. If the (uri)
-  //  is the current namespace for (prefix) then there is no need to declare the namespace.
-  template < class t_TyChar >
-  _TyXmlNamespaceValueWrap AddNamespace( TGetPrefixUri< t_TyChar > const & _rpuNamespace )
+  // What a tag which is made has - see xml_writer<>::StartTag(). Each may be given until the tag is committed: by
+  //  Commit(), or when anything within it is written. The strings are as xml_writer<> has them - see SvXmlStrArg().
+  // Declare the namespace (prefix,URI) on this tag - unless it is the one in scope for the prefix. The tag, and its
+  //  attributes of the prefix, are in it. What is returned refers to it - for attributes and for tags within this one.
+  //  See xml_token<>::AddNamespace().
+  template < class t_TyStrPrefix, class t_TyStrUri >
+  _TyXmlNamespaceValueWrap AddNamespace( t_TyStrPrefix const & _rPrefix, t_TyStrUri const & _rUri )
+    requires( CXmlStrArg< t_TyStrPrefix > && CXmlStrArg< t_TyStrUri > )
   {
-    return m_pwcxt->GetToken().AddNamespace( m_pwcxt->GetDocumentContext(), _rpuNamespace );
+    _CheckNotCommitted();
+    return m_pwcxt->GetToken().AddNamespace( m_pwcxt->GetDocumentContext(), SvXmlStrArg( _rPrefix ), SvXmlStrArg( _rUri ) );
   }
-  // Use this to set the default namespace for any added attributes.
+  // The namespace of the attributes without a prefix which are added - unless one is given for an attribute.
   void SetDefaultAttributeNamespace( _TyXmlNamespaceValueWrap const & _rxnvw )
   {
+    VerifyThrowSz( !_rxnvw.RStringPrefix().empty(), "The namespace of an attribute has a prefix." );
     m_xnvwAttributes = _rxnvw.ShedReference( enrtStandaloneReference );
   }
   void ClearDefaultAttributeNamespace()
   {
     m_xnvwAttributes.Clear();
   }
-  template < class t_TyChar >
-  void AddAttribute(  const t_TyChar * _pcAttrName, size_t _stLenAttrName = (numeric_limits< size_t >::max)(),
-                      const t_TyChar * _pcAttrValue = nullptr, size_t _stLenAttrValue = (numeric_limits< size_t >::max)(),
-                      const _TyXmlNamespaceValueWrap * _pxnvw = nullptr )
+  // Add the attribute: its value is the characters of the value - what must be is escaped when it is written. See
+  //  xml_token<>::AddAttribute() for its namespace - _pxnvw is that of an attribute without a prefix.
+  template < class t_TyStrName, class t_TyStrValue >
+  void AddAttribute( t_TyStrName const & _rName, t_TyStrValue const & _rValue, const _TyXmlNamespaceValueWrap * _pxnvw = nullptr )
+    requires( CXmlStrArg< t_TyStrName > && CXmlStrArg< t_TyStrValue > )
   {
-    _CheckCommitted();
-     m_pwcxt->GetToken().AddAttribute(  m_pwcxt->GetDocumentContext(), _pcAttrName, _stLenAttrName, _pcAttrValue, _stLenAttrValue, 
-                                        _PGetDefaultAttributeNamespace( _pxnvw ) );
+    _CheckNotCommitted();
+    m_pwcxt->GetToken().AddAttribute( m_pwcxt->GetDocumentContext(), SvXmlStrArg( _rName ), SvXmlStrArg( _rValue ), _PGetDefaultAttributeNamespace( _pxnvw ) );
   }
-  template < class t_TyStrViewOrString >
-  void AddAttribute(  t_TyStrViewOrString const & _strName, t_TyStrViewOrString const & _strValue, const _TyXmlNamespaceValueWrap * _pxnvw = nullptr )
+  template < class t_TyStrName >
+  void AddAttribute( _TyXmlNamespaceValueWrap const & _rxnvw, t_TyStrName const & _rName, auto const & _rValue )
+    requires( CXmlStrArg< t_TyStrName > )
   {
-    _CheckCommitted();
-    m_pwcxt->GetToken().AddAttribute( m_pwcxt->GetDocumentContext(), _strName, _strValue, _PGetDefaultAttributeNamespace( _pxnvw ) );
+    AddAttribute( _rName, _rValue, &_rxnvw );
   }
-  // We support adding formatted attributes but only for char and wchar_t types. They will be interpreted as UTF-8 and UTF-16/32 depending on platform.
-  template < class t_TyChar >
-  void FormatAttribute( const t_TyChar * _pcAttrName, size_t _stLenAttrName = (numeric_limits< size_t >::max)(),
-                        const t_TyChar * _pcAttrValueFmt = nullptr, size_t _stLenAttrValue = (numeric_limits< size_t >::max)(),
-                        const _TyXmlNamespaceValueWrap * _pxnvw = nullptr, ... )
-    requires( TAreSameSizeTypes_v< t_TyChar, char > || TAreSameSizeTypes_v< t_TyChar, wchar_t > )
+  // An attribute whose value is a number - as std::to_chars() writes it: the shortest which is read as the same number.
+  //  A bool is "true" or "false" ( as xs:boolean ).
+  template < class t_TyStrName, class t_TyNumber >
+  void AddAttribute( t_TyStrName const & _rName, t_TyNumber _tValue, const _TyXmlNamespaceValueWrap * _pxnvw = nullptr )
+    requires( CXmlStrArg< t_TyStrName > && CXmlNumberArg< t_TyNumber > )
   {
-    _CheckCommitted();
+    if constexpr ( is_same_v< t_TyNumber, bool > )
+      AddAttribute( _rName, _tValue ? "true" : "false", _pxnvw );
+    else
+    {
+      char rgcValue[ 64 ];
+      std::to_chars_result tcr = std::to_chars( rgcValue, rgcValue + sizeof( rgcValue ), _tValue );
+      VerifyThrowSz( std::errc() == tcr.ec, "The number couldn't be written." );
+      AddAttribute( _rName, basic_string_view< char >( rgcValue, tcr.ptr - rgcValue ), _pxnvw );
+    }
+  }
+  // An attribute whose value is as printf() writes it - for a format of char ( UTF-8 ) or of wchar_t.
+  template < class t_TyStrName, class t_TyCharFormat >
+  void FormatAttribute( t_TyStrName const & _rName, const t_TyCharFormat * _pszFormat, ... )
+    requires( CXmlStrArg< t_TyStrName > && ( is_same_v< t_TyCharFormat, char > || is_same_v< t_TyCharFormat, wchar_t > ) )
+  {
+    basic_string< t_TyCharFormat > strValue;
     va_list ap;
-    va_start( ap, _pxnvw );
-    m_pwcxt->GetToken().FormatAttributeVArg( m_pwcxt->GetDocumentContext(), _pcAttrName, _stLenAttrName, 
-      _pcAttrValueFmt, _stLenAttrValue, _PGetDefaultAttributeNamespace( _pxnvw ), ap );
+    va_start( ap, _pszFormat );
+    try
+    {
+      VPrintfStdStr( strValue, _pszFormat, ap );
+    }
+    catch ( ... )
+    {
+      va_end( ap );
+      throw;
+    }
     va_end( ap );
+    AddAttribute( _rName, strValue );
   }
-  // A more succinct format that doesn't allow as many options.
-  template < class t_TyChar >
-  void FormatAttribute( const t_TyChar * _pszAttrName, const t_TyChar * _pszAttrValueFmt, ... )
-    requires( TAreSameSizeTypes_v< t_TyChar, char > || TAreSameSizeTypes_v< t_TyChar, wchar_t > )
+  // Write <name></name> - and not <name/> - if nothing is written within the tag. See xml_write_context<>::FFullEnd().
+  void SetFullEnd( bool _fFullEnd = true )
   {
-    _CheckCommitted();
-    va_list ap;
-    va_start( ap, _pszAttrValueFmt );
-    m_pwcxt->GetToken().FormatAttributeVArg( m_pwcxt->GetDocumentContext(), _pszAttrName, (numeric_limits< size_t >::max)(), 
-      _pszAttrValueFmt, (numeric_limits< size_t >::max)(), _PGetDefaultAttributeNamespace( nullptr ), ap );
-    va_end( ap );
-  }
-  template < class t_TyChar >
-  void FormatAttribute( _TyXmlNamespaceValueWrap const & _rxnvw, const t_TyChar * _pszAttrName, const t_TyChar * _pszAttrValueFmt, ... )
-    requires( TAreSameSizeTypes_v< t_TyChar, char > || TAreSameSizeTypes_v< t_TyChar, wchar_t > )
-  {
-    _CheckCommitted();
-    Assert( !!&_rxnvw ); // shouldn't pass null ref - though we will not crash - but we will not honor any default attribute namespace that have been decalred.
-    va_list ap;
-    va_start( ap, _pszAttrValueFmt );
-    m_pwcxt->GetToken().FormatAttributeVArg( m_pwcxt->GetDocumentContext(), _pszAttrName, (numeric_limits< size_t >::max)(), 
-      _pszAttrValueFmt, (numeric_limits< size_t >::max)(), &_rxnvw, ap );
-    va_end( ap );
+    VerifyThrowSz( !!m_pwcxt, "The tag has been ended." );
+    m_pwcxt->SetFullEnd( _fFullEnd );
   }
 protected:
-  void _CheckCommitted() const
+  void _CheckNotCommitted() const
   {
-    VerifyThrowSz( !m_pwcxt->FCommited(), "Trying to edit a tag that has already been committed." );
+    VerifyThrowSz( !!m_pwcxt, "The tag has been ended." );
+    VerifyThrowSz( !m_pwcxt->FCommitted(), "The tag has been written - nothing may be added to it." );
   }
   const _TyXmlNamespaceValueWrap * _PGetDefaultAttributeNamespace( const _TyXmlNamespaceValueWrap * _pxnvw ) const
   {
-    // The document-level default atttribute namespace is handled by xml_token.
-    return !_pxnvw ? &m_xnvwAttributes : _pxnvw;
+    // The default namespace of attributes of the document is xml_token<>'s.
+    return !!_pxnvw ? _pxnvw : ( m_xnvwAttributes.FIsNull() ? nullptr : &m_xnvwAttributes );
   }
   _TyWriteContext * m_pwcxt{nullptr}; // The context in the context stack to which this xml_write_tag corresponds.
   _TyXmlNamespaceValueWrap m_xnvwAttributes; // When this is set then it is used for marking any added attributes.
@@ -738,43 +811,261 @@ public:
     );
     rctxt.ClearContent(); // Clear the content as a sanity check. The above doesn't modify the content tokens.
   }
-  // Start the tag. If _ppvNamespace is non-null:
-  // 1) Check to see if the (prefix,uri) happens to be current. If it isn't:
-  //    a) If prefix isn't the empty string then it will be added to the front of _pszTagName. 
-  //    b) The appropriate xmlns= will be added as an attribute in this case.
-  // 2) If the prefix is current then we will still add it to the front of _pszTagName but we won't
-  //    add the xmlns declaration.
-  // 3) We don't validate the contents of the name or any prefix now we do that on output.  
-  // 4) For convenience's sake the caller may add a prefix onto the beginning of _pszTagName and that
-  //    prefix will be used if it is a current namespace prefix. If it isn't a current namespace prefix
-  //    then an exception will be thrown.
-  template < class t_TyChar >
-  _TyXmlWriteTag StartTag( const t_TyChar * _pszTagName, size_t _stLenTag = 0, TGetPrefixUri< t_TyChar > const * _ppuNamespace = nullptr )
+  // Writing what is made - rather than what was read:
+  // The strings may be strings, string views or null-terminated strings of any type of character - see SvXmlStrArg(). Each
+  //  is checked as what it is: what can't be written throws - a character which XML hasn't, "--" within a comment - and
+  //  what must be is escaped - a '<' or an '&' of character data. A reference is written by WriteEntityReference() or
+  //  WriteCharReference(): an '&' of a string is the character '&' ( see SetDetectReferences() for those of a tag ).
+  // A tag is written when anything within it is - or when it is committed or ended: until then what it has may be added.
+  // The xml_write_tag<> which is returned ends the tag when it is destroyed - or by its EndTag().
+  // Start a tag - see xml_token<>::SetTagName() for its name and its namespace:
+  //  StartTag( name ): the namespace in scope for the prefix of the name - or the default namespace.
+  //  StartTag( name, prefix, uri ): that namespace - declared on the tag unless it is the one in scope for the prefix.
+  //  StartTag( namespace, name ): that namespace, which is in scope - as AddNamespace() returned it.
+  template < class t_TyStrName >
+  _TyXmlWriteTag StartTag( t_TyStrName const & _rName )
+    requires( CXmlStrArg< t_TyStrName > )
   {
-    _CheckCommitCur();
-    // Add a new tag as the top of the context. Setting it as s_knTokenEmptyElemTag allows "empty element tag" ending.
-    _TyWriteContext & rwcxNew = m_lContexts.emplace_back( this, m_xdcxtDocumentContext.GetUserObj(), s_knTokenEmptyElemTag );
-    rwcxNew.GetToken().SetTagName( m_xdcxtDocumentContext, _pszTagName, _stLenTag, _ppuNamespace );
+    _TyWriteContext & rwcxNew = _StartMadeTag();
+    _StartedMadeTag( rwcxNew, [&]( _TyXmlToken & _rtok ) { _rtok.SetTagName( m_xdcxtDocumentContext, SvXmlStrArg( _rName ) ); } );
     return _TyXmlWriteTag( rwcxNew );
   }
-  // Once a namespace has been added you can then obtain its _TyXmlNamespaceValueWrap and use that to mark namespace on tags
-  //  and attributes. This is much faster since no namespace lookup needs to be made.
-  template < class t_TyChar >
-  _TyXmlWriteTag StartTag( _TyXmlNamespaceValueWrap const & _rxnvw, const t_TyChar * _pszTagName, size_t _stLenTag = 0 )
+  template < class t_TyStrName, class t_TyStrPrefix, class t_TyStrUri >
+  _TyXmlWriteTag StartTag( t_TyStrName const & _rName, t_TyStrPrefix const & _rPrefix, t_TyStrUri const & _rUri )
+    requires( CXmlStrArg< t_TyStrName > && CXmlStrArg< t_TyStrPrefix > && CXmlStrArg< t_TyStrUri > )
   {
-    _CheckCommitCur();
-    // Add a new tag as the top of the context.
-    _TyWriteContext & rwcxNew = m_lContexts.emplace_back( this, m_xdcxtDocumentContext.GetUserObj(), s_knTokenEmptyElemTag );
-    rwcxNew.GetToken().SetTagName( m_xdcxtDocumentContext, _rxnvw, _pszTagName, _stLenTag );
+    _TyWriteContext & rwcxNew = _StartMadeTag();
+    _StartedMadeTag( rwcxNew, [&]( _TyXmlToken & _rtok ) { _rtok.SetTagName( m_xdcxtDocumentContext, SvXmlStrArg( _rName ), SvXmlStrArg( _rPrefix ), SvXmlStrArg( _rUri ) ); } );
     return _TyXmlWriteTag( rwcxNew );
+  }
+  template < class t_TyStrName >
+  _TyXmlWriteTag StartTag( _TyXmlNamespaceValueWrap const & _rxnvw, t_TyStrName const & _rName )
+    requires( CXmlStrArg< t_TyStrName > )
+  {
+    _TyWriteContext & rwcxNew = _StartMadeTag();
+    _StartedMadeTag( rwcxNew, [&]( _TyXmlToken & _rtok ) { _rtok.SetTagName( m_xdcxtDocumentContext, _rxnvw, SvXmlStrArg( _rName ) ); } );
+    return _TyXmlWriteTag( rwcxNew );
+  }
+  // <name>text</name> - or <name/> if the text is empty.
+  template < class t_TyStrName, class t_TyStrText >
+  void WriteElement( t_TyStrName const & _rName, t_TyStrText const & _rText )
+    requires( CXmlStrArg< t_TyStrName > && CXmlStrArg< t_TyStrText > )
+  {
+    _TyXmlWriteTag xwt( StartTag( _rName ) );
+    WriteCharData( _rText );
+  }
+  // Character data: the characters which it is - '<', '&' and the '>' of "]]>" are written as references, as is a #xD.
+  //  Outside of the document element it may be only white space.
+  template < class t_TyStr >
+  void WriteCharData( t_TyStr const & _rStr )
+    requires( CXmlStrArg< t_TyStr > )
+  {
+    _CheckNotEnded();
+    auto sv = SvXmlStrArg( _rStr );
+    if ( sv.empty() )
+      return; // Nothing is written - and the tag which it would be within is as it was: <name/> if nothing else is.
+    _WriteChecked( [this,&sv]()
+      {
+        _WriteCharAndAttrString< TGetCharDataStart >( sv.data(), sv.data() + sv.length(), edrNoReferences );
+      } );
+  }
+  // A reference to the general entity _rName: one of the five which XML predefines ( 4.6 ), or one which the document type
+  //  declaration which was written declares - or may declare, if it has an external subset or a reference to a parameter
+  //  entity ( 4.1 Entity Declared ). Within the document element.
+  template < class t_TyStr >
+  void WriteEntityReference( t_TyStr const & _rName )
+    requires( CXmlStrArg< t_TyStr > )
+  {
+    _CheckNotEnded();
+    VerifyThrowSz( FInsideDocumentTag(), "A reference is within the document element." );
+    _TyStdStr strName;
+    {
+      auto sv = SvXmlStrArg( _rName );
+      ConvertString( strName, sv.data(), sv.length() );
+    }
+    _CheckNameOfDeclaration( strName, "entity" );
+    if ( !_FIsPredefinedEntity( strName ) )
+    {
+      VerifyThrowSz( m_fWroteDoctypeDecl, "The entity [%s] is not declared - no document type declaration was written.", StrConvertString< char >( strName ).c_str() );
+      VerifyThrowSz( !m_fDeclaredEntitiesComplete || ( m_setDeclaredEntities.end() != m_setDeclaredEntities.find( strName ) ),
+        "The entity [%s] is not declared by the document type declaration which was written.", StrConvertString< char >( strName ).c_str() );
+    }
+    _CheckCommitCur();
+    _WriteTransportRaw( _TyMarkupTraits::s_kszEntityRefRefBegin, StaticStringLen( _TyMarkupTraits::s_kszEntityRefRefBegin ) );
+    _WriteTransportRaw( strName.data(), strName.length() );
+    _WriteTransportRaw( _TyMarkupTraits::s_kszReferenceEnd, StaticStringLen( _TyMarkupTraits::s_kszReferenceEnd ) );
+  }
+  // A reference to the character _ucChar: &#xhhhh; - it is to be a Char [2]. Within the document element.
+  void WriteCharReference( char32_t _ucChar )
+  {
+    _CheckNotEnded();
+    VerifyThrowSz( FInsideDocumentTag(), "A reference is within the document element." );
+    VerifyThrowSz( FIsXmlChar( _ucChar ), "[U+%X] is not a character of XML.", unsigned( _ucChar ) );
+    _CheckCommitCur();
+    char rgcHex[ 16 ];
+    std::to_chars_result tcr = std::to_chars( rgcHex, rgcHex + sizeof( rgcHex ), uint32_t( _ucChar ), 16 );
+    _WriteTransportRaw( _TyMarkupTraits::s_kszCharHexRefBegin, StaticStringLen( _TyMarkupTraits::s_kszCharHexRefBegin ) );
+    for ( const char * pc = rgcHex; tcr.ptr != pc; ++pc )
+    {
+      const _TyChar ch = _TyChar( ( *pc >= 'a' ) ? ( *pc - 'a' + 'A' ) : *pc );
+      _WriteTransportRaw( &ch, 1 );
+    }
+    _WriteTransportRaw( _TyMarkupTraits::s_kszReferenceEnd, StaticStringLen( _TyMarkupTraits::s_kszReferenceEnd ) );
+  }
+  // <!--text--> - the text hasn't "--" and doesn't end with '-' ( [15] ).
+  template < class t_TyStr >
+  void WriteComment( t_TyStr const & _rStr )
+    requires( CXmlStrArg< t_TyStr > )
+  {
+    _CheckNotEnded();
+    auto sv = SvXmlStrArg( _rStr );
+    _WriteChecked( [this,&sv]()
+      {
+        _WriteTransportRaw( _TyMarkupTraits::s_kszCommentBegin, StaticStringLen( _TyMarkupTraits::s_kszCommentBegin ) );
+        _WriteCommentString( sv.data(), sv.data() + sv.length() );
+        _WriteTransportRaw( _TyMarkupTraits::s_kszCommentEnd, StaticStringLen( _TyMarkupTraits::s_kszCommentEnd ) );
+      } );
+  }
+  // <?target data?> - or <?target?> if the data is empty ( [16] ). The target is a name and not "xml" in any case; the
+  //  data hasn't "?>".
+  template < class t_TyStrTarget, class t_TyStrData >
+  void WriteProcessingInstruction( t_TyStrTarget const & _rTarget, t_TyStrData const & _rData )
+    requires( CXmlStrArg< t_TyStrTarget > && CXmlStrArg< t_TyStrData > )
+  {
+    _CheckNotEnded();
+    _TyStdStr strTarget;
+    {
+      auto sv = SvXmlStrArg( _rTarget );
+      ConvertString( strTarget, sv.data(), sv.length() );
+    }
+    _CheckNameOfDeclaration( strTarget, "processing instruction target" );
+    VerifyThrowSz( !( ( 3 == strTarget.length() ) && ( ( _TyChar('x') == strTarget[0] ) || ( _TyChar('X') == strTarget[0] ) ) &&
+                      ( ( _TyChar('m') == strTarget[1] ) || ( _TyChar('M') == strTarget[1] ) ) && ( ( _TyChar('l') == strTarget[2] ) || ( _TyChar('L') == strTarget[2] ) ) ),
+      "The target of a processing instruction is not \"xml\" - in any case ( [17] )." );
+    auto svData = SvXmlStrArg( _rData );
+    _WriteChecked( [this,&strTarget,&svData]()
+      {
+        _WriteTransportRaw( _TyMarkupTraits::s_kszProcessingInstructionBegin, StaticStringLen( _TyMarkupTraits::s_kszProcessingInstructionBegin ) );
+        _WritePIString< TGetPITargetStart >( strTarget.data(), strTarget.data() + strTarget.length() );
+        if ( !svData.empty() )
+        {
+          _WriteTransportRaw( _TyMarkupTraits::s_kszSpace, StaticStringLen( _TyMarkupTraits::s_kszSpace ) );
+          _WritePIString< TGetPITargetMeatStart >( svData.data(), svData.data() + svData.length() );
+        }
+        _WriteTransportRaw( _TyMarkupTraits::s_kszProcessingInstructionEnd, StaticStringLen( _TyMarkupTraits::s_kszProcessingInstructionEnd ) );
+      } );
+  }
+  // <![CDATA[text]]> - a "]]>" of the text is written in two sections, as is a #xD. Within the document element.
+  template < class t_TyStr >
+  void WriteCDataSection( t_TyStr const & _rStr )
+    requires( CXmlStrArg< t_TyStr > )
+  {
+    _CheckNotEnded();
+    VerifyThrowSz( FInsideDocumentTag(), "A CDATA section is within the document element." );
+    auto sv = SvXmlStrArg( _rStr );
+    _WriteChecked( [this,&sv]()
+      {
+        _WriteTransportRaw( _TyMarkupTraits::s_kszCDataSectionBegin, StaticStringLen( _TyMarkupTraits::s_kszCDataSectionBegin ) );
+        _WriteCDataString( sv.data(), sv.data() + sv.length() );
+        _WriteTransportRaw( _TyMarkupTraits::s_kszCDataSectionEnd, StaticStringLen( _TyMarkupTraits::s_kszCDataSectionEnd ) );
+      } );
+  }
+  // The document type declaration - all of its text, from its "<!DOCTYPE" through its '>': it is parsed as that of a
+  //  document is - nothing external is read - and the general entities which it declares may then be referred to. Once,
+  //  and before the document element.
+  template < class t_TyStr >
+  void WriteDoctypeDecl( t_TyStr const & _rStr )
+    requires( CXmlStrArg< t_TyStr > )
+  {
+    _CheckNotEnded();
+    VerifyThrowSz( FInProlog(), "The document type declaration may only be written before the first tag." );
+    VerifyThrowSz( !m_fWroteDoctypeDecl, "A document type declaration has already been written - there may be only one." );
+    auto sv = SvXmlStrArg( _rStr );
+    typedef typename decltype( sv )::value_type _TyCharDtd;
+    xml_dtd< _TyCharDtd > dtd;
+    xml_dtd_parser< _TyCharDtd >::CheckDoctypeDeclText( sv, dtd );
+    // The entities which it declares - all of them, unless there are declarations which weren't read.
+    m_setDeclaredEntities.clear();
+    for ( auto const & rvtEntity : dtd.m_mapGeneralEntities )
+    {
+      _TyStdStr strName;
+      ConvertString( strName, rvtEntity.first );
+      m_setDeclaredEntities.insert( std::move( strName ) );
+    }
+    m_fDeclaredEntitiesComplete = !dtd.m_optExternalId.has_value() &&
+      ( dtd.m_rgItems.end() == std::find_if( dtd.m_rgItems.begin(), dtd.m_rgItems.end(), []( auto const & _ritem ) { return exdiParameterEntityReference == _ritem.m_eItem; } ) );
+    _WriteTransportRaw( sv.data(), sv.length() );
+    m_fWroteDoctypeDecl = true;
+  }
+  // <!DOCTYPE name PUBLIC "publicId" "systemId" [internalSubset]> - an empty string is one which isn't given: there is a
+  //  system identifier if there is a public one. A literal is in '"' unless it has one.
+  template < class t_TyStrName, class t_TyStrPublic, class t_TyStrSystem, class t_TyStrSubset >
+  void WriteDoctypeDecl( t_TyStrName const & _rName, t_TyStrPublic const & _rPublicId, t_TyStrSystem const & _rSystemId, t_TyStrSubset const & _rInternalSubset )
+    requires( CXmlStrArg< t_TyStrName > && CXmlStrArg< t_TyStrPublic > && CXmlStrArg< t_TyStrSystem > && CXmlStrArg< t_TyStrSubset > )
+  {
+    std::u32string strText( U"<!DOCTYPE " );
+    auto Append = [&strText]( auto _sv )
+    {
+      std::u32string str;
+      ConvertString( str, _sv.data(), _sv.length() );
+      strText += str;
+    };
+    auto AppendLiteral = [&strText,&Append]( auto _sv )
+    {
+      strText += U' ';
+      const char32_t kchQuote = ( decltype( _sv )::npos == _sv.find( typename decltype( _sv )::value_type( '"' ) ) ) ? U'"' : U'\'';
+      strText += kchQuote;
+      Append( _sv );
+      strText += kchQuote;
+    };
+    Append( SvXmlStrArg( _rName ) );
+    auto svPublic = SvXmlStrArg( _rPublicId );
+    auto svSystem = SvXmlStrArg( _rSystemId );
+    VerifyThrowSz( svPublic.empty() || !svSystem.empty(), "A public identifier is followed by a system identifier ( [75] )." );
+    if ( !svPublic.empty() )
+    {
+      strText += U" PUBLIC";
+      AppendLiteral( svPublic );
+      AppendLiteral( svSystem );
+    }
+    else
+    if ( !svSystem.empty() )
+    {
+      strText += U" SYSTEM";
+      AppendLiteral( svSystem );
+    }
+    auto svSubset = SvXmlStrArg( _rInternalSubset );
+    if ( !svSubset.empty() )
+    {
+      strText += U" [";
+      Append( svSubset );
+      strText += U']';
+    }
+    strText += U'>';
+    WriteDoctypeDecl( strText );
+  }
+  // The document is complete: its element was written and ended. Nothing more may be written.
+  // ( The tags are ended by their xml_write_tag<>s - none is open. )
+  void EndDocument()
+  {
+    _CheckNotEnded();
+    VerifyThrowSz( !FInsideDocumentTag(), "A tag hasn't been ended - each is ended by its xml_write_tag<>." );
+    VerifyThrowSz( m_fWroteFirstTag, "A document has an element ( [1] ) - none was written." );
+    m_fEndedDocument = true;
+  }
+  bool FEndedDocument() const
+  {
+    return m_fEndedDocument;
   }
   // Start a tag by copying the passed token.
   // If the namespace of the tag isn't current then the namespace is declared as an additional attribute.
   // We also copy current namespace declarations even if they are not referred to by the tag's namespace prefix.
   template < class t_TyXmlToken >
   _TyXmlWriteTag StartTag( t_TyXmlToken const & _rtok )
+    requires( CXmlTokenArg< t_TyXmlToken > )
   {
     VerifyThrowSz( _rtok.FIsTag(), "Trying to start a tag with a non-tag token." );
+    _CheckStartTag();
     _rtok.AssertValid();
     _ImportEntitiesOfSource( _rtok.GetLexToken().GetUserObj() );
     // Here's how things will work: We call to copy the lex token that is inside of the xml token.
@@ -805,8 +1096,10 @@ public:
   // We leave the tag name intact in the old object and we must leave any active namespace declarations there and just copy them.
   template < class t_TyXmlToken >
   _TyXmlWriteTag StartTag( t_TyXmlToken && _rrtok, bool _fKeepTagName = false )
+    requires( CXmlTokenArg< t_TyXmlToken > )
   {
     VerifyThrowSz( _rrtok.FIsTag(), "Trying to start a tag with a non-tag token." );
+    _CheckStartTag();
     _rrtok.AssertValid();
     _ImportEntitiesOfSource( _rrtok.GetLexToken().GetUserObj() );
     // First make a copy of the tag name's _l_value<>. We shouldn't have to copy anything else since clearly the caller
@@ -867,9 +1160,36 @@ public:
   {
     if ( !FInsideDocumentTag() )
       return;
-    _CheckWriteTagEnd( true );
+    // The tag is written - if it hasn't been - and then the end of its start tag: there is content.
     _TyWriteContext & rwcxCur = m_lContexts.back();
     rwcxCur.CommitTagData();
+    _CheckWriteTagEnd( true );
+  }
+  // A dry run: nothing is written while it lasts - see _WriteChecked().
+  struct _TyDryRun
+  {
+    size_t & m_rnDryRun;
+    explicit _TyDryRun( size_t & _rnDryRun )
+      : m_rnDryRun( _rnDryRun )
+    {
+      ++m_rnDryRun;
+    }
+    ~_TyDryRun()
+    {
+      --m_rnDryRun;
+    }
+  };
+  // What is made is checked before any of it is written: _rftor writes it - it is run once with nothing written, and if
+  //  that doesn't throw the tag which it is within is written and it is run again. If it throws nothing was written.
+  template < class t_TyFunctor >
+  void _WriteChecked( t_TyFunctor const & _rftor )
+  {
+    {
+      _TyDryRun dr( m_nDryRun );
+      _rftor();
+    }
+    _CheckCommitCur();
+    _rftor();
   }
   // Check to see if we have started a tag and if so end it allowing for an end tag.
   void _CheckWriteTagEnd( bool _fWithContent )
@@ -894,8 +1214,8 @@ public:
     //  so in that regard we will check the token id and when we a s_knTokenSTag we know if was paired with a s_knTokenETag when read from a file.
     bool fHadUnendedTag;
     if ( ( fHadUnendedTag = m_fHaveUnendedTag ) )
-      _CheckWriteTagEnd( ( s_knTokenSTag == _pwcxEnd->GetToken().GetTokenId() ) );
-    if ( !fHadUnendedTag || ( s_knTokenSTag == _pwcxEnd->GetToken().GetTokenId() ) )
+      _CheckWriteTagEnd( ( _pwcxEnd->FFullEnd() ) );
+    if ( !fHadUnendedTag || ( _pwcxEnd->FFullEnd() ) )
     {
       // We have already validate the tag name so we can just write it:
       _WriteTransportRaw( _TyMarkupTraits::s_kszEndTagBegin, StaticStringLen( _TyMarkupTraits::s_kszEndTagBegin ) );
@@ -966,6 +1286,9 @@ protected:
     m_lContexts.clear();
     m_fWroteFirstTag = false;
     m_fWroteDoctypeDecl = false;
+    m_fEndedDocument = false;
+    m_setDeclaredEntities.clear();
+    m_fDeclaredEntitiesComplete = false;
     m_nWithinEntityReference = 0;
     m_setEntitiesOfSource.clear();
     m_pvUserObjSource = nullptr;
@@ -985,6 +1308,8 @@ protected:
       return; // no-op.
     if ( !!m_nWithinEntityReference )
       return; // The reference to the entity is what was written for this - see _WriteEntityContentBegin().
+    if ( !!m_nDryRun )
+      return; // See _WriteChecked().
     m_optTransportOut->Write( _pcBegin, _pcEnd );
   }
   template < class t_TyChar >
@@ -1006,6 +1331,119 @@ protected:
     _rtok.GetLexToken().KGetStringView( sv, krdt.DataRangeGetSingle().GetRangeBase() );
     _WriteTransportRaw( &sv[0], sv.length() );
   }
+  void _CheckNotEnded() const
+  {
+    VerifyThrowSz( !m_fEndedDocument, "The document was ended - see EndDocument()." );
+  }
+  // Before a tag is started: there is one document element ( [1] ).
+  void _CheckStartTag()
+  {
+    _CheckNotEnded();
+    VerifyThrowSz( !FInEpilog(), "The document has one element - and it was written ( [1] )." );
+    _CheckCommitCur(); // The tag which this one is within is written.
+  }
+  // The context of a tag which is made: see StartTag(). What is given to such a tag is strings: an '&' of one is the
+  //  character - as it is of what is given to the writer.
+  _TyWriteContext & _StartMadeTag()
+  {
+    _CheckStartTag();
+    _TyWriteContext & rwcxNew = m_lContexts.emplace_back( this, m_xdcxtDocumentContext.GetUserObj(), s_knTokenEmptyElemTag );
+    rwcxNew.SetDetectReferences( edrNoReferences );
+    return rwcxNew;
+  }
+  // The tag is named - if that throws there is no tag.
+  template < class t_TyFunctor >
+  void _StartedMadeTag( _TyWriteContext & _rwcxNew, t_TyFunctor && _rrftor )
+  {
+    Assert( &_rwcxNew == &m_lContexts.back() );
+    try
+    {
+      std::forward< t_TyFunctor >( _rrftor )( _rwcxNew.GetToken() );
+    }
+    catch ( ... )
+    {
+      m_lContexts.pop_back();
+      throw;
+    }
+  }
+  // The name of an entity or the target of a processing instruction: a Name [5] - and with namespaces one without a
+  //  colon ( Namespaces in XML 7 ).
+  void _CheckNameOfDeclaration( _TyStdStr const & _rstrName, const char * _pszWhat ) const
+  {
+    if ( m_fUseNamespaces )
+      VerifyThrowSz( !_rstrName.empty() && ( _TyXmlToken::NLenNCName( _rstrName ) == _rstrName.length() ), "The %s [%s] is not an NCName - a name without a colon.", _pszWhat, StrConvertString< char >( _rstrName ).c_str() );
+    else
+      _TyXmlToken::ValidateName( _rstrName );
+  }
+  // amp, lt, gt, apos, quot ( 4.6 ).
+  static bool _FIsPredefinedEntity( _TyStdStr const & _rstrName )
+  {
+    static const char * const s_rgpszPredefined[] = { "amp", "lt", "gt", "apos", "quot" };
+    for ( const char * pszPredefined : s_rgpszPredefined )
+    {
+      const size_t knLen = strlen( pszPredefined );
+      if ( ( knLen == _rstrName.length() ) && std::equal( _rstrName.begin(), _rstrName.end(), pszPredefined, []( _TyChar _chL, char _chR ) { return _chL == _TyChar( _chR ); } ) )
+        return true;
+    }
+    return false;
+  }
+  // The text of a comment - checked: it hasn't "--" and doesn't end with '-' ( [15] ).
+  template < class t_TyChar >
+  void _WriteCommentString( const t_TyChar * _pcBegin, const t_TyChar * const _pcEnd )
+  {
+    if ( _pcEnd == _pcBegin )
+      return; // <!---->
+    // No anti-accepting states in the the CommentChar production - no need to obtain the accept state. No fancy processing for comments.
+    VerifyThrowSz( _pcEnd == _l_match< t_TyChar >::PszMatch( PspGetCommentCharsStart< t_TyChar >(), _pcBegin, ( _pcEnd - _pcBegin ) ),
+      "Invalid comment - did you put two dashes in a row - or end it with a dash?" );
+    _WriteTransportRaw( _pcBegin, _pcEnd );
+  }
+  // The target or the rest of a processing instruction - checked against t_tempGetStartToken.
+  template < template < class t_TyChar > class t_tempGetStartToken, class t_TyChar >
+  void _WritePIString( const t_TyChar * _pcBegin, const t_TyChar * const _pcEnd )
+  {
+    typedef _l_state_proto< t_TyChar > _TyStateProto;
+    const _TyStateProto * const kpspValidateTokenStart = t_tempGetStartToken< t_TyChar >::s_kpspStart;
+    const bool kfIsPITargetMeat = ( kpspValidateTokenStart == TGetPITargetMeatStart< t_TyChar >::s_kpspStart );
+    // In this case there is no remedy to any encountered anti-accept state, but we want to know if we hit one
+    //  so we can give a more informative error message.
+    const _TyStateProto * pspAccept;
+    const t_TyChar * pcMatch = _l_match< t_TyChar >::PszMatch( kpspValidateTokenStart, _pcBegin, _pcEnd - _pcBegin, &pspAccept );
+    VerifyThrowSz( !( !pspAccept || pspAccept->FIsAntiAcceptingState() || ( pcMatch != _pcEnd ) ),
+      kfIsPITargetMeat ? "Invalid characters found in PITargetMeat - or \"?>\"." : "Invalid characters found in PITarget." );
+    _WriteTransportRaw( _pcBegin, _pcEnd );
+  }
+  // The text of a CDATA section - checked: each "]]>" of it is written as "]]]]><![CDATA[>" - in two sections.
+  template < class t_TyChar >
+  void _WriteCDataString( const t_TyChar * _pcBegin, const t_TyChar * const _pcEnd )
+  {
+    typedef _l_state_proto< t_TyChar > _TyStateProto;
+    // Move through and appropriately replace each found "]]>" with "]]]]><![CDATA[>", writing as we go.
+    // Since we are using an anti-accepting state in the CDCharsOutputValidate production we need to examine the returned state for anti-accepting.
+    const _TyStateProto * pspCDCharsOutputValidate = PspGetCDCharsOutputValidateStart< t_TyChar >();
+    for ( const t_TyChar * pcCur = _pcBegin; _pcEnd != pcCur;  )
+    {
+      const _TyStateProto * pspAccept;
+      const t_TyChar * pcMatch = _l_match< t_TyChar >::PszMatch( pspCDCharsOutputValidate, pcCur, _pcEnd - pcCur, &pspAccept );
+      // If we find an accepting state that doesn't complete the entire remainder of characters then we are at a failure point:
+      //  there are no transitions from this final accepting state.
+      // However if we find an anti-accepting state then that means we have encountered an embedded "]]>" and we can appropriately escape.
+      VerifyThrowSz( !( !pcMatch || !pspAccept || ( !pspAccept->FIsAntiAcceptingState() && ( pcMatch != _pcEnd ) ) ),
+        "Invalid characters found inside of a CDataSection." );
+      // Write what we can. We should be pointing just after the "]]>" so we should be able to write all the way to pcMatch-1:
+      if ( pcMatch == _pcEnd ) // most likely occurence
+      {
+        Assert( !pspAccept->FIsAntiAcceptingState() );
+        _WriteCDataRun( pcCur, _pcEnd );
+        return; // all done.
+      }
+      Assert( ( pcMatch[-3] == t_TyChar(']') ) && ( pcMatch[-2] == t_TyChar(']') ) && ( pcMatch[-1] == t_TyChar('>') ) );
+      // The "]]>" is replaced - all three of its characters: what is before it is written and then the replacement.
+      _WriteCDataRun( pcCur, pcMatch-3 );
+      pcCur = pcMatch;
+      _WriteTransportRaw( _TyMarkupTraits::s_kszCDataSectionReplaceEnd, StaticStringLen( _TyMarkupTraits::s_kszCDataSectionReplaceEnd ) );
+    }
+  }
   // This just commits the start of the tag. And we can't write the last ">" or "/>" until
   //  we know if there will be sub-tag data at all. This is because one invariant is that we
   //  never seek the output file which allows us to write to stdout, etc.
@@ -1026,6 +1464,22 @@ protected:
     // We must check all attribute (name,value) pairs and if they are all typed data (i.e. not user added strings) then they all came from
     //  an xml_read_cursor and they needn't be validated.
     CheckDuplicateTokenAttrs( true, _rtok.GetLexToken(), true );
+    // The values which are strings - those of a tag which was made, and those which were set - are checked before any of
+    //  the tag is written: if one can't be written nothing is.
+    {
+      const _TyLexValue & rrgAttrsCheck = _rtok.GetValue()[vknAttributesIdx];
+      _TyDryRun dr( m_nDryRun );
+      for ( size_t nAttr = 0; nAttr < rrgAttrsCheck.GetSize(); ++nAttr )
+      {
+        const _TyLexValue & rvalValue = rrgAttrsCheck[nAttr][vknAttr_ValueIdx];
+        if ( !rvalValue.FIsString() )
+          continue;
+        if ( rrgAttrsCheck[nAttr][vknAttr_FDoubleQuoteIdx].template GetVal< bool >() )
+          _WriteCharAndAttrData< TGetAttCharDataNoDoubleQuoteStart >( _rtok, rvalValue, _edrDetectReferences );
+        else
+          _WriteCharAndAttrData< TGetAttCharDataNoSingleQuoteStart >( _rtok, rvalValue, _edrDetectReferences );
+      }
+    }
     _WriteTransportRaw( _TyMarkupTraits::s_kszTagBegin, StaticStringLen( _TyMarkupTraits::s_kszTagBegin ) );
     m_fHaveUnendedTag = true;
     // We are no longer in the prolog: a string which is written from here - the value of an attribute of this very tag
@@ -1369,11 +1823,7 @@ protected:
       rval.ApplyString( 
         [this]< typename t_TyChar >( const t_TyChar * _pcBegin, const t_TyChar * const _pcEnd )
         {
-          // No anti-accepting states in the the CommentChar production - no need to obtain the accept state. No fancy processing for comments.
-          VerifyThrowSz( _pcEnd == _l_match< t_TyChar >::PszMatch( PspGetCommentCharsStart< t_TyChar >(), _pcBegin, ( _pcEnd - _pcBegin ) ), 
-            "Invalid comment - did you put two dashes in a row?" );
-          // While we are here we might as well write the data to the output transport.
-          _WriteTransportRaw( _pcBegin, _pcEnd );
+          _WriteCommentString( _pcBegin, _pcEnd );
         }
       );
     }
@@ -1444,6 +1894,8 @@ protected:
       );
     }
     m_fWroteDoctypeDecl = true;
+    m_setDeclaredEntities.clear(); // Those of the document which it is of - see _ImportEntitiesOfSource() - and perhaps more.
+    m_fDeclaredEntitiesComplete = false;
   }
   template < template < class t_TyChar > class t_tempGetStartToken, class t_TyXmlToken >
   void _WritePIPortion( t_TyXmlToken const & _rtok, typename t_TyXmlToken::_TyLexValue const & _rval )
@@ -1456,16 +1908,7 @@ protected:
       _rval.ApplyString(
         [this]< typename t_TyChar >(const t_TyChar * _pcBegin, const t_TyChar* const _pcEnd)
         {
-          typedef _l_state_proto< t_TyChar > _TyStateProto;
-          const _TyStateProto* const kpspValidateTokenStart = t_tempGetStartToken< t_TyChar >::s_kpspStart;
-          const bool kfIsPITargetMeat = ( kpspValidateTokenStart == TGetPITargetMeatStart< t_TyChar >::s_kpspStart );
-          // In this case there is no remedy to any encountered anti-accept state, but we want to know if we hit one
-          //  so we can give a more informative error message.
-          const _TyStateProto* pspAccept;
-          const t_TyChar* pcMatch = _l_match< t_TyChar >::PszMatch(kpspValidateTokenStart, _pcBegin, _pcEnd - _pcBegin, &pspAccept);
-          VerifyThrowSz(!(!pspAccept || pspAccept->FIsAntiAcceptingState() || (pcMatch != _pcEnd)),
-            kfIsPITargetMeat ? "Invalid characters found in PITargetMeat." : "Invalid characters found in PITarget.");
-          _WriteTransportRaw(_pcBegin, _pcEnd);
+          _WritePIString< t_tempGetStartToken >( _pcBegin, _pcEnd );
         }
       );
     }
@@ -1505,32 +1948,7 @@ protected:
       rval.ApplyString( 
         [this]< typename t_TyChar >( const t_TyChar * _pcBegin, const t_TyChar * const _pcEnd )
         {
-          typedef _l_state_proto< t_TyChar > _TyStateProto;
-          // Move through and appropriately replace each found "]]>" with "]]]]><![CDATA[>", writing as we go.
-          // Since we are using an anti-accepting state in the CDCharsOutputValidate production we need to examine the returned state for anti-accepting.
-          const _TyStateProto * pspCDCharsOutputValidate = PspGetCDCharsOutputValidateStart< t_TyChar >();
-          for ( const t_TyChar * pcCur = _pcBegin; _pcEnd != pcCur;  )
-          {
-            const _TyStateProto * pspAccept;
-            const t_TyChar * pcMatch = _l_match< t_TyChar >::PszMatch( pspCDCharsOutputValidate, pcCur, _pcEnd - pcCur, &pspAccept );
-            // If we find an accepting state that doesn't complete the entire remainder of characters then we are at a failure point:
-            //  there are no transitions from this final accepting state.
-            // However if we find an anti-accepting state then that means we have encountered an embedded "]]>" and we can appropriately escape.
-            VerifyThrowSz( !( !pcMatch || ( !pspAccept->FIsAntiAcceptingState() && ( pcMatch != _pcEnd ) ) ),
-              "Invalid characters found inside of a CDataSection." );
-            // Write what we can. We should be pointing just after the "]]>" so we should be able to write all the way to pcMatch-1:
-            if ( pcMatch == _pcEnd ) // most likely occurence
-            {
-              Assert( !pspAccept->FIsAntiAcceptingState() );
-              _WriteCDataRun( pcCur, _pcEnd );
-              return; // all done.
-            }
-            Assert( ( pcMatch[-3] == t_TyChar(']') ) && ( pcMatch[-2] == t_TyChar(']') ) && ( pcMatch[-1] == t_TyChar('>') ) );
-            // The "]]>" is replaced - all three of its characters: what is before it is written and then the replacement.
-            _WriteCDataRun( pcCur, pcMatch-3 );
-            pcCur = pcMatch;
-            _WriteTransportRaw( _TyMarkupTraits::s_kszCDataSectionReplaceEnd, StaticStringLen( _TyMarkupTraits::s_kszCDataSectionReplaceEnd ) );
-          }
+          _WriteCDataString( _pcBegin, _pcEnd );
         }
       );
     }
@@ -1587,7 +2005,7 @@ protected:
       _WriteTransportRaw( _pcBegin, _pcEnd );
       return;
     }
-    Assert( m_fWroteFirstTag ); // The value of an attribute is written when its tag is - see _CommitTag().
+    Assert( m_fWroteFirstTag || !!m_nDryRun ); // The value of an attribute is written when its tag is - see _CommitTag().
     const _TyStateProto * const kpspAllReferences = PspGetAllReferencesStart< t_TyCharApplyString >();
     // Move through and validate as we have described above: each time around we write the characters which may be
     //  written as they are and then deal with the one at which they end.
@@ -1855,7 +2273,13 @@ protected:
 // state:
   bool m_fWroteFirstTag{false};
   bool m_fWroteDoctypeDecl{false};
-  size_t m_nWithinEntityReference{0}; // We are within what an entity has and its reference is what was written: nothing is.
+  bool m_fEndedDocument{false}; // See EndDocument().
+  // The general entities which the document type declaration which was written declares - see WriteDoctypeDecl(): all of
+  //  them, if m_fDeclaredEntitiesComplete - otherwise some may not be known to us.
+  set< _TyStdStr, std::less<> > m_setDeclaredEntities;
+  bool m_fDeclaredEntitiesComplete{false};
+  size_t m_nWithinEntityReference{0};
+  size_t m_nDryRun{0}; // Nothing is written - see _WriteChecked(). // We are within what an entity has and its reference is what was written: nothing is.
   // The names of the entities which we have from the documents whose tokens we are given - see _ImportEntitiesOfSource().
   set< _TyStdStr, std::less<> > m_setEntitiesOfSource;
   const void * m_pvUserObjSource{nullptr}; // The user object from which we last had them.

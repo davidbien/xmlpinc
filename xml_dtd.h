@@ -1989,6 +1989,12 @@ public:
   static void CheckDoctypeDeclText( _TyStrView _svText )
   {
     _TyDtd dtd;
+    CheckDoctypeDeclText( _svText, dtd );
+  }
+  // And what it declares is in _rdtd.
+  static void CheckDoctypeDeclText( _TyStrView _svText, _TyDtd & _rdtd )
+  {
+    _TyDtd & dtd = _rdtd;
     _TyThis dtdParser( dtd );
     _TyAnalyzerMemory analyzer;
     analyzer.emplaceTransport( _svText.data(), _svText.length() );

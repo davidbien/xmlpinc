@@ -60,6 +60,7 @@ struct xml_markup_traits< char32_t >
   static constexpr const _TyChar s_kszXmlnsEtc[] = U"xmlns:";
   static constexpr const _TyChar s_kszXmlPrefix[] = U"xml";
   static constexpr const _TyChar s_kszXmlUri[] = U"http://www.w3.org/XML/1998/namespace";
+  static constexpr const _TyChar s_kszXmlnsUri[] = U"http://www.w3.org/2000/xmlns/";
 };
 
 template <>
@@ -108,6 +109,7 @@ struct xml_markup_traits< char16_t >
   static constexpr const _TyChar s_kszXmlnsEtc[] = u"xmlns:";
   static constexpr const _TyChar s_kszXmlPrefix[] = u"xml";
   static constexpr const _TyChar s_kszXmlUri[] = u"http://www.w3.org/XML/1998/namespace";
+  static constexpr const _TyChar s_kszXmlnsUri[] = u"http://www.w3.org/2000/xmlns/";
 };
 
 template <>
@@ -156,6 +158,7 @@ struct xml_markup_traits< char8_t >
   static constexpr const _TyChar s_kszXmlnsEtc[] = u8"xmlns:";
   static constexpr const _TyChar s_kszXmlPrefix[] = u8"xml";
   static constexpr const _TyChar s_kszXmlUri[] = u8"http://www.w3.org/XML/1998/namespace";
+  static constexpr const _TyChar s_kszXmlnsUri[] = u8"http://www.w3.org/2000/xmlns/";
 };
 
 __XMLP_END_NAMESPACE

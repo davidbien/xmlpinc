@@ -328,7 +328,7 @@ public:
     typename _TyUriAndPrefixMap::const_iterator cit = m_mapPrefixes.find( _rrs );
     if ( m_mapPrefixes.end() != cit )
       return *cit;
-    pair< typename _TyUriAndPrefixMap::iterator, bool > pib = m_mapPrefixes.insert( std::forward< t_TyStrViewOrString >( _rrs ) );
+    pair< typename _TyUriAndPrefixMap::iterator, bool > pib = m_mapPrefixes.emplace( std::forward< t_TyStrViewOrString >( _rrs ) );
     Assert( pib.second );
     return *pib.first;
   }
@@ -338,7 +338,7 @@ public:
     typename _TyUriAndPrefixMap::const_iterator cit = m_mapUris.find( _rrs );
     if ( m_mapUris.end() != cit )
       return *cit;
-    pair< typename _TyUriAndPrefixMap::iterator, bool > pib = m_mapUris.insert( std::forward< t_TyStrViewOrString >( _rrs ) );
+    pair< typename _TyUriAndPrefixMap::iterator, bool > pib = m_mapUris.emplace( std::forward< t_TyStrViewOrString >( _rrs ) );
     Assert( pib.second );
     return *pib.first;
   }
@@ -387,20 +387,20 @@ public:
   _TyXmlNamespaceValueWrap GetNamespaceValueWrap( ENamespaceReferenceType _enrtReferenceType, const t_TyStrViewOrString & _rsvPrefix )
     requires TAreSameSizeTypes_v< typename t_TyStrViewOrString::value_type, _TyChar >
   {
-    return MapNamespaces().GetNamespaceValueWrap( _enrtReferenceType, _rsvPrefix );
+    return MapNamespaces().GetNamespaceValueWrap( _enrtReferenceType, &_rsvPrefix );
   }
 // Default attribute namespace support.
   bool FHasDefaultAttributeNamespace() const
   {
     return !m_xnvwDefaultAttributeNamespace.FIsNull();
   }
-  bool ClearDefaultAttributeNamespace()
+  void ClearDefaultAttributeNamespace()
   {
     m_xnvwDefaultAttributeNamespace.Clear();
   }
   void SetDefaultAttributeNamespace( _TyXmlNamespaceValueWrap const & _rxnvw )
   {
-    VerifyThrowSz( !m_xnvwDefaultAttributeNamespace.FIsDefaultNamespace(), "Attributes cannot use the default namespace." );
+    VerifyThrowSz( !_rxnvw.RStringPrefix().empty(), "Attributes cannot use the default namespace." );
     m_xnvwDefaultAttributeNamespace = _rxnvw.ShedReference( enrtStandaloneReference );
   }
   _TyXmlNamespaceValueWrap const & GetDefaultAttributeNamespace() const

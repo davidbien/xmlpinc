@@ -452,12 +452,12 @@ public:
     m_mapNamespaces.clear();
   }
   // Return whether there is a non-empty current default namespace.
-  bool FHasDefaultNamespace( _TyXmlNamespaceValueWrap * _pxnvw = nullptr )
+  bool FHasDefaultNamespace( _TyXmlNamespaceValueWrap * _pxnvw = nullptr ) const
   {
-    typename _TyNamespaceMap::iterator it = m_mapNamespaces.find( _TyStrView() );
-    bool fHasDefault = ( m_mapNamespaces.end() != it ) && !it->second.second.front().RStrUri().empty();
-    if ( fHasDefault && !!_pxnvw )
-      *_pxnvw = _TyXmlNamespaceValueWrap( *it, nullptr, enrtTagNameReference );
+    typename _TyNamespaceMap::const_iterator cit = m_mapNamespaces.find( _TyStrView() );
+    bool fHasDefault = ( m_mapNamespaces.end() != cit ) && !cit->second.second.front().RStrUri().empty();
+    if ( fHasDefault && !!_pxnvw ) // A reference - which changes nothing of the map.
+      *_pxnvw = _TyXmlNamespaceValueWrap( const_cast< typename _TyNamespaceMap::value_type & >( *cit ), nullptr, enrtTagNameReference );
     return fHasDefault;
   }
   // Check to see that the passed _TyXmlNamespaceValueWrap is the currently active URI for the prefix given.
@@ -488,7 +488,7 @@ public:
     // If both are null then we are asking for the current default namespace - and we will throw later if there isn't one.
     VerifyThrowSz( ( !_psvPrefix && !_psvUri ) || ( !!_psvPrefix && ( ( !!_psvUri && !_psvUri->empty() ) || _psvPrefix->empty() ) ), "Must pass at least a prefix and must pass a non-empty URI unless the prefix is empty." );
     if ( !_psvUri )
-      return GetNamespaceValueWrap( _enrtReferenceType, *_psvPrefix );
+      return GetNamespaceValueWrap( _enrtReferenceType, _psvPrefix );
     else
       return _GetNamespaceValueWrap( _rcontUriPrefix, _enrtReferenceType, *_psvPrefix, *_psvUri );
   }
@@ -504,8 +504,8 @@ public:
   _TyXmlNamespaceValueWrap GetNamespaceValueWrap( ENamespaceReferenceType _enrtReferenceType, const t_TyStrViewOrString * _psvPrefix = nullptr )
     requires TAreSameSizeTypes_v< typename t_TyStrViewOrString::value_type, _TyChar >
   {
-    typename _TyNamespaceMap::iterator itNM = m_mapNamespaces.find( !_psvPrefix ? _TyStrView() : *_psvPrefix );
-    VerifyThrowSz( m_mapNamespaces.end() != itNM, !_psvPrefix ? "No active default namespace." : "No active namespace for prefix[%s].", StrConvertString< char >( *_psvPrefix ).c_str() );
+    typename _TyNamespaceMap::iterator itNM = m_mapNamespaces.find( !_psvPrefix ? _TyStrView() : _TyStrView( *_psvPrefix ) );
+    VerifyThrowSz( m_mapNamespaces.end() != itNM, "No active namespace for prefix[%s].", !_psvPrefix ? "" : StrConvertString< char >( *_psvPrefix ).c_str() );
     return _TyXmlNamespaceValueWrap( *itNM, nullptr, _enrtReferenceType );
   }
 protected:

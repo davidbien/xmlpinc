@@ -77,6 +77,17 @@ void CheckDuplicateTokenAttrs( bool _fStrict, const t_TyLexToken & _rltok, bool 
       _TyStdStr strNameLeft, strNameRight;
       (void)_rltok.FGetStringViewOrString( svNameLeft, strNameLeft, (*_rlpt)[vknNameIdx] );
       (void)_rltok.FGetStringViewOrString( svNameRight, strNameRight, (*_rrpt)[vknNameIdx] );
+      // An attribute in a namespace is compared by its local name - the name may have its prefix ( see
+      //  FIncludePrefixesInAttrNames() ): two prefixes may be bound to the same namespace ( Namespaces in XML 6.3 ).
+      auto SvLocal = []( _TyStrView _svName, _TyLexValue const & _rvalNS ) -> _TyStrView
+      {
+        if ( !_rvalNS.template FIsA< _TyXmlNamespaceValueWrap >() || _rvalNS.template GetVal< _TyXmlNamespaceValueWrap >().FIsAttributeNamespaceDeclaration() )
+          return _svName;
+        const size_t knPosColon = _svName.find( _TyChar( ':' ) );
+        return ( _TyStrView::npos == knPosColon ) ? _svName : _svName.substr( knPosColon + 1 );
+      };
+      svNameLeft = SvLocal( svNameLeft, (*_rlpt)[vknNamespaceIdx] );
+      svNameRight = SvLocal( svNameRight, (*_rrpt)[vknNamespaceIdx] );
       strong_ordering iComp = svNameLeft <=> svNameRight;
       if ( 0 == iComp )
       {
