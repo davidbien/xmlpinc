@@ -144,9 +144,44 @@ protected:
     for ( _TyPosition posFrom : _rrgFrom )
       m_rgFollow[posFrom].insert( m_rgFollow[posFrom].end(), _rrgTo.begin(), _rrgTo.end() );
   }
+  // A particle whose sets are being found: those of its children are added to it one by one, in order.
+  struct _TyCompiling
+  {
+    const _TyParticle * m_pcp;
+    size_t m_nChildNext{ 0 }; // The child which is next to be compiled.
+    _TySets m_sets;
+  };
+  // The sets of a particle: those of a name, or those of its children taken together. Groups may be within groups as
+  //  deep as a document says - so the particles which are being compiled are on a stack of our own, not the thread's.
   _TySets _Compile( _TyParticle const & _rcp )
   {
-    _TySets sets;
+    vector< _TyCompiling > rgCompiling;
+    rgCompiling.push_back( _CompilingBegin( _rcp ) );
+    for ( ;; )
+    {
+      _TyCompiling & rcomp = rgCompiling.back();
+      if ( rcomp.m_nChildNext < rcomp.m_pcp->m_rgChildren.size() )
+      {
+        _TyParticle const & rcpChild = rcomp.m_pcp->m_rgChildren[ rcomp.m_nChildNext++ ];
+        rgCompiling.push_back( _CompilingBegin( rcpChild ) ); // rcomp is no more.
+        continue;
+      }
+      // All of the children are done: so is this particle.
+      _TySets sets = std::move( rcomp.m_sets );
+      if ( ( exdoZeroOrMore == rcomp.m_pcp->m_eOccurrence ) || ( exdoOneOrMore == rcomp.m_pcp->m_eOccurrence ) )
+        _AddFollow( sets.m_rgLast, sets.m_rgFirst ); // Again.
+      if ( ( exdoZeroOrMore == rcomp.m_pcp->m_eOccurrence ) || ( exdoOptional == rcomp.m_pcp->m_eOccurrence ) )
+        sets.m_fNullable = true;
+      rgCompiling.pop_back();
+      if ( rgCompiling.empty() )
+        return sets;
+      _AddChild( rgCompiling.back(), sets );
+    }
+  }
+  // A particle is begun: a name is a position - the next one, as the names occur in the model.
+  _TyCompiling _CompilingBegin( _TyParticle const & _rcp )
+  {
+    _TyCompiling comp{ &_rcp };
     switch( _rcp.m_eParticle )
     {
       case exdpName:
@@ -154,48 +189,44 @@ protected:
         const _TyPosition pos = _TyPosition( m_rgpstrNames.size() );
         m_rgpstrNames.push_back( &_rcp.m_strName );
         m_rgFollow.emplace_back();
-        sets.m_rgFirst.push_back( pos );
-        sets.m_rgLast.push_back( pos );
+        comp.m_sets.m_rgFirst.push_back( pos );
+        comp.m_sets.m_rgLast.push_back( pos );
       }
       break;
       case exdpChoice:
-      {
-        for ( _TyParticle const & rcpChild : _rcp.m_rgChildren )
-        {
-          _TySets setsChild = _Compile( rcpChild );
-          sets.m_fNullable = sets.m_fNullable || setsChild.m_fNullable;
-          sets.m_rgFirst.insert( sets.m_rgFirst.end(), setsChild.m_rgFirst.begin(), setsChild.m_rgFirst.end() );
-          sets.m_rgLast.insert( sets.m_rgLast.end(), setsChild.m_rgLast.begin(), setsChild.m_rgLast.end() );
-        }
-      }
       break;
       case exdpSeq:
-      {
-        sets.m_fNullable = true;
-        for ( _TyParticle const & rcpChild : _rcp.m_rgChildren )
-        {
-          _TySets setsChild = _Compile( rcpChild );
-          // What may be last so far may be followed by what may be first in this one.
-          _AddFollow( sets.m_rgLast, setsChild.m_rgFirst );
-          if ( sets.m_fNullable )
-            sets.m_rgFirst.insert( sets.m_rgFirst.end(), setsChild.m_rgFirst.begin(), setsChild.m_rgFirst.end() );
-          if ( setsChild.m_fNullable )
-            sets.m_rgLast.insert( sets.m_rgLast.end(), setsChild.m_rgLast.begin(), setsChild.m_rgLast.end() );
-          else
-            sets.m_rgLast = std::move( setsChild.m_rgLast );
-          sets.m_fNullable = sets.m_fNullable && setsChild.m_fNullable;
-        }
-      }
+        comp.m_sets.m_fNullable = true; // Nothing so far: it may be nothing.
       break;
       default:
         Assert( false );
       break;
     }
-    if ( ( exdoZeroOrMore == _rcp.m_eOccurrence ) || ( exdoOneOrMore == _rcp.m_eOccurrence ) )
-      _AddFollow( sets.m_rgLast, sets.m_rgFirst ); // Again.
-    if ( ( exdoZeroOrMore == _rcp.m_eOccurrence ) || ( exdoOptional == _rcp.m_eOccurrence ) )
-      sets.m_fNullable = true;
-    return sets;
+    return comp;
+  }
+  // The sets of a child are added to those of its group.
+  void _AddChild( _TyCompiling & _rcomp, _TySets & _rsetsChild )
+  {
+    _TySets & rsets = _rcomp.m_sets;
+    if ( exdpChoice == _rcomp.m_pcp->m_eParticle )
+    {
+      rsets.m_fNullable = rsets.m_fNullable || _rsetsChild.m_fNullable;
+      rsets.m_rgFirst.insert( rsets.m_rgFirst.end(), _rsetsChild.m_rgFirst.begin(), _rsetsChild.m_rgFirst.end() );
+      rsets.m_rgLast.insert( rsets.m_rgLast.end(), _rsetsChild.m_rgLast.begin(), _rsetsChild.m_rgLast.end() );
+    }
+    else
+    {
+      Assert( exdpSeq == _rcomp.m_pcp->m_eParticle );
+      // What may be last so far may be followed by what may be first in this one.
+      _AddFollow( rsets.m_rgLast, _rsetsChild.m_rgFirst );
+      if ( rsets.m_fNullable )
+        rsets.m_rgFirst.insert( rsets.m_rgFirst.end(), _rsetsChild.m_rgFirst.begin(), _rsetsChild.m_rgFirst.end() );
+      if ( _rsetsChild.m_fNullable )
+        rsets.m_rgLast.insert( rsets.m_rgLast.end(), _rsetsChild.m_rgLast.begin(), _rsetsChild.m_rgLast.end() );
+      else
+        rsets.m_rgLast = std::move( _rsetsChild.m_rgLast );
+      rsets.m_fNullable = rsets.m_fNullable && _rsetsChild.m_fNullable;
+    }
   }
   vector< const _TyStdStr * > m_rgpstrNames; // The element type of each position: the names are those of the DTD.
   vector< _TyRgPositions > m_rgFollow; // The positions which may follow each position.

@@ -79,14 +79,70 @@ enum EXmlDtdParticle : uint8_t
   exdpEXmlDtdParticleCount
 };
 // A content particle [48] - and the content model of an element type with element content [47]: a choice or a sequence.
+// Groups may be within groups as deep as a document says: "((((...))))". So nothing is done to a particle by calling
+//  a function for each level - not freeing it, not copying it: a stack of the particles is kept instead. Otherwise a
+//  DTD of a few kilobytes is enough to overflow the stack of the thread which reads it.
 template < class t_TyChar >
 struct xml_dtd_content_particle
 {
+  typedef xml_dtd_content_particle _TyThis;
   typedef basic_string< t_TyChar > _TyStdStr;
   EXmlDtdParticle m_eParticle{ exdpName };
   EXmlDtdOccurrence m_eOccurrence{ exdoOnce };
   _TyStdStr m_strName; // The element type for exdpName.
   vector< xml_dtd_content_particle > m_rgChildren; // The particles of a choice or a sequence.
+
+  xml_dtd_content_particle() = default;
+  xml_dtd_content_particle( xml_dtd_content_particle && ) noexcept = default;
+  // Moving into this frees what this was: each particle that is freed is freed as below.
+  xml_dtd_content_particle & operator=( xml_dtd_content_particle && ) noexcept = default;
+  // Each level is copied as the levels above it are: the particles are copied from a stack of those yet to be.
+  xml_dtd_content_particle( xml_dtd_content_particle const & _r )
+    : m_eParticle( _r.m_eParticle ),
+      m_eOccurrence( _r.m_eOccurrence ),
+      m_strName( _r.m_strName )
+  {
+    vector< pair< const _TyThis *, _TyThis * > > rgToCopy{ { &_r, this } }; // The particles whose children are yet to be copied.
+    while ( !rgToCopy.empty() )
+    {
+      const auto [ kpcpFrom, pcpTo ] = rgToCopy.back();
+      rgToCopy.pop_back();
+      // All of the children are put in first: then the vector doesn't move them while we know where they are.
+      pcpTo->m_rgChildren.reserve( kpcpFrom->m_rgChildren.size() );
+      for ( _TyThis const & rcpChild : kpcpFrom->m_rgChildren )
+      {
+        _TyThis & rcpTo = pcpTo->m_rgChildren.emplace_back();
+        rcpTo.m_eParticle = rcpChild.m_eParticle;
+        rcpTo.m_eOccurrence = rcpChild.m_eOccurrence;
+        rcpTo.m_strName = rcpChild.m_strName;
+      }
+      for ( size_t nChild = 0; nChild < kpcpFrom->m_rgChildren.size(); ++nChild )
+        if ( !kpcpFrom->m_rgChildren[ nChild ].m_rgChildren.empty() )
+          rgToCopy.push_back( { &kpcpFrom->m_rgChildren[ nChild ], &pcpTo->m_rgChildren[ nChild ] } );
+    }
+  }
+  xml_dtd_content_particle & operator=( xml_dtd_content_particle const & _r )
+  {
+    if ( this != &_r )
+      *this = xml_dtd_content_particle( _r );
+    return *this;
+  }
+  // The descendants are taken from their parents into one vector - then each is freed with no children of its own.
+  ~xml_dtd_content_particle()
+  {
+    if ( m_rgChildren.empty() )
+      return;
+    vector< _TyThis > rgToFree( std::move( m_rgChildren ) );
+    for ( size_t nParticle = 0; nParticle < rgToFree.size(); ++nParticle )
+    {
+      if ( rgToFree[ nParticle ].m_rgChildren.empty() )
+        continue;
+      // Moved out first: rgToFree may move its contents as it grows. What is left of each child is nothing.
+      vector< _TyThis > rgChildren( std::move( rgToFree[ nParticle ].m_rgChildren ) );
+      for ( _TyThis & rcpChild : rgChildren )
+        rgToFree.push_back( std::move( rcpChild ) );
+    }
+  }
 };
 enum EXmlDtdContent : uint8_t
 {
