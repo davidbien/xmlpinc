@@ -38,6 +38,7 @@
 #include <set>
 #include "xml_output_tokens.h"
 #include "xml_attr_default.h"
+#include "xml_dtd.h"
 #include "_l_match.h"
 
 __XMLP_BEGIN_NAMESPACE
@@ -1292,8 +1293,9 @@ protected:
   }
   // Write the document type declaration: the token's value is its text from "<!DOCTYPE" through its '>' - see
   //  s_knTokenDoctypeDecl. It may be written once and only in the prolog.
-  // The text is written as it is. That of a token which a read cursor made was read by the parser of the DTD. A string
-  //  which comes from elsewhere is not parsed here: we check only that it begins and ends as a declaration does.
+  // The text is written as it is - once it is known to be a document type declaration: it is parsed as that of a
+  //  document is - see xml_dtd_parser<>::CheckDoctypeDeclText(). ( Also that of a token which a read cursor made: its
+  //  value is a string as any other and may be anyone's by now. )
   template < class t_TyXmlToken >
   void _WriteDoctypeDecl( t_TyXmlToken const & _rtok )
   {
@@ -1311,12 +1313,9 @@ protected:
       rval.ApplyString(
         [this]< typename t_TyChar >( const t_TyChar * _pcBegin, const t_TyChar * const _pcEnd )
         {
-          static constexpr char s_kszDoctypeBegin[] = "<!DOCTYPE";
-          const size_t knLenBegin = StaticStringLen( s_kszDoctypeBegin );
-          bool fLooksLikeOne = ( size_t( _pcEnd - _pcBegin ) > knLenBegin ) && ( t_TyChar( '>' ) == _pcEnd[-1] );
-          for ( size_t n = 0; fLooksLikeOne && ( n < knLenBegin ); ++n )
-            fLooksLikeOne = ( t_TyChar( s_kszDoctypeBegin[n] ) == _pcBegin[n] );
-          VerifyThrowSz( fLooksLikeOne, "The text of a document type declaration must be all of it: from its \"<!DOCTYPE\" through its '>'." );
+          // The parser is that of the type of character of this size.
+          typedef conditional_t< sizeof( t_TyChar ) == sizeof( char8_t ), char8_t, conditional_t< sizeof( t_TyChar ) == sizeof( char16_t ), char16_t, char32_t > > _TyCharDtd;
+          xml_dtd_parser< _TyCharDtd >::CheckDoctypeDeclText( basic_string_view< _TyCharDtd >( (const _TyCharDtd *)_pcBegin, size_t( _pcEnd - _pcBegin ) ) );
           _WriteTransportRaw( _pcBegin, _pcEnd );
         }
       );
@@ -1372,6 +1371,7 @@ protected:
     _CheckCommitCur();
     _WriteTransportRaw( _TyMarkupTraits::s_kszCDataSectionBegin, StaticStringLen( _TyMarkupTraits::s_kszCDataSectionBegin ) );
     // If we find illegal characters within a CDATA section then there is no remedy. (Well we could end the CDataSection and put in a CharRef, but we aren't doing that now.)
+    // That is what is done for a #xD - which is not illegal, and which would be read as the end of a line: see _WriteCDataRun().
     // If we find a "]]>" embedded in the CDataSection then we will appropriately escape it with an overlapping CDataSection. I.e.: "<![CDATA[]]]]><![CDATA[>]]>".
     const _TyLexValue & rval = _rtok.GetValue();
     // We should see either a single data range here or some type of string.
@@ -1399,12 +1399,13 @@ protected:
             if ( pcMatch == _pcEnd ) // most likely occurence
             {
               Assert( !pspAccept->FIsAntiAcceptingState() );
-              _WriteTransportRaw( pcCur, _pcEnd );
+              _WriteCDataRun( pcCur, _pcEnd );
               return; // all done.
             }
             Assert( ( pcMatch[-3] == t_TyChar(']') ) && ( pcMatch[-2] == t_TyChar(']') ) && ( pcMatch[-1] == t_TyChar('>') ) );
-            _WriteTransportRaw( pcCur, pcMatch-1 );
-            pcCur = pcMatch - 1;
+            // The "]]>" is replaced - all three of its characters: what is before it is written and then the replacement.
+            _WriteCDataRun( pcCur, pcMatch-3 );
+            pcCur = pcMatch;
             _WriteTransportRaw( _TyMarkupTraits::s_kszCDataSectionReplaceEnd, StaticStringLen( _TyMarkupTraits::s_kszCDataSectionReplaceEnd ) );
           }
         }
@@ -1412,9 +1413,40 @@ protected:
     }
     else
     {
-      _WriteTypedData( _rtok, rval );
+      // The text of the document as it is - but for text whose #xD's are characters of it: see s_kdtfLiteralLineEnds.
+      typedef _l_data<> _TyData;
+      _TyData const & krdt = rval.GetTypedData();
+      if ( !krdt.FIsNull() && krdt.FContainsSingleDataRange() && !!( s_kdtfLiteralLineEnds & krdt.DataRangeGetSingle().type() ) )
+      {
+        basic_string_view< typename t_TyXmlToken::_TyChar > sv;
+        _rtok.GetLexToken().KGetStringView( sv, krdt.DataRangeGetSingle().GetRangeBase() );
+        _WriteCDataRun( sv.data(), sv.data() + sv.length() );
+      }
+      else
+        _WriteTypedData( _rtok, rval );
     }
     _WriteTransportRaw( _TyMarkupTraits::s_kszCDataSectionEnd, StaticStringLen( _TyMarkupTraits::s_kszCDataSectionEnd ) );
+  }
+  // Write characters of a CDATA section which may be written as they are. But a #xD would be read as the end of a
+  //  line - as #xA ( 2.11 ) - and within the section there is no writing a reference to it: the section is ended, the
+  //  reference is written and the section is begun again. What is read is then what we were given - as a section,
+  //  character data which is the #xD, and a section.
+  template < class t_TyCharValue >
+  void _WriteCDataRun( const t_TyCharValue * _pcBegin, const t_TyCharValue * const _pcEnd )
+  {
+    static constexpr _TyChar s_kszCarriageReturn[] = { _TyChar('1'), _TyChar('3'), 0 };
+    const t_TyCharValue * pcRun = _pcBegin;
+    for ( const t_TyCharValue * pcCur = std::find( _pcBegin, _pcEnd, t_TyCharValue( 0xD ) ); _pcEnd != pcCur; pcCur = std::find( pcCur, _pcEnd, t_TyCharValue( 0xD ) ) )
+    {
+      _WriteTransportRaw( pcRun, pcCur );
+      pcRun = ++pcCur;
+      _WriteTransportRaw( _TyMarkupTraits::s_kszCDataSectionEnd, StaticStringLen( _TyMarkupTraits::s_kszCDataSectionEnd ) );
+      _WriteTransportRaw( _TyMarkupTraits::s_kszCharDecRefBegin, StaticStringLen( _TyMarkupTraits::s_kszCharDecRefBegin ) );
+      _WriteTransportRaw( s_kszCarriageReturn, StrNLen( s_kszCarriageReturn ) );
+      _WriteTransportRaw( _TyMarkupTraits::s_kszReferenceEnd, StaticStringLen( _TyMarkupTraits::s_kszReferenceEnd ) );
+      _WriteTransportRaw( _TyMarkupTraits::s_kszCDataSectionBegin, StaticStringLen( _TyMarkupTraits::s_kszCDataSectionBegin ) );
+    }
+    _WriteTransportRaw( pcRun, _pcEnd );
   }
   // Write a string which is character data or the value of an attribute - validating it and escaping what must be: see
   //  _WriteCharAndAttrData() below for what is done and for _edrDetectReferences, which may not be edrDetectReferencesCount here.

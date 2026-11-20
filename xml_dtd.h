@@ -1777,6 +1777,19 @@ public:
   {
     _StripTextDecl( _rstrText );
   }
+  // Whether the text is a document type declaration [28] - all of it, from its "<!DOCTYPE" through its '>', and
+  //  nothing more: it is parsed as that of a document is. Nothing external is read. Throws if it isn't one.
+  // ( The declarations nest - a content model within a content model - so this is for the parser: there is no DFA
+  //  which says so as there is for a comment or for character data. )
+  static void CheckDoctypeDeclText( _TyStrView _svText )
+  {
+    _TyDtd dtd;
+    _TyThis dtdParser( dtd );
+    _TyAnalyzerMemory analyzer;
+    analyzer.emplaceTransport( _svText.data(), _svText.length() );
+    dtdParser.ParseDoctypeDecl( analyzer );
+    VerifyThrowSz( size_t( analyzer.GetStream().PosTokenStart() ) == _svText.length(), "There is text after the '>' which ends the document type declaration." );
+  }
 protected:
   static void _StripTextDecl( _TyStdStr & _rstrText )
   {
