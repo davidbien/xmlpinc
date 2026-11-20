@@ -141,6 +141,34 @@ public:
   {
     return m_edrDetectReferences;
   }
+  // Pretty printing - see xml_writer<>::SetOutputFormat(): whether what is within the element is indented - it isn't once
+  //  text is written within it, nor where xml:space="preserve" is in scope.
+  bool FIndentWithin() const
+  {
+    return !m_fMixed && !m_fPreserveSpace;
+  }
+  void SetMixed()
+  {
+    m_fMixed = true;
+  }
+  void SetPreserveSpace( bool _fPreserveSpace )
+  {
+    m_fPreserveSpace = _fPreserveSpace;
+  }
+  bool FHadChildMarkup() const
+  {
+    return m_fHadChildMarkup;
+  }
+  void SetHadChildMarkup()
+  {
+    m_fHadChildMarkup = true;
+  }
+  // An element is as the one which it is within - until what it has says otherwise.
+  void InheritFormat( _TyThis const & _rwcxWithin )
+  {
+    m_fMixed = _rwcxWithin.m_fMixed;
+    m_fPreserveSpace = _rwcxWithin.m_fPreserveSpace;
+  }
   // The document context of the writer - that of the tokens which it makes.
   auto & GetDocumentContext()
   {
@@ -204,6 +232,10 @@ protected:
   _TyXmlToken m_xtkToken; // This is always a tag token. It really doesn't matter if the id is s_knTokenSTag or s_knTokenEmptyElemTag.
   bool m_fCommitted{false}; // Committed yet?
   optional< bool > m_optfFullEnd; // See SetFullEnd().
+  // Pretty printing - see xml_writer<>::SetOutputFormat():
+  bool m_fMixed{false}; // Text was written within it - or within an element which it is within, before it was begun.
+  bool m_fPreserveSpace{false}; // xml:space="preserve" is in scope.
+  bool m_fHadChildMarkup{false}; // Markup was written within it on a line of its own: its end tag is on one as well.
   EDetectReferences m_edrDetectReferences{ edrDetectReferencesCount }; // User can override this inside of xml_write_tag.
 };
 
@@ -475,6 +507,26 @@ public:
     _Init( _rXmlDeclProperties, _pxofFormat, _fKeepEncoding ); // This might write the XMLDecl tag to the file, but definitely will init the context stack.
   }
 // options:
+  // How what is written is formatted - see _xml_output_format. Unless m_fNoFormatting it is pretty printed - to be looked
+  //  at: each tag, comment and processing instruction within an element is on a line of its own, indented by its depth.
+  //  Character data which is only white space is not written where the indentation is in its place - between the markup
+  //  within an element and at the top level - and the white space within tags is a single space. An element within which
+  //  text is written - character data, a CDATA section, a reference - has mixed content: nothing more within it is
+  //  indented, as nothing is where xml:space="preserve" is in scope ( 2.10 ). So the white space of the document is
+  //  changed - but for that the document is as it was.
+  // It applies when a transport is opened - the format given to OpenFile() or OpenMemFile() is used instead if one is.
+  void SetOutputFormat( _xml_output_format const & _rxof )
+  {
+    m_optxofFormat = _rxof;
+  }
+  void ClearOutputFormat()
+  {
+    m_optxofFormat.reset();
+  }
+  bool FPrettyPrint() const
+  {
+    return m_fPrettyPrint;
+  }
   void SetWriteBOM( bool _fWriteBOM )
   {
     VerifyThrowSz( ( m_fWriteBOM == _fWriteBOM ) || !FHasTransport(), "Mustn't change the use of namespaces after opening a transport." );
@@ -864,10 +916,13 @@ public:
     auto sv = SvXmlStrArg( _rStr );
     if ( sv.empty() )
       return; // Nothing is written - and the tag which it would be within is as it was: <name/> if nothing else is.
+    if ( m_fPrettyPrint && _FSkipWhiteSpace( _FIsWhiteSpace( sv.data(), sv.data() + sv.length() ) ) )
+      return; // The indentation is in its place - see SetOutputFormat().
     _WriteChecked( [this,&sv]()
       {
         _WriteCharAndAttrString< TGetCharDataStart >( sv.data(), sv.data() + sv.length(), edrNoReferences );
       } );
+    _MarkMixed();
   }
   // A reference to the general entity _rName: one of the five which XML predefines ( 4.6 ), or one which the document type
   //  declaration which was written declares - or may declare, if it has an external subset or a reference to a parameter
@@ -894,6 +949,7 @@ public:
     _WriteTransportRaw( _TyMarkupTraits::s_kszEntityRefRefBegin, StaticStringLen( _TyMarkupTraits::s_kszEntityRefRefBegin ) );
     _WriteTransportRaw( strName.data(), strName.length() );
     _WriteTransportRaw( _TyMarkupTraits::s_kszReferenceEnd, StaticStringLen( _TyMarkupTraits::s_kszReferenceEnd ) );
+    _MarkMixed();
   }
   // A reference to the character _ucChar: &#xhhhh; - it is to be a Char [2]. Within the document element.
   void WriteCharReference( char32_t _ucChar )
@@ -911,6 +967,7 @@ public:
       _WriteTransportRaw( &ch, 1 );
     }
     _WriteTransportRaw( _TyMarkupTraits::s_kszReferenceEnd, StaticStringLen( _TyMarkupTraits::s_kszReferenceEnd ) );
+    _MarkMixed();
   }
   // <!--text--> - the text hasn't "--" and doesn't end with '-' ( [15] ).
   template < class t_TyStr >
@@ -921,9 +978,11 @@ public:
     auto sv = SvXmlStrArg( _rStr );
     _WriteChecked( [this,&sv]()
       {
+        _FormatBeforeContentMarkup();
         _WriteTransportRaw( _TyMarkupTraits::s_kszCommentBegin, StaticStringLen( _TyMarkupTraits::s_kszCommentBegin ) );
         _WriteCommentString( sv.data(), sv.data() + sv.length() );
         _WriteTransportRaw( _TyMarkupTraits::s_kszCommentEnd, StaticStringLen( _TyMarkupTraits::s_kszCommentEnd ) );
+        _FormatAfterTopLevel();
       } );
   }
   // <?target data?> - or <?target?> if the data is empty ( [16] ). The target is a name and not "xml" in any case; the
@@ -945,6 +1004,7 @@ public:
     auto svData = SvXmlStrArg( _rData );
     _WriteChecked( [this,&strTarget,&svData]()
       {
+        _FormatBeforeContentMarkup();
         _WriteTransportRaw( _TyMarkupTraits::s_kszProcessingInstructionBegin, StaticStringLen( _TyMarkupTraits::s_kszProcessingInstructionBegin ) );
         _WritePIString< TGetPITargetStart >( strTarget.data(), strTarget.data() + strTarget.length() );
         if ( !svData.empty() )
@@ -953,6 +1013,7 @@ public:
           _WritePIString< TGetPITargetMeatStart >( svData.data(), svData.data() + svData.length() );
         }
         _WriteTransportRaw( _TyMarkupTraits::s_kszProcessingInstructionEnd, StaticStringLen( _TyMarkupTraits::s_kszProcessingInstructionEnd ) );
+        _FormatAfterTopLevel();
       } );
   }
   // <![CDATA[text]]> - a "]]>" of the text is written in two sections, as is a #xD. Within the document element.
@@ -969,6 +1030,7 @@ public:
         _WriteCDataString( sv.data(), sv.data() + sv.length() );
         _WriteTransportRaw( _TyMarkupTraits::s_kszCDataSectionEnd, StaticStringLen( _TyMarkupTraits::s_kszCDataSectionEnd ) );
       } );
+    _MarkMixed();
   }
   // The document type declaration - all of its text, from its "<!DOCTYPE" through its '>': it is parsed as that of a
   //  document is - nothing external is read - and the general entities which it declares may then be referred to. Once,
@@ -996,6 +1058,7 @@ public:
       ( dtd.m_rgItems.end() == std::find_if( dtd.m_rgItems.begin(), dtd.m_rgItems.end(), []( auto const & _ritem ) { return exdiParameterEntityReference == _ritem.m_eItem; } ) );
     _WriteTransportRaw( sv.data(), sv.length() );
     m_fWroteDoctypeDecl = true;
+    _FormatAfterTopLevel();
   }
   // <!DOCTYPE name PUBLIC "publicId" "systemId" [internalSubset]> - an empty string is one which isn't given: there is a
   //  system identifier if there is a public one. A literal is in '"' unless it has one.
@@ -1090,6 +1153,7 @@ public:
       tokThis._FixupNamespaceDeclarations( m_xdcxtDocumentContext, ctxtTokenCopy );
     tokThis.AssertValid( m_fUseNamespaces );
     _TyWriteContext & rwcxNew = m_lContexts.emplace_back( this, std::move( tokThis ) );
+    rwcxNew.InheritFormat( *std::prev( std::prev( m_lContexts.end() ) ) );
     return _TyXmlWriteTag( rwcxNew );
   }
   // Start a tag by moving its contents into this object.
@@ -1115,6 +1179,7 @@ public:
     if ( _fKeepTagName )
       _rrtok[vknTagNameIdx][vknNameIdx] = std::move( rvNameCopy );
     _TyWriteContext & rwcxNew = m_lContexts.emplace_back( this, std::move( tokThis ) );
+    rwcxNew.InheritFormat( *std::prev( std::prev( m_lContexts.end() ) ) );
     return _TyXmlWriteTag( rwcxNew );
   }
   // The entities of the document which a token comes from: those which its DTD declared, which the user object of its
@@ -1218,12 +1283,17 @@ public:
     if ( !fHadUnendedTag || ( _pwcxEnd->FFullEnd() ) )
     {
       // We have already validate the tag name so we can just write it:
+      // Pretty printing: on a line of its own if what was within it was.
+      if ( m_fPrettyPrint && _pwcxEnd->FHadChildMarkup() && _pwcxEnd->FIndentWithin() )
+        _WriteNewLineIndent( m_lContexts.size() - 2 );
       _WriteTransportRaw( _TyMarkupTraits::s_kszEndTagBegin, StaticStringLen( _TyMarkupTraits::s_kszEndTagBegin ) );
       _WriteName( _pwcxEnd->GetToken(), _pwcxEnd->GetToken()[vknTagNameIdx] );
-      _WriteTransportRaw( _pwcxEnd->RStrEndTagSpace().data(), _pwcxEnd->RStrEndTagSpace().length() );
+      if ( !m_fPrettyPrint ) // Pretty printed there is no white space within a tag but a single space before each attribute.
+        _WriteTransportRaw( _pwcxEnd->RStrEndTagSpace().data(), _pwcxEnd->RStrEndTagSpace().length() );
       _WriteTransportRaw( _TyMarkupTraits::s_kszTagEnd, StaticStringLen( _TyMarkupTraits::s_kszTagEnd ) );
     }
     m_lContexts.pop_back();
+    _FormatAfterTopLevel(); // The document element was ended.
   }
   // Write a non-tag token to the output transport at the current position.
   // Validation is performed - e.g. only whitespace chardata is allowed before the first tag.
@@ -1250,8 +1320,11 @@ public:
       case s_knTokenCharData:
       {
         // Must be a single value here:
+        if ( m_fPrettyPrint && _FSkipWhiteSpace( _FIsWhiteSpaceValue( _rtok, _rtok.GetValue() ) ) )
+          break; // The indentation is in its place - see SetOutputFormat().
         _CheckCommitCur();
         _WriteCharAndAttrData< TGetCharDataStart >( _rtok, _rtok.GetValue() );
+        _MarkMixed();
       }
       break;
       case s_knTokenProcessingInstruction:
@@ -1281,6 +1354,17 @@ protected:
     _TyPrFormatContext prFormatContext;
     if ( _pxofFormat )
       prFormatContext.first = *_pxofFormat;
+    else
+    if ( m_optxofFormat.has_value() )
+      prFormatContext.first = *m_optxofFormat;
+    // Pretty printing - see SetOutputFormat().
+    m_fPrettyPrint = !prFormatContext.first.m_fNoFormatting;
+    m_strIndent.clear();
+    if ( prFormatContext.first.FUseTabsForIndent() )
+      m_strIndent.assign( 1, _TyChar( '\t' ) );
+    else
+      m_strIndent.assign( prFormatContext.first.NSpacesPerIndent(), _TyChar( ' ' ) );
+    m_nMaxIndentLevels = prFormatContext.first.m_nMaximumIndentLevelForWhitespace;
     // Always obtain the encoding from the passed XMLDeclProperties.
     m_xdcxtDocumentContext.Init( _fKeepEncoding ? efceFileCharacterEncodingCount : _TyXmlTransportOut::GetEncoding(), m_fUseNamespaces, &_rXmlDeclProperties, &prFormatContext );
     m_lContexts.clear();
@@ -1294,9 +1378,12 @@ protected:
     m_pvUserObjSource = nullptr;
     m_fHaveUnendedTag = false;
     m_strUnendedTagSpace.clear();
-    if ( m_fWriteXMLDecl )
-      _WriteXmlDecl();
     m_lContexts.emplace_back( this, m_xdcxtDocumentContext.GetUserObj(), s_knTokenXMLDecl  ); // create the XMLDecl pseudo-tag.
+    if ( m_fWriteXMLDecl )
+    {
+      _WriteXmlDecl();
+      _FormatAfterTopLevel();
+    }
   }
   template < class t_TyChar >
   void _WriteTransportRaw( t_TyChar const * _pcBegin, t_TyChar const * _pcEnd )
@@ -1331,6 +1418,141 @@ protected:
     _rtok.GetLexToken().KGetStringView( sv, krdt.DataRangeGetSingle().GetRangeBase() );
     _WriteTransportRaw( &sv[0], sv.length() );
   }
+  // Pretty printing - see xml_writer<>::SetOutputFormat():
+  // A new line and the indentation of _nLevel - the element at the top level is at level zero.
+  void _WriteNewLineIndent( size_t _nLevel )
+  {
+    static constexpr _TyChar s_kszNewLine[] = { _TyChar( '\n' ), 0 };
+    _WriteTransportRaw( s_kszNewLine, 1 );
+    const size_t knLevels = ( std::min )( _nLevel, m_nMaxIndentLevels );
+    for ( size_t nLevel = 0; nLevel < knLevels; ++nLevel )
+      _WriteTransportRaw( m_strIndent.data(), m_strIndent.length() );
+  }
+  // Before markup - a tag, a comment, a processing instruction - within _rwcxWithin: within an element which is indented
+  //  it is on a line of its own at _nLevel. ( At the top level each line was ended after what was on it - see
+  //  _FormatAfterTopLevel(). ) Nothing is done in a dry run.
+  void _FormatBefore( _TyWriteContext & _rwcxWithin, size_t _nLevel )
+  {
+    if ( !m_fPrettyPrint || !!m_nDryRun || ( &_rwcxWithin == &m_lContexts.front() ) || !_rwcxWithin.FIndentWithin() )
+      return;
+    _WriteNewLineIndent( _nLevel );
+    _rwcxWithin.SetHadChildMarkup();
+  }
+  // Before markup within the current element - or at the top level.
+  void _FormatBeforeContentMarkup()
+  {
+    _FormatBefore( m_lContexts.back(), m_lContexts.size() - 1 );
+  }
+  // After what is at the top level - the XML declaration, the document type declaration, a comment, a processing
+  //  instruction, the document element: its line is ended.
+  void _FormatAfterTopLevel()
+  {
+    static constexpr _TyChar s_kszNewLine[] = { _TyChar( '\n' ), 0 };
+    if ( m_fPrettyPrint && !m_nDryRun && ( 1 == m_lContexts.size() ) )
+      _WriteTransportRaw( s_kszNewLine, 1 );
+  }
+  // Text - character data, a CDATA section, a reference - was written within the current element: its content is mixed and
+  //  nothing more within it is indented.
+  void _MarkMixed()
+  {
+    if ( FInsideDocumentTag() && !m_nDryRun )
+      m_lContexts.back().SetMixed();
+  }
+  // Whether character data isn't written when pretty printing: white space where the indentation is in its place - between
+  //  the markup within an element which is indented and at the top level.
+  bool _FSkipWhiteSpace( bool _fIsWhiteSpace ) const
+  {
+    return m_fPrettyPrint && _fIsWhiteSpace && ( !FInsideDocumentTag() || m_lContexts.back().FIndentWithin() );
+  }
+  template < class t_TyChar >
+  static bool _FIsWhiteSpace( const t_TyChar * _pcBegin, const t_TyChar * const _pcEnd )
+  {
+    for ( ; _pcEnd != _pcBegin; ++_pcBegin )
+      if ( ( t_TyChar( 0x20 ) != *_pcBegin ) && ( t_TyChar( 0x9 ) != *_pcBegin ) && ( t_TyChar( 0xA ) != *_pcBegin ) && ( t_TyChar( 0xD ) != *_pcBegin ) )
+        return false;
+    return true;
+  }
+  // Whether the character data of a token is white space only - text which is that and no reference.
+  template < class t_TyXmlToken >
+  static bool _FIsWhiteSpaceValue( t_TyXmlToken const & _rtok, typename t_TyXmlToken::_TyLexValue const & _rval )
+  {
+    if ( !_rval.FHasTypedData() )
+    {
+      bool fIsWhiteSpace = true;
+      _rval.ApplyString(
+        [&fIsWhiteSpace]< typename t_TyChar >( const t_TyChar * _pcBegin, const t_TyChar * const _pcEnd )
+        {
+          fIsWhiteSpace = _FIsWhiteSpace( _pcBegin, _pcEnd );
+        }
+      );
+      return fIsWhiteSpace;
+    }
+    _l_data<> const & krdt = _rval.GetTypedData();
+    if ( krdt.FIsNull() )
+      return true;
+    bool fIsWhiteSpace = true;
+    krdt.Apply(
+      [&_rtok,&fIsWhiteSpace]( const _l_data_typed_range * _pdtrBegin, const _l_data_typed_range * _pdtrEnd )
+      {
+        for ( const _l_data_typed_range * pdtrCur = _pdtrBegin; fIsWhiteSpace && ( _pdtrEnd != pdtrCur ); ++pdtrCur )
+        {
+          if ( s_kdtPlainText != DtGetType( pdtrCur->type() ) )
+          {
+            fIsWhiteSpace = false;
+            break;
+          }
+          basic_string_view< typename t_TyXmlToken::_TyChar > sv;
+          _rtok.GetLexToken().KGetStringView( sv, pdtrCur->GetRangeBase() );
+          fIsWhiteSpace = _FIsWhiteSpace( sv.data(), sv.data() + sv.length() );
+        }
+      }
+    );
+    return fIsWhiteSpace;
+  }
+  // xml:space ( 2.10 ) of the tag which is committed: "preserve" - its white space is kept and nothing within it is
+  //  indented - or "default". Otherwise it is as the element which it is within.
+  template < class t_TyXmlToken >
+  void _SetXmlSpace( t_TyXmlToken const & _rtok, _TyWriteContext & _rwcx )
+  {
+    typedef typename t_TyXmlToken::_TyLexValue _TyLexValue;
+    typedef typename t_TyXmlToken::_TyChar _TyCharTok;
+    typedef basic_string_view< _TyCharTok > _TyStrViewTok;
+    auto FEquals = []( _TyStrViewTok _sv, const char * _psz ) -> bool
+    {
+      const size_t knLen = strlen( _psz );
+      if ( knLen != _sv.length() )
+        return false;
+      for ( size_t n = 0; n < knLen; ++n )
+        if ( _sv[n] != _TyCharTok( _psz[n] ) )
+          return false;
+      return true;
+    };
+    const _TyLexValue & rrgAttrs = _rtok.GetValue()[vknAttributesIdx];
+    for ( size_t nAttr = 0; nAttr < rrgAttrs.GetSize(); ++nAttr )
+    {
+      const _TyLexValue & rvalAttr = rrgAttrs[nAttr];
+      _TyStrViewTok svName;
+      basic_string< _TyCharTok > strName;
+      (void)_rtok.GetLexToken().FGetStringViewOrString( svName, strName, rvalAttr[vknNameIdx] );
+      // Its name is as it was read or made: with its prefix, or without it when the namespace has it.
+      const _TyLexValue & rvalNS = rvalAttr[vknNamespaceIdx];
+      const bool kfPrefixXml = rvalNS.template FIsA< xml_namespace_value_wrap< _TyCharTok > >() &&
+        FEquals( _TyStrViewTok( rvalNS.template GetVal< xml_namespace_value_wrap< _TyCharTok > >().RStringPrefix() ), "xml" );
+      if ( !FEquals( svName, "xml:space" ) && !( kfPrefixXml && FEquals( svName, "space" ) ) )
+        continue;
+      const _TyLexValue & rvalValue = rvalAttr[vknAttr_ValueIdx];
+      basic_string< _TyCharTok > strValue;
+      if ( FIsAttrDefaultValue( rvalValue ) )
+        strValue = rvalValue.template GetVal< xml_attr_default_value< _TyCharTok > >().SvValue();
+      else
+        _rtok.GetLexToken().GetString( strValue, rvalValue );
+      if ( FEquals( strValue, "preserve" ) )
+        _rwcx.SetPreserveSpace( true );
+      else
+      if ( FEquals( strValue, "default" ) )
+        _rwcx.SetPreserveSpace( false );
+    }
+  }
   void _CheckNotEnded() const
   {
     VerifyThrowSz( !m_fEndedDocument, "The document was ended - see EndDocument()." );
@@ -1348,6 +1570,7 @@ protected:
   {
     _CheckStartTag();
     _TyWriteContext & rwcxNew = m_lContexts.emplace_back( this, m_xdcxtDocumentContext.GetUserObj(), s_knTokenEmptyElemTag );
+    rwcxNew.InheritFormat( *std::prev( std::prev( m_lContexts.end() ) ) );
     rwcxNew.SetDetectReferences( edrNoReferences );
     return rwcxNew;
   }
@@ -1480,6 +1703,14 @@ protected:
           _WriteCharAndAttrData< TGetAttCharDataNoSingleQuoteStart >( _rtok, rvalValue, _edrDetectReferences );
       }
     }
+    // Pretty printing: the tag is on a line of its own within an element which is indented - and xml:space of the tag is
+    //  had for what is within it. ( The tag which is committed is the current one. )
+    if ( m_fPrettyPrint )
+    {
+      Assert( ( m_lContexts.size() >= 2 ) && ( &_rtok == &m_lContexts.back().GetToken() ) );
+      _FormatBefore( *std::prev( std::prev( m_lContexts.end() ) ), m_lContexts.size() - 2 );
+      _SetXmlSpace( _rtok, m_lContexts.back() );
+    }
     _WriteTransportRaw( _TyMarkupTraits::s_kszTagBegin, StaticStringLen( _TyMarkupTraits::s_kszTagBegin ) );
     m_fHaveUnendedTag = true;
     // We are no longer in the prolog: a string which is written from here - the value of an attribute of this very tag
@@ -1489,7 +1720,8 @@ protected:
     _WriteName( _rtok, rvalRoot[vknTagNameIdx] );
     // The white space of the tag as it was written - if it was read.
     _TyTagSpaces tagSpaces;
-    _GetTagSpaces( _rtok, tagSpaces );
+    if ( !m_fPrettyPrint ) // Pretty printed it is a single space before each attribute.
+      _GetTagSpaces( _rtok, tagSpaces );
     m_strUnendedTagSpace = tagSpaces.m_strBeforeEnd;
     // Move through all attributes writing each.
     const _TyLexValue & rrgAttrs = rvalRoot[vknAttributesIdx];
@@ -1808,6 +2040,7 @@ protected:
   {
     typedef typename t_TyXmlToken::_TyLexValue _TyLexValue;
     _CheckCommitCur();
+    _FormatBeforeContentMarkup();
     _WriteTransportRaw( _TyMarkupTraits::s_kszCommentBegin, StaticStringLen( _TyMarkupTraits::s_kszCommentBegin ) );
     // Scenarios:
     // 1) We do everything in the character type of t_TyXmlToken. There is no reason to convert because we can just convert on output and that doesn't require a buffer.
@@ -1832,6 +2065,7 @@ protected:
       _WriteTypedData( _rtok, rval );
     }
     _WriteTransportRaw( _TyMarkupTraits::s_kszCommentEnd, StaticStringLen( _TyMarkupTraits::s_kszCommentEnd ) );
+    _FormatAfterTopLevel();
   }
   // The content of a general entity - see s_knTokenEntityContentBegin: the tokens between these two are what the entity
   //  of the document which was read has.
@@ -1856,6 +2090,7 @@ protected:
         }
       );
       _WriteTransportRaw( _TyMarkupTraits::s_kszReferenceEnd, StaticStringLen( _TyMarkupTraits::s_kszReferenceEnd ) );
+      _MarkMixed();
     }
     ++m_nWithinEntityReference;
   }
@@ -1894,6 +2129,7 @@ protected:
       );
     }
     m_fWroteDoctypeDecl = true;
+    _FormatAfterTopLevel();
     m_setDeclaredEntities.clear(); // Those of the document which it is of - see _ImportEntitiesOfSource() - and perhaps more.
     m_fDeclaredEntitiesComplete = false;
   }
@@ -1918,6 +2154,7 @@ protected:
   {
     typedef typename t_TyXmlToken::_TyLexValue _TyLexValue;
     _CheckCommitCur();
+    _FormatBeforeContentMarkup();
     _WriteTransportRaw( _TyMarkupTraits::s_kszProcessingInstructionBegin, StaticStringLen( _TyMarkupTraits::s_kszProcessingInstructionBegin ) );
     const _TyLexValue & rval = _rtok.GetValue();
     VerifyThrow( rval.FIsArray() );
@@ -1929,6 +2166,7 @@ protected:
       _WritePIPortion< TGetPITargetMeatStart >( _rtok, rval[vknProcessingInstruction_MeatIdx] );
     }
     _WriteTransportRaw( _TyMarkupTraits::s_kszProcessingInstructionEnd, StaticStringLen( _TyMarkupTraits::s_kszProcessingInstructionEnd ) );
+    _FormatAfterTopLevel();
   }
   template < class t_TyXmlToken >
   void _WriteCDataSection( t_TyXmlToken const & _rtok )
@@ -1967,6 +2205,7 @@ protected:
         _WriteTypedData( _rtok, rval );
     }
     _WriteTransportRaw( _TyMarkupTraits::s_kszCDataSectionEnd, StaticStringLen( _TyMarkupTraits::s_kszCDataSectionEnd ) );
+    _MarkMixed();
   }
   // Write characters of a CDATA section which may be written as they are. But a #xD would be read as the end of a
   //  line - as #xA ( 2.11 ) - and within the section there is no writing a reference to it: the section is ended, the
@@ -2279,7 +2518,12 @@ protected:
   set< _TyStdStr, std::less<> > m_setDeclaredEntities;
   bool m_fDeclaredEntitiesComplete{false};
   size_t m_nWithinEntityReference{0};
-  size_t m_nDryRun{0}; // Nothing is written - see _WriteChecked(). // We are within what an entity has and its reference is what was written: nothing is.
+  size_t m_nDryRun{0}; // Nothing is written - see _WriteChecked().
+  // Pretty printing - see SetOutputFormat():
+  optional< _xml_output_format > m_optxofFormat; // The format of what is written - unless OpenFile() or OpenMemFile() is given one.
+  bool m_fPrettyPrint{false};
+  _TyStdStr m_strIndent; // The indentation of a level.
+  size_t m_nMaxIndentLevels{0}; // Deeper than this the indentation is that of this. // We are within what an entity has and its reference is what was written: nothing is.
   // The names of the entities which we have from the documents whose tokens we are given - see _ImportEntitiesOfSource().
   set< _TyStdStr, std::less<> > m_setEntitiesOfSource;
   const void * m_pvUserObjSource{nullptr}; // The user object from which we last had them.
