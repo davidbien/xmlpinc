@@ -24,11 +24,11 @@ using TGetAnalyzerBase = _l_analyzer< t_TyTraits, false, true >;
 typedef _l_state_proto< char32_t > vTyStateProtoChar32;
 
 template < class t_TyTraits >
-extern _l_state< char32_t, 8, false, false, 0, 0 >		startUTF32All;
+extern _l_state< char32_t, 11, false, false, 0, 0 >		startUTF32All;
 template < class t_TyTraits >
-extern _l_state< char32_t, 6, false, false, 0, 0 >		stateUTF32_1;
+extern _l_state< char32_t, 9, false, false, 0, 0 >		stateUTF32_1;
 template < class t_TyTraits >
-extern _l_state< char32_t, 6, false, false, 0, 0 >		stateUTF32_2;
+extern _l_state< char32_t, 9, false, false, 0, 0 >		stateUTF32_2;
 template < class t_TyTraits >
 extern _l_state< char32_t, 3, false, false, 0, 0 >		stateUTF32_3;
 template < class t_TyTraits >
@@ -36,7 +36,7 @@ extern _l_state< char32_t, 1, false, false, 0, 0 >		stateUTF32_4;
 template < class t_TyTraits >
 extern _l_state< char32_t, 0, false, false, 0, 1 >		stateUTF32_5;
 template < class t_TyTraits >
-extern _l_state< char32_t, 8, false, false, 0, 0 >		stateUTF32_6;
+extern _l_state< char32_t, 11, false, false, 0, 0 >		stateUTF32_6;
 template < class t_TyTraits >
 extern _l_state< char32_t, 0, false, false, 0, 1 >		stateUTF32_7;
 template < class t_TyTraits >
@@ -50,9 +50,9 @@ extern _l_state< char32_t, 0, false, false, 0, 1 >		stateUTF32_11;
 template < class t_TyTraits >
 extern _l_state< char32_t, 1, false, false, 0, 0 >		stateUTF32_12;
 template < class t_TyTraits >
-extern _l_state< char32_t, 7, true, false, 0, 0 >		stateUTF32_13;
+extern _l_state< char32_t, 10, true, false, 0, 0 >		stateUTF32_13;
 template < class t_TyTraits >
-extern _l_state< char32_t, 4, false, false, 0, 0 >		stateUTF32_14;
+extern _l_state< char32_t, 7, false, false, 0, 0 >		stateUTF32_14;
 template < class t_TyTraits >
 extern _l_state< char32_t, 16, false, false, 0, 0 >		stateUTF32_15;
 template < class t_TyTraits >
@@ -70,9 +70,9 @@ extern _l_state< char32_t, 0, false, false, 0, 1 >		stateUTF32_21;
 template < class t_TyTraits >
 extern _l_state< char32_t, 0, false, false, 0, 0 >		stateUTF32_22;
 template < class t_TyTraits >
-extern _l_state< char32_t, 6, false, false, 0, 0 >		stateUTF32_23;
+extern _l_state< char32_t, 9, false, false, 0, 0 >		stateUTF32_23;
 template < class t_TyTraits >
-extern _l_state< char32_t, 6, false, false, 0, 0 >		stateUTF32_24;
+extern _l_state< char32_t, 9, false, false, 0, 0 >		stateUTF32_24;
 template < class t_TyTraits >
 extern _l_state< char32_t, 18, false, false, 0, 0 >		stateUTF32_25;
 template < class t_TyTraits >
@@ -90,7 +90,7 @@ extern _l_state< char32_t, 1, false, false, 0, 0 >		stateUTF32_31;
 template < class t_TyTraits >
 extern _l_state< char32_t, 0, false, false, 0, 1 >		stateUTF32_32;
 template < class t_TyTraits >
-extern _l_state< char32_t, 8, false, false, 0, 0 >		stateUTF32_33;
+extern _l_state< char32_t, 11, false, false, 0, 0 >		stateUTF32_33;
 template < class t_TyTraits >
 extern _l_state< char32_t, 0, false, false, 0, 1 >		stateUTF32_34;
 template < class t_TyTraits >
@@ -110,7 +110,7 @@ extern _l_state< char32_t, 1, false, false, 0, 0 >		stateUTF32_41;
 template < class t_TyTraits >
 extern _l_state< char32_t, 3, false, false, 0, 0 >		stateUTF32_42;
 template < class t_TyTraits >
-extern _l_state< char32_t, 4, false, false, 0, 0 >		stateUTF32_43;
+extern _l_state< char32_t, 7, false, false, 0, 0 >		stateUTF32_43;
 template < class t_TyTraits >
 extern _l_state< char32_t, 1, false, false, 0, 0 >		stateUTF32_44;
 template < class t_TyTraits >
@@ -230,7 +230,7 @@ extern _l_state< char32_t, 0, false, false, 0, 1 >		stateUTF32_101;
 template < class t_TyTraits >
 extern _l_state< char32_t, 18, false, false, 0, 0 >		stateUTF32_102;
 template < class t_TyTraits >
-extern _l_state< char32_t, 8, false, false, 0, 0 >		stateUTF32_103;
+extern _l_state< char32_t, 7, false, false, 0, 0 >		stateUTF32_103;
 template < class t_TyTraits >
 extern _l_state< char32_t, 0, false, false, 0, 1 >		stateUTF32_104;
 template < class t_TyTraits >
@@ -242,7 +242,7 @@ extern _l_state< char32_t, 2, false, false, 0, 0 >		stateUTF32_107;
 template < class t_TyTraits >
 extern _l_state< char32_t, 0, false, false, 0, 1 >		stateUTF32_108;
 template < class t_TyTraits >
-extern _l_state< char32_t, 6, false, false, 0, 0 >		stateUTF32_109;
+extern _l_state< char32_t, 5, false, false, 0, 0 >		stateUTF32_109;
 template < class t_TyTraits >
 extern _l_state< char32_t, 2, false, false, 0, 0 >		stateUTF32_110;
 template < class t_TyTraits >
@@ -266,7 +266,7 @@ extern _l_state< char32_t, 1, false, false, 0, 0 >		stateUTF32_119;
 template < class t_TyTraits >
 extern _l_state< char32_t, 0, false, false, 0, 1 >		stateUTF32_120;
 template < class t_TyTraits >
-extern _l_state< char32_t, 9, false, false, 0, 0 >		stateUTF32_121;
+extern _l_state< char32_t, 8, false, false, 0, 0 >		stateUTF32_121;
 template < class t_TyTraits >
 extern _l_state< char32_t, 0, false, false, 0, 1 >		stateUTF32_122;
 template < class t_TyTraits >
@@ -278,7 +278,7 @@ extern _l_state< char32_t, 1, false, false, 0, 0 >		stateUTF32_125;
 template < class t_TyTraits >
 extern _l_state< char32_t, 3, false, false, 0, 0 >		stateUTF32_126;
 template < class t_TyTraits >
-extern _l_state< char32_t, 7, false, false, 0, 0 >		stateUTF32_127;
+extern _l_state< char32_t, 6, false, false, 0, 0 >		stateUTF32_127;
 template < class t_TyTraits >
 extern _l_state< char32_t, 2, false, false, 0, 0 >		stateUTF32_128;
 template < class t_TyTraits >
@@ -522,20 +522,20 @@ extern _l_state< char32_t, 6, false, false, 0, 0 >		stateUTF32_247;
 extern _l_state< char32_t, 15, false, false, 0, 0 >		startUTF32NCName;
 extern _l_state< char32_t, 18, true, false, 0, 0 >		stateUTF32_249;
 
-extern _l_state< char32_t, 6, false, false, 0, 0 >		startUTF32CharData;
-extern _l_state< char32_t, 6, true, false, 0, 0 >		stateUTF32_251;
-extern _l_state< char32_t, 6, true, false, 0, 0 >		stateUTF32_252;
-extern _l_state< char32_t, 8, true, false, 0, 0 >		stateUTF32_253;
-extern _l_state< char32_t, 4, false, false, 0, 0 >		stateUTF32_254;
+extern _l_state< char32_t, 9, false, false, 0, 0 >		startUTF32CharData;
+extern _l_state< char32_t, 9, true, false, 0, 0 >		stateUTF32_251;
+extern _l_state< char32_t, 9, true, false, 0, 0 >		stateUTF32_252;
+extern _l_state< char32_t, 11, true, false, 0, 0 >		stateUTF32_253;
+extern _l_state< char32_t, 7, false, false, 0, 0 >		stateUTF32_254;
 
 extern _l_state< char32_t, 7, true, false, 0, 0 >		startUTF32CDCharsOutputValidate;
 extern _l_state< char32_t, 7, true, false, 0, 0 >		stateUTF32_256;
 extern _l_state< char32_t, 9, true, false, 0, 0 >		stateUTF32_257;
 extern _l_state< char32_t, 5, false, false, 0, 0 >		stateUTF32_258;
 
-extern _l_state< char32_t, 4, true, false, 0, 0 >		startUTF32AttCharDataNoSingleQuote;
+extern _l_state< char32_t, 7, true, false, 0, 0 >		startUTF32AttCharDataNoSingleQuote;
 
-extern _l_state< char32_t, 5, true, false, 0, 0 >		startUTF32AttCharDataNoDoubleQuote;
+extern _l_state< char32_t, 8, true, false, 0, 0 >		startUTF32AttCharDataNoDoubleQuote;
 
 extern _l_state< char32_t, 16, false, false, 0, 0 >		startUTF32Name;
 extern _l_state< char32_t, 18, true, false, 0, 0 >		stateUTF32_262;
@@ -861,7 +861,7 @@ extern _l_state< char32_t, 0, false, false, 0, 0 >		stateUTF32_429;
 template < class t_TyTraits >
 extern _l_state< char32_t, 0, false, false, 0, 1 >		stateUTF32_430;
 template < class t_TyTraits >
-extern _l_state< char32_t, 3, false, false, 0, 0 >		stateUTF32_431;
+extern _l_state< char32_t, 6, false, false, 0, 0 >		stateUTF32_431;
 template < class t_TyTraits >
 extern _l_state< char32_t, 0, false, false, 0, 1 >		stateUTF32_432;
 template < class t_TyTraits >
@@ -871,7 +871,7 @@ extern _l_state< char32_t, 0, false, false, 0, 1 >		stateUTF32_434;
 template < class t_TyTraits >
 extern _l_state< char32_t, 3, false, false, 0, 0 >		stateUTF32_435;
 template < class t_TyTraits >
-extern _l_state< char32_t, 3, false, false, 0, 0 >		stateUTF32_436;
+extern _l_state< char32_t, 6, false, false, 0, 0 >		stateUTF32_436;
 template < class t_TyTraits >
 extern _l_state< char32_t, 16, false, false, 0, 0 >		stateUTF32_437;
 template < class t_TyTraits >
@@ -897,7 +897,7 @@ extern _l_state< char32_t, 0, false, false, 0, 1 >		stateUTF32_447;
 template < class t_TyTraits >
 extern _l_state< char32_t, 18, false, false, 0, 0 >		stateUTF32_448;
 template < class t_TyTraits >
-extern _l_state< char32_t, 4, false, false, 0, 0 >		stateUTF32_449;
+extern _l_state< char32_t, 7, false, false, 0, 0 >		stateUTF32_449;
 template < class t_TyTraits >
 extern _l_state< char32_t, 0, false, false, 0, 1 >		stateUTF32_450;
 template < class t_TyTraits >
@@ -913,7 +913,7 @@ extern _l_state< char32_t, 3, false, false, 0, 0 >		stateUTF32_455;
 template < class t_TyTraits >
 extern _l_state< char32_t, 0, false, false, 0, 1 >		stateUTF32_456;
 template < class t_TyTraits >
-extern _l_state< char32_t, 4, false, false, 0, 0 >		stateUTF32_457;
+extern _l_state< char32_t, 7, false, false, 0, 0 >		stateUTF32_457;
 template < class t_TyTraits >
 extern _l_state< char32_t, 16, false, false, 0, 0 >		stateUTF32_458;
 template < class t_TyTraits >
@@ -972,7 +972,7 @@ extern _l_state< char32_t, 1, false, false, 0, 0 >		stateUTF32_484;
 template < class t_TyTraits >
 extern _l_state< char32_t, 0, false, false, 0, 1 >		stateUTF32_485;
 template < class t_TyTraits >
-extern _l_state< char32_t, 8, false, false, 0, 0 >		stateUTF32_486;
+extern _l_state< char32_t, 7, false, false, 0, 0 >		stateUTF32_486;
 template < class t_TyTraits >
 extern _l_state< char32_t, 0, false, false, 0, 1 >		stateUTF32_487;
 template < class t_TyTraits >
@@ -980,7 +980,7 @@ extern _l_state< char32_t, 1, false, false, 0, 0 >		stateUTF32_488;
 template < class t_TyTraits >
 extern _l_state< char32_t, 2, false, false, 0, 0 >		stateUTF32_489;
 template < class t_TyTraits >
-extern _l_state< char32_t, 6, false, false, 0, 0 >		stateUTF32_490;
+extern _l_state< char32_t, 5, false, false, 0, 0 >		stateUTF32_490;
 template < class t_TyTraits >
 extern _l_state< char32_t, 2, false, false, 0, 0 >		stateUTF32_491;
 template < class t_TyTraits >
@@ -1004,7 +1004,7 @@ extern _l_state< char32_t, 1, false, false, 0, 0 >		stateUTF32_500;
 template < class t_TyTraits >
 extern _l_state< char32_t, 0, false, false, 0, 1 >		stateUTF32_501;
 template < class t_TyTraits >
-extern _l_state< char32_t, 9, false, false, 0, 0 >		stateUTF32_502;
+extern _l_state< char32_t, 8, false, false, 0, 0 >		stateUTF32_502;
 template < class t_TyTraits >
 extern _l_state< char32_t, 0, false, false, 0, 1 >		stateUTF32_503;
 template < class t_TyTraits >
@@ -1016,7 +1016,7 @@ extern _l_state< char32_t, 1, false, false, 0, 0 >		stateUTF32_506;
 template < class t_TyTraits >
 extern _l_state< char32_t, 3, false, false, 0, 0 >		stateUTF32_507;
 template < class t_TyTraits >
-extern _l_state< char32_t, 7, false, false, 0, 0 >		stateUTF32_508;
+extern _l_state< char32_t, 6, false, false, 0, 0 >		stateUTF32_508;
 template < class t_TyTraits >
 extern _l_state< char32_t, 2, false, false, 0, 0 >		stateUTF32_509;
 template < class t_TyTraits >
@@ -1069,9 +1069,9 @@ extern _l_state< char32_t, 0, false, false, 0, 1 >		stateUTF32_532;
 template < class t_TyTraits >
 extern _l_state< char32_t, 0, false, false, 0, 1 >		stateUTF32_533;
 template < class t_TyTraits >
-extern _l_state< char32_t, 3, false, false, 0, 0 >		stateUTF32_534;
+extern _l_state< char32_t, 6, false, false, 0, 0 >		stateUTF32_534;
 template < class t_TyTraits >
-extern _l_state< char32_t, 3, false, false, 0, 0 >		stateUTF32_535;
+extern _l_state< char32_t, 6, false, false, 0, 0 >		stateUTF32_535;
 template < class t_TyTraits >
 extern _l_state< char32_t, 0, false, false, 0, 1 >		stateUTF32_536;
 template < class t_TyTraits >
@@ -1314,9 +1314,9 @@ template < class t_TyTraits >
 extern _l_state< char32_t, 8, false, false, 0, 0 >		stateUTF32_654;
 
 template < class t_TyTraits >
-extern _l_state< char32_t, 6, false, false, 0, 0 >		startUTF32DtdIgnore;
+extern _l_state< char32_t, 9, false, false, 0, 0 >		startUTF32DtdIgnore;
 template < class t_TyTraits >
-extern _l_state< char32_t, 4, true, false, 0, 0 >		stateUTF32_656;
+extern _l_state< char32_t, 7, true, false, 0, 0 >		stateUTF32_656;
 template < class t_TyTraits >
 extern _l_state< char32_t, 1, true, false, 0, 0 >		stateUTF32_657;
 template < class t_TyTraits >
@@ -2224,52 +2224,61 @@ public:
 template < class t_TyTraits >
 using TGetLexicalAnalyzer = _lexical_analyzer<t_TyTraits>;
 
-typedef _l_state< char32_t, 8, false, false, 0, 0 > _TystateUTF320;
+typedef _l_state< char32_t, 11, false, false, 0, 0 > _TystateUTF320;
 template < class t_TyTraits > inline
 _TystateUTF320 startUTF32All = {
 #ifdef LXOBJ_STATENUMBERS
 	0,
 #endif //LXOBJ_STATENUMBERS
-	8, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	11, 0, 0, 0, 0, 0, vktidInvalidIdToken,
 	{
-		{ 0x01, U'%', (vTyStateProtoChar32*)( & stateUTF32_1<t_TyTraits> ) },
+		{ 0x09, 0x0a, (vTyStateProtoChar32*)( & stateUTF32_1<t_TyTraits> ) },
+		{ 0x0d, 0x0d, (vTyStateProtoChar32*)( & stateUTF32_1<t_TyTraits> ) },
+		{ U' ', U'%', (vTyStateProtoChar32*)( & stateUTF32_1<t_TyTraits> ) },
 		{ U'&', U'&', (vTyStateProtoChar32*)( & stateUTF32_4<t_TyTraits> ) },
 		{ 0x027, U';', (vTyStateProtoChar32*)( & stateUTF32_1<t_TyTraits> ) },
 		{ U'<', U'<', (vTyStateProtoChar32*)( & stateUTF32_3<t_TyTraits> ) },
 		{ U'=', 0x05c, (vTyStateProtoChar32*)( & stateUTF32_1<t_TyTraits> ) },
 		{ U']', U']', (vTyStateProtoChar32*)( & stateUTF32_2<t_TyTraits> ) },
 		{ U'^', 0x0d7ff, (vTyStateProtoChar32*)( & stateUTF32_1<t_TyTraits> ) },
-		{ 0x0e000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_1<t_TyTraits> ) }
+		{ 0x0e000, 0x0fffd, (vTyStateProtoChar32*)( & stateUTF32_1<t_TyTraits> ) },
+		{ 0x010000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_1<t_TyTraits> ) }
 	}	};
-typedef _l_state< char32_t, 6, false, false, 0, 0 > _TystateUTF321;
+typedef _l_state< char32_t, 9, false, false, 0, 0 > _TystateUTF321;
 template < class t_TyTraits > inline
 _TystateUTF321 stateUTF32_1 = {
 #ifdef LXOBJ_STATENUMBERS
 	1,
 #endif //LXOBJ_STATENUMBERS
-	6, 0, 0, (vTyStateProtoChar32*)( & stateUTF32_5<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	9, 0, 0, (vTyStateProtoChar32*)( & stateUTF32_5<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
 	{
-		{ 0x01, U'%', (vTyStateProtoChar32*)( & stateUTF32_1<t_TyTraits> ) },
+		{ 0x09, 0x0a, (vTyStateProtoChar32*)( & stateUTF32_1<t_TyTraits> ) },
+		{ 0x0d, 0x0d, (vTyStateProtoChar32*)( & stateUTF32_1<t_TyTraits> ) },
+		{ U' ', U'%', (vTyStateProtoChar32*)( & stateUTF32_1<t_TyTraits> ) },
 		{ 0x027, U';', (vTyStateProtoChar32*)( & stateUTF32_1<t_TyTraits> ) },
 		{ U'=', 0x05c, (vTyStateProtoChar32*)( & stateUTF32_1<t_TyTraits> ) },
 		{ U']', U']', (vTyStateProtoChar32*)( & stateUTF32_2<t_TyTraits> ) },
 		{ U'^', 0x0d7ff, (vTyStateProtoChar32*)( & stateUTF32_1<t_TyTraits> ) },
-		{ 0x0e000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_1<t_TyTraits> ) }
+		{ 0x0e000, 0x0fffd, (vTyStateProtoChar32*)( & stateUTF32_1<t_TyTraits> ) },
+		{ 0x010000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_1<t_TyTraits> ) }
 	}	};
-typedef _l_state< char32_t, 6, false, false, 0, 0 > _TystateUTF322;
+typedef _l_state< char32_t, 9, false, false, 0, 0 > _TystateUTF322;
 template < class t_TyTraits > inline
 _TystateUTF322 stateUTF32_2 = {
 #ifdef LXOBJ_STATENUMBERS
 	2,
 #endif //LXOBJ_STATENUMBERS
-	6, 0, 0, (vTyStateProtoChar32*)( & stateUTF32_5<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	9, 0, 0, (vTyStateProtoChar32*)( & stateUTF32_5<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
 	{
-		{ 0x01, U'%', (vTyStateProtoChar32*)( & stateUTF32_1<t_TyTraits> ) },
+		{ 0x09, 0x0a, (vTyStateProtoChar32*)( & stateUTF32_1<t_TyTraits> ) },
+		{ 0x0d, 0x0d, (vTyStateProtoChar32*)( & stateUTF32_1<t_TyTraits> ) },
+		{ U' ', U'%', (vTyStateProtoChar32*)( & stateUTF32_1<t_TyTraits> ) },
 		{ 0x027, U';', (vTyStateProtoChar32*)( & stateUTF32_1<t_TyTraits> ) },
 		{ U'=', 0x05c, (vTyStateProtoChar32*)( & stateUTF32_1<t_TyTraits> ) },
 		{ U']', U']', (vTyStateProtoChar32*)( & stateUTF32_6<t_TyTraits> ) },
 		{ U'^', 0x0d7ff, (vTyStateProtoChar32*)( & stateUTF32_1<t_TyTraits> ) },
-		{ 0x0e000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_1<t_TyTraits> ) }
+		{ 0x0e000, 0x0fffd, (vTyStateProtoChar32*)( & stateUTF32_1<t_TyTraits> ) },
+		{ 0x010000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_1<t_TyTraits> ) }
 	}	};
 typedef _l_state< char32_t, 3, false, false, 0, 0 > _TystateUTF323;
 template < class t_TyTraits > inline
@@ -2305,22 +2314,25 @@ _TystateUTF325 stateUTF32_5 = {
 	{
 	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger43 )
 	} };
-typedef _l_state< char32_t, 8, false, false, 0, 0 > _TystateUTF326;
+typedef _l_state< char32_t, 11, false, false, 0, 0 > _TystateUTF326;
 template < class t_TyTraits > inline
 _TystateUTF326 stateUTF32_6 = {
 #ifdef LXOBJ_STATENUMBERS
 	6,
 #endif //LXOBJ_STATENUMBERS
-	8, 0, 0, (vTyStateProtoChar32*)( & stateUTF32_5<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	11, 0, 0, (vTyStateProtoChar32*)( & stateUTF32_5<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
 	{
-		{ 0x01, U'%', (vTyStateProtoChar32*)( & stateUTF32_1<t_TyTraits> ) },
+		{ 0x09, 0x0a, (vTyStateProtoChar32*)( & stateUTF32_1<t_TyTraits> ) },
+		{ 0x0d, 0x0d, (vTyStateProtoChar32*)( & stateUTF32_1<t_TyTraits> ) },
+		{ U' ', U'%', (vTyStateProtoChar32*)( & stateUTF32_1<t_TyTraits> ) },
 		{ 0x027, U';', (vTyStateProtoChar32*)( & stateUTF32_1<t_TyTraits> ) },
 		{ U'=', U'=', (vTyStateProtoChar32*)( & stateUTF32_1<t_TyTraits> ) },
 		{ U'>', U'>', (vTyStateProtoChar32*)( & stateUTF32_14<t_TyTraits> ) },
 		{ U'?', 0x05c, (vTyStateProtoChar32*)( & stateUTF32_1<t_TyTraits> ) },
 		{ U']', U']', (vTyStateProtoChar32*)( & stateUTF32_6<t_TyTraits> ) },
 		{ U'^', 0x0d7ff, (vTyStateProtoChar32*)( & stateUTF32_1<t_TyTraits> ) },
-		{ 0x0e000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_1<t_TyTraits> ) }
+		{ 0x0e000, 0x0fffd, (vTyStateProtoChar32*)( & stateUTF32_1<t_TyTraits> ) },
+		{ 0x010000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_1<t_TyTraits> ) }
 	}	};
 typedef _l_state< char32_t, 0, false, false, 0, 1 > _TystateUTF327;
 template < class t_TyTraits > inline
@@ -2381,37 +2393,43 @@ _TystateUTF3212 stateUTF32_12 = {
 	{
 		{ U'x', U'x', (vTyStateProtoChar32*)( & stateUTF32_22<t_TyTraits> ) }
 	}	};
-typedef _l_state< char32_t, 7, true, false, 0, 0 > _TystateUTF3213;
+typedef _l_state< char32_t, 10, true, false, 0, 0 > _TystateUTF3213;
 template < class t_TyTraits > inline
 _TystateUTF3213 stateUTF32_13 = {
 #ifdef LXOBJ_STATENUMBERS
 	13,
 #endif //LXOBJ_STATENUMBERS
-	7, 0, kucAccept, 0, 
+	10, 0, kucAccept, 0, 
 	offsetof( _TystateUTF3213, m_pmfnAccept ),  0, 1006,
 	{
-		{ 0x01, U'%', (vTyStateProtoChar32*)( & stateUTF32_23<t_TyTraits> ) },
+		{ 0x09, 0x0a, (vTyStateProtoChar32*)( & stateUTF32_23<t_TyTraits> ) },
+		{ 0x0d, 0x0d, (vTyStateProtoChar32*)( & stateUTF32_23<t_TyTraits> ) },
+		{ U' ', U'%', (vTyStateProtoChar32*)( & stateUTF32_23<t_TyTraits> ) },
 		{ U'&', U'&', (vTyStateProtoChar32*)( & stateUTF32_4<t_TyTraits> ) },
 		{ 0x027, U';', (vTyStateProtoChar32*)( & stateUTF32_23<t_TyTraits> ) },
 		{ U'=', 0x05c, (vTyStateProtoChar32*)( & stateUTF32_23<t_TyTraits> ) },
 		{ U']', U']', (vTyStateProtoChar32*)( & stateUTF32_24<t_TyTraits> ) },
 		{ U'^', 0x0d7ff, (vTyStateProtoChar32*)( & stateUTF32_23<t_TyTraits> ) },
-		{ 0x0e000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_23<t_TyTraits> ) }
+		{ 0x0e000, 0x0fffd, (vTyStateProtoChar32*)( & stateUTF32_23<t_TyTraits> ) },
+		{ 0x010000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_23<t_TyTraits> ) }
 	}, 
 	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken1006 ) };
-typedef _l_state< char32_t, 4, false, false, 0, 0 > _TystateUTF3214;
+typedef _l_state< char32_t, 7, false, false, 0, 0 > _TystateUTF3214;
 template < class t_TyTraits > inline
 _TystateUTF3214 stateUTF32_14 = {
 #ifdef LXOBJ_STATENUMBERS
 	14,
 #endif //LXOBJ_STATENUMBERS
-	4, 0, kucAntiAccepting, 0, 
+	7, 0, kucAntiAccepting, 0, 
 	0,  0, 0,
 	{
-		{ 0x01, U'%', (vTyStateProtoChar32*)( & stateUTF32_14<t_TyTraits> ) },
+		{ 0x09, 0x0a, (vTyStateProtoChar32*)( & stateUTF32_14<t_TyTraits> ) },
+		{ 0x0d, 0x0d, (vTyStateProtoChar32*)( & stateUTF32_14<t_TyTraits> ) },
+		{ U' ', U'%', (vTyStateProtoChar32*)( & stateUTF32_14<t_TyTraits> ) },
 		{ 0x027, U';', (vTyStateProtoChar32*)( & stateUTF32_14<t_TyTraits> ) },
 		{ U'=', 0x0d7ff, (vTyStateProtoChar32*)( & stateUTF32_14<t_TyTraits> ) },
-		{ 0x0e000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_14<t_TyTraits> ) }
+		{ 0x0e000, 0x0fffd, (vTyStateProtoChar32*)( & stateUTF32_14<t_TyTraits> ) },
+		{ 0x010000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_14<t_TyTraits> ) }
 	} };
 typedef _l_state< char32_t, 16, false, false, 0, 0 > _TystateUTF3215;
 template < class t_TyTraits > inline
@@ -2526,35 +2544,41 @@ _TystateUTF3222 stateUTF32_22 = {
 	22,
 #endif //LXOBJ_STATENUMBERS
 	0, 0, 0, (vTyStateProtoChar32*)( & stateUTF32_32<t_TyTraits> ), 0, 0, vktidInvalidIdToken };
-typedef _l_state< char32_t, 6, false, false, 0, 0 > _TystateUTF3223;
+typedef _l_state< char32_t, 9, false, false, 0, 0 > _TystateUTF3223;
 template < class t_TyTraits > inline
 _TystateUTF3223 stateUTF32_23 = {
 #ifdef LXOBJ_STATENUMBERS
 	23,
 #endif //LXOBJ_STATENUMBERS
-	6, 0, 0, (vTyStateProtoChar32*)( & stateUTF32_5<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	9, 0, 0, (vTyStateProtoChar32*)( & stateUTF32_5<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
 	{
-		{ 0x01, U'%', (vTyStateProtoChar32*)( & stateUTF32_23<t_TyTraits> ) },
+		{ 0x09, 0x0a, (vTyStateProtoChar32*)( & stateUTF32_23<t_TyTraits> ) },
+		{ 0x0d, 0x0d, (vTyStateProtoChar32*)( & stateUTF32_23<t_TyTraits> ) },
+		{ U' ', U'%', (vTyStateProtoChar32*)( & stateUTF32_23<t_TyTraits> ) },
 		{ 0x027, U';', (vTyStateProtoChar32*)( & stateUTF32_23<t_TyTraits> ) },
 		{ U'=', 0x05c, (vTyStateProtoChar32*)( & stateUTF32_23<t_TyTraits> ) },
 		{ U']', U']', (vTyStateProtoChar32*)( & stateUTF32_24<t_TyTraits> ) },
 		{ U'^', 0x0d7ff, (vTyStateProtoChar32*)( & stateUTF32_23<t_TyTraits> ) },
-		{ 0x0e000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_23<t_TyTraits> ) }
+		{ 0x0e000, 0x0fffd, (vTyStateProtoChar32*)( & stateUTF32_23<t_TyTraits> ) },
+		{ 0x010000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_23<t_TyTraits> ) }
 	}	};
-typedef _l_state< char32_t, 6, false, false, 0, 0 > _TystateUTF3224;
+typedef _l_state< char32_t, 9, false, false, 0, 0 > _TystateUTF3224;
 template < class t_TyTraits > inline
 _TystateUTF3224 stateUTF32_24 = {
 #ifdef LXOBJ_STATENUMBERS
 	24,
 #endif //LXOBJ_STATENUMBERS
-	6, 0, 0, (vTyStateProtoChar32*)( & stateUTF32_5<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	9, 0, 0, (vTyStateProtoChar32*)( & stateUTF32_5<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
 	{
-		{ 0x01, U'%', (vTyStateProtoChar32*)( & stateUTF32_23<t_TyTraits> ) },
+		{ 0x09, 0x0a, (vTyStateProtoChar32*)( & stateUTF32_23<t_TyTraits> ) },
+		{ 0x0d, 0x0d, (vTyStateProtoChar32*)( & stateUTF32_23<t_TyTraits> ) },
+		{ U' ', U'%', (vTyStateProtoChar32*)( & stateUTF32_23<t_TyTraits> ) },
 		{ 0x027, U';', (vTyStateProtoChar32*)( & stateUTF32_23<t_TyTraits> ) },
 		{ U'=', 0x05c, (vTyStateProtoChar32*)( & stateUTF32_23<t_TyTraits> ) },
 		{ U']', U']', (vTyStateProtoChar32*)( & stateUTF32_33<t_TyTraits> ) },
 		{ U'^', 0x0d7ff, (vTyStateProtoChar32*)( & stateUTF32_23<t_TyTraits> ) },
-		{ 0x0e000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_23<t_TyTraits> ) }
+		{ 0x0e000, 0x0fffd, (vTyStateProtoChar32*)( & stateUTF32_23<t_TyTraits> ) },
+		{ 0x010000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_23<t_TyTraits> ) }
 	}	};
 typedef _l_state< char32_t, 18, false, false, 0, 0 > _TystateUTF3225;
 template < class t_TyTraits > inline
@@ -2712,22 +2736,25 @@ _TystateUTF3232 stateUTF32_32 = {
 	{
 	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger15 )
 	} };
-typedef _l_state< char32_t, 8, false, false, 0, 0 > _TystateUTF3233;
+typedef _l_state< char32_t, 11, false, false, 0, 0 > _TystateUTF3233;
 template < class t_TyTraits > inline
 _TystateUTF3233 stateUTF32_33 = {
 #ifdef LXOBJ_STATENUMBERS
 	33,
 #endif //LXOBJ_STATENUMBERS
-	8, 0, 0, (vTyStateProtoChar32*)( & stateUTF32_5<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	11, 0, 0, (vTyStateProtoChar32*)( & stateUTF32_5<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
 	{
-		{ 0x01, U'%', (vTyStateProtoChar32*)( & stateUTF32_23<t_TyTraits> ) },
+		{ 0x09, 0x0a, (vTyStateProtoChar32*)( & stateUTF32_23<t_TyTraits> ) },
+		{ 0x0d, 0x0d, (vTyStateProtoChar32*)( & stateUTF32_23<t_TyTraits> ) },
+		{ U' ', U'%', (vTyStateProtoChar32*)( & stateUTF32_23<t_TyTraits> ) },
 		{ 0x027, U';', (vTyStateProtoChar32*)( & stateUTF32_23<t_TyTraits> ) },
 		{ U'=', U'=', (vTyStateProtoChar32*)( & stateUTF32_23<t_TyTraits> ) },
 		{ U'>', U'>', (vTyStateProtoChar32*)( & stateUTF32_43<t_TyTraits> ) },
 		{ U'?', 0x05c, (vTyStateProtoChar32*)( & stateUTF32_23<t_TyTraits> ) },
 		{ U']', U']', (vTyStateProtoChar32*)( & stateUTF32_33<t_TyTraits> ) },
 		{ U'^', 0x0d7ff, (vTyStateProtoChar32*)( & stateUTF32_23<t_TyTraits> ) },
-		{ 0x0e000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_23<t_TyTraits> ) }
+		{ 0x0e000, 0x0fffd, (vTyStateProtoChar32*)( & stateUTF32_23<t_TyTraits> ) },
+		{ 0x010000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_23<t_TyTraits> ) }
 	}	};
 typedef _l_state< char32_t, 0, false, false, 0, 1 > _TystateUTF3234;
 template < class t_TyTraits > inline
@@ -2886,19 +2913,22 @@ _TystateUTF3242 stateUTF32_42 = {
 		{ U'A', U'F', (vTyStateProtoChar32*)( & stateUTF32_52<t_TyTraits> ) },
 		{ U'a', U'f', (vTyStateProtoChar32*)( & stateUTF32_52<t_TyTraits> ) }
 	}	};
-typedef _l_state< char32_t, 4, false, false, 0, 0 > _TystateUTF3243;
+typedef _l_state< char32_t, 7, false, false, 0, 0 > _TystateUTF3243;
 template < class t_TyTraits > inline
 _TystateUTF3243 stateUTF32_43 = {
 #ifdef LXOBJ_STATENUMBERS
 	43,
 #endif //LXOBJ_STATENUMBERS
-	4, 0, kucAntiAccepting, 0, 
+	7, 0, kucAntiAccepting, 0, 
 	0,  0, 0,
 	{
-		{ 0x01, U'%', (vTyStateProtoChar32*)( & stateUTF32_43<t_TyTraits> ) },
+		{ 0x09, 0x0a, (vTyStateProtoChar32*)( & stateUTF32_43<t_TyTraits> ) },
+		{ 0x0d, 0x0d, (vTyStateProtoChar32*)( & stateUTF32_43<t_TyTraits> ) },
+		{ U' ', U'%', (vTyStateProtoChar32*)( & stateUTF32_43<t_TyTraits> ) },
 		{ 0x027, U';', (vTyStateProtoChar32*)( & stateUTF32_43<t_TyTraits> ) },
 		{ U'=', 0x0d7ff, (vTyStateProtoChar32*)( & stateUTF32_43<t_TyTraits> ) },
-		{ 0x0e000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_43<t_TyTraits> ) }
+		{ 0x0e000, 0x0fffd, (vTyStateProtoChar32*)( & stateUTF32_43<t_TyTraits> ) },
+		{ 0x010000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_43<t_TyTraits> ) }
 	} };
 typedef _l_state< char32_t, 1, false, false, 0, 0 > _TystateUTF3244;
 template < class t_TyTraits > inline
@@ -3685,22 +3715,21 @@ _TystateUTF32102 stateUTF32_102 = {
 		{ 0x0fdf0, 0x0fffd, (vTyStateProtoChar32*)( & stateUTF32_102<t_TyTraits> ) },
 		{ 0x010000, 0x0effff, (vTyStateProtoChar32*)( & stateUTF32_102<t_TyTraits> ) }
 	}	};
-typedef _l_state< char32_t, 8, false, false, 0, 0 > _TystateUTF32103;
+typedef _l_state< char32_t, 7, false, false, 0, 0 > _TystateUTF32103;
 template < class t_TyTraits > inline
 _TystateUTF32103 stateUTF32_103 = {
 #ifdef LXOBJ_STATENUMBERS
 	103,
 #endif //LXOBJ_STATENUMBERS
-	8, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	7, 0, 0, 0, 0, 0, vktidInvalidIdToken,
 	{
-		{ 0x01, 0x08, (vTyStateProtoChar32*)( & stateUTF32_109<t_TyTraits> ) },
 		{ 0x09, 0x0a, (vTyStateProtoChar32*)( & stateUTF32_110<t_TyTraits> ) },
-		{ 0x0b, 0x0c, (vTyStateProtoChar32*)( & stateUTF32_109<t_TyTraits> ) },
 		{ 0x0d, 0x0d, (vTyStateProtoChar32*)( & stateUTF32_110<t_TyTraits> ) },
-		{ 0x0e, U'%', (vTyStateProtoChar32*)( & stateUTF32_109<t_TyTraits> ) },
+		{ U' ', U'%', (vTyStateProtoChar32*)( & stateUTF32_109<t_TyTraits> ) },
 		{ U'(', U';', (vTyStateProtoChar32*)( & stateUTF32_109<t_TyTraits> ) },
 		{ U'=', 0x0d7ff, (vTyStateProtoChar32*)( & stateUTF32_109<t_TyTraits> ) },
-		{ 0x0e000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_109<t_TyTraits> ) }
+		{ 0x0e000, 0x0fffd, (vTyStateProtoChar32*)( & stateUTF32_109<t_TyTraits> ) },
+		{ 0x010000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_109<t_TyTraits> ) }
 	}	};
 typedef _l_state< char32_t, 0, false, false, 0, 1 > _TystateUTF32104;
 template < class t_TyTraits > inline
@@ -3759,20 +3788,19 @@ _TystateUTF32108 stateUTF32_108 = {
 	{
 	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger21 )
 	} };
-typedef _l_state< char32_t, 6, false, false, 0, 0 > _TystateUTF32109;
+typedef _l_state< char32_t, 5, false, false, 0, 0 > _TystateUTF32109;
 template < class t_TyTraits > inline
 _TystateUTF32109 stateUTF32_109 = {
 #ifdef LXOBJ_STATENUMBERS
 	109,
 #endif //LXOBJ_STATENUMBERS
-	6, 0, 0, (vTyStateProtoChar32*)( & stateUTF32_116<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	5, 0, 0, (vTyStateProtoChar32*)( & stateUTF32_116<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
 	{
-		{ 0x01, 0x08, (vTyStateProtoChar32*)( & stateUTF32_109<t_TyTraits> ) },
-		{ 0x0b, 0x0c, (vTyStateProtoChar32*)( & stateUTF32_109<t_TyTraits> ) },
-		{ 0x0e, U'%', (vTyStateProtoChar32*)( & stateUTF32_109<t_TyTraits> ) },
+		{ U' ', U'%', (vTyStateProtoChar32*)( & stateUTF32_109<t_TyTraits> ) },
 		{ U'(', U';', (vTyStateProtoChar32*)( & stateUTF32_109<t_TyTraits> ) },
 		{ U'=', 0x0d7ff, (vTyStateProtoChar32*)( & stateUTF32_109<t_TyTraits> ) },
-		{ 0x0e000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_109<t_TyTraits> ) }
+		{ 0x0e000, 0x0fffd, (vTyStateProtoChar32*)( & stateUTF32_109<t_TyTraits> ) },
+		{ 0x010000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_109<t_TyTraits> ) }
 	}	};
 typedef _l_state< char32_t, 2, false, false, 0, 0 > _TystateUTF32110;
 template < class t_TyTraits > inline
@@ -3924,23 +3952,22 @@ _TystateUTF32120 stateUTF32_120 = {
 	{
 	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger15 )
 	} };
-typedef _l_state< char32_t, 9, false, false, 0, 0 > _TystateUTF32121;
+typedef _l_state< char32_t, 8, false, false, 0, 0 > _TystateUTF32121;
 template < class t_TyTraits > inline
 _TystateUTF32121 stateUTF32_121 = {
 #ifdef LXOBJ_STATENUMBERS
 	121,
 #endif //LXOBJ_STATENUMBERS
-	9, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	8, 0, 0, 0, 0, 0, vktidInvalidIdToken,
 	{
-		{ 0x01, 0x08, (vTyStateProtoChar32*)( & stateUTF32_127<t_TyTraits> ) },
 		{ 0x09, 0x0a, (vTyStateProtoChar32*)( & stateUTF32_128<t_TyTraits> ) },
-		{ 0x0b, 0x0c, (vTyStateProtoChar32*)( & stateUTF32_127<t_TyTraits> ) },
 		{ 0x0d, 0x0d, (vTyStateProtoChar32*)( & stateUTF32_128<t_TyTraits> ) },
-		{ 0x0e, U'!', (vTyStateProtoChar32*)( & stateUTF32_127<t_TyTraits> ) },
+		{ U' ', U'!', (vTyStateProtoChar32*)( & stateUTF32_127<t_TyTraits> ) },
 		{ U'#', U'%', (vTyStateProtoChar32*)( & stateUTF32_127<t_TyTraits> ) },
 		{ 0x027, U';', (vTyStateProtoChar32*)( & stateUTF32_127<t_TyTraits> ) },
 		{ U'=', 0x0d7ff, (vTyStateProtoChar32*)( & stateUTF32_127<t_TyTraits> ) },
-		{ 0x0e000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_127<t_TyTraits> ) }
+		{ 0x0e000, 0x0fffd, (vTyStateProtoChar32*)( & stateUTF32_127<t_TyTraits> ) },
+		{ 0x010000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_127<t_TyTraits> ) }
 	}	};
 typedef _l_state< char32_t, 0, false, false, 0, 1 > _TystateUTF32122;
 template < class t_TyTraits > inline
@@ -3998,21 +4025,20 @@ _TystateUTF32126 stateUTF32_126 = {
 		{ U'A', U'F', (vTyStateProtoChar32*)( & stateUTF32_134<t_TyTraits> ) },
 		{ U'a', U'f', (vTyStateProtoChar32*)( & stateUTF32_134<t_TyTraits> ) }
 	}	};
-typedef _l_state< char32_t, 7, false, false, 0, 0 > _TystateUTF32127;
+typedef _l_state< char32_t, 6, false, false, 0, 0 > _TystateUTF32127;
 template < class t_TyTraits > inline
 _TystateUTF32127 stateUTF32_127 = {
 #ifdef LXOBJ_STATENUMBERS
 	127,
 #endif //LXOBJ_STATENUMBERS
-	7, 0, 0, (vTyStateProtoChar32*)( & stateUTF32_135<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	6, 0, 0, (vTyStateProtoChar32*)( & stateUTF32_135<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
 	{
-		{ 0x01, 0x08, (vTyStateProtoChar32*)( & stateUTF32_127<t_TyTraits> ) },
-		{ 0x0b, 0x0c, (vTyStateProtoChar32*)( & stateUTF32_127<t_TyTraits> ) },
-		{ 0x0e, U'!', (vTyStateProtoChar32*)( & stateUTF32_127<t_TyTraits> ) },
+		{ U' ', U'!', (vTyStateProtoChar32*)( & stateUTF32_127<t_TyTraits> ) },
 		{ U'#', U'%', (vTyStateProtoChar32*)( & stateUTF32_127<t_TyTraits> ) },
 		{ 0x027, U';', (vTyStateProtoChar32*)( & stateUTF32_127<t_TyTraits> ) },
 		{ U'=', 0x0d7ff, (vTyStateProtoChar32*)( & stateUTF32_127<t_TyTraits> ) },
-		{ 0x0e000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_127<t_TyTraits> ) }
+		{ 0x0e000, 0x0fffd, (vTyStateProtoChar32*)( & stateUTF32_127<t_TyTraits> ) },
+		{ 0x010000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_127<t_TyTraits> ) }
 	}	};
 typedef _l_state< char32_t, 2, false, false, 0, 0 > _TystateUTF32128;
 template < class t_TyTraits > inline
@@ -5393,84 +5419,99 @@ _TystateUTF32249 stateUTF32_249 = {
 		{ 0x010000, 0x0effff, (vTyStateProtoChar32*)( & stateUTF32_249 ) }
 	}, nullptr /* ActionToken2004 */ };
 
-typedef _l_state< char32_t, 6, false, false, 0, 0 > _TystateUTF32250;
+typedef _l_state< char32_t, 9, false, false, 0, 0 > _TystateUTF32250;
 inline
 _TystateUTF32250 startUTF32CharData = {
 #ifdef LXOBJ_STATENUMBERS
 	250,
 #endif //LXOBJ_STATENUMBERS
-	6, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	9, 0, 0, 0, 0, 0, vktidInvalidIdToken,
 	{
-		{ 0x01, U'%', (vTyStateProtoChar32*)( & stateUTF32_251 ) },
+		{ 0x09, 0x0a, (vTyStateProtoChar32*)( & stateUTF32_251 ) },
+		{ 0x0d, 0x0d, (vTyStateProtoChar32*)( & stateUTF32_251 ) },
+		{ U' ', U'%', (vTyStateProtoChar32*)( & stateUTF32_251 ) },
 		{ 0x027, U';', (vTyStateProtoChar32*)( & stateUTF32_251 ) },
 		{ U'=', 0x05c, (vTyStateProtoChar32*)( & stateUTF32_251 ) },
 		{ U']', U']', (vTyStateProtoChar32*)( & stateUTF32_252 ) },
 		{ U'^', 0x0d7ff, (vTyStateProtoChar32*)( & stateUTF32_251 ) },
-		{ 0x0e000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_251 ) }
+		{ 0x0e000, 0x0fffd, (vTyStateProtoChar32*)( & stateUTF32_251 ) },
+		{ 0x010000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_251 ) }
 	}	};
-typedef _l_state< char32_t, 6, true, false, 0, 0 > _TystateUTF32251;
+typedef _l_state< char32_t, 9, true, false, 0, 0 > _TystateUTF32251;
 inline
 _TystateUTF32251 stateUTF32_251 = {
 #ifdef LXOBJ_STATENUMBERS
 	251,
 #endif //LXOBJ_STATENUMBERS
-	6, 0, kucAccept, 0, 
+	9, 0, kucAccept, 0, 
 	offsetof( _TystateUTF32251, m_pmfnAccept ),  0, 2002,
 	{
-		{ 0x01, U'%', (vTyStateProtoChar32*)( & stateUTF32_251 ) },
+		{ 0x09, 0x0a, (vTyStateProtoChar32*)( & stateUTF32_251 ) },
+		{ 0x0d, 0x0d, (vTyStateProtoChar32*)( & stateUTF32_251 ) },
+		{ U' ', U'%', (vTyStateProtoChar32*)( & stateUTF32_251 ) },
 		{ 0x027, U';', (vTyStateProtoChar32*)( & stateUTF32_251 ) },
 		{ U'=', 0x05c, (vTyStateProtoChar32*)( & stateUTF32_251 ) },
 		{ U']', U']', (vTyStateProtoChar32*)( & stateUTF32_252 ) },
 		{ U'^', 0x0d7ff, (vTyStateProtoChar32*)( & stateUTF32_251 ) },
-		{ 0x0e000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_251 ) }
+		{ 0x0e000, 0x0fffd, (vTyStateProtoChar32*)( & stateUTF32_251 ) },
+		{ 0x010000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_251 ) }
 	}, nullptr /* ActionToken2002 */ };
-typedef _l_state< char32_t, 6, true, false, 0, 0 > _TystateUTF32252;
+typedef _l_state< char32_t, 9, true, false, 0, 0 > _TystateUTF32252;
 inline
 _TystateUTF32252 stateUTF32_252 = {
 #ifdef LXOBJ_STATENUMBERS
 	252,
 #endif //LXOBJ_STATENUMBERS
-	6, 0, kucAccept, 0, 
+	9, 0, kucAccept, 0, 
 	offsetof( _TystateUTF32252, m_pmfnAccept ),  0, 2002,
 	{
-		{ 0x01, U'%', (vTyStateProtoChar32*)( & stateUTF32_251 ) },
+		{ 0x09, 0x0a, (vTyStateProtoChar32*)( & stateUTF32_251 ) },
+		{ 0x0d, 0x0d, (vTyStateProtoChar32*)( & stateUTF32_251 ) },
+		{ U' ', U'%', (vTyStateProtoChar32*)( & stateUTF32_251 ) },
 		{ 0x027, U';', (vTyStateProtoChar32*)( & stateUTF32_251 ) },
 		{ U'=', 0x05c, (vTyStateProtoChar32*)( & stateUTF32_251 ) },
 		{ U']', U']', (vTyStateProtoChar32*)( & stateUTF32_253 ) },
 		{ U'^', 0x0d7ff, (vTyStateProtoChar32*)( & stateUTF32_251 ) },
-		{ 0x0e000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_251 ) }
+		{ 0x0e000, 0x0fffd, (vTyStateProtoChar32*)( & stateUTF32_251 ) },
+		{ 0x010000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_251 ) }
 	}, nullptr /* ActionToken2002 */ };
-typedef _l_state< char32_t, 8, true, false, 0, 0 > _TystateUTF32253;
+typedef _l_state< char32_t, 11, true, false, 0, 0 > _TystateUTF32253;
 inline
 _TystateUTF32253 stateUTF32_253 = {
 #ifdef LXOBJ_STATENUMBERS
 	253,
 #endif //LXOBJ_STATENUMBERS
-	8, 0, kucAccept, 0, 
+	11, 0, kucAccept, 0, 
 	offsetof( _TystateUTF32253, m_pmfnAccept ),  0, 2002,
 	{
-		{ 0x01, U'%', (vTyStateProtoChar32*)( & stateUTF32_251 ) },
+		{ 0x09, 0x0a, (vTyStateProtoChar32*)( & stateUTF32_251 ) },
+		{ 0x0d, 0x0d, (vTyStateProtoChar32*)( & stateUTF32_251 ) },
+		{ U' ', U'%', (vTyStateProtoChar32*)( & stateUTF32_251 ) },
 		{ 0x027, U';', (vTyStateProtoChar32*)( & stateUTF32_251 ) },
 		{ U'=', U'=', (vTyStateProtoChar32*)( & stateUTF32_251 ) },
 		{ U'>', U'>', (vTyStateProtoChar32*)( & stateUTF32_254 ) },
 		{ U'?', 0x05c, (vTyStateProtoChar32*)( & stateUTF32_251 ) },
 		{ U']', U']', (vTyStateProtoChar32*)( & stateUTF32_253 ) },
 		{ U'^', 0x0d7ff, (vTyStateProtoChar32*)( & stateUTF32_251 ) },
-		{ 0x0e000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_251 ) }
+		{ 0x0e000, 0x0fffd, (vTyStateProtoChar32*)( & stateUTF32_251 ) },
+		{ 0x010000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_251 ) }
 	}, nullptr /* ActionToken2002 */ };
-typedef _l_state< char32_t, 4, false, false, 0, 0 > _TystateUTF32254;
+typedef _l_state< char32_t, 7, false, false, 0, 0 > _TystateUTF32254;
 inline
 _TystateUTF32254 stateUTF32_254 = {
 #ifdef LXOBJ_STATENUMBERS
 	254,
 #endif //LXOBJ_STATENUMBERS
-	4, 0, kucAntiAccepting, 0, 
+	7, 0, kucAntiAccepting, 0, 
 	0,  0, 0,
 	{
-		{ 0x01, U'%', (vTyStateProtoChar32*)( & stateUTF32_254 ) },
+		{ 0x09, 0x0a, (vTyStateProtoChar32*)( & stateUTF32_254 ) },
+		{ 0x0d, 0x0d, (vTyStateProtoChar32*)( & stateUTF32_254 ) },
+		{ U' ', U'%', (vTyStateProtoChar32*)( & stateUTF32_254 ) },
 		{ 0x027, U';', (vTyStateProtoChar32*)( & stateUTF32_254 ) },
 		{ U'=', 0x0d7ff, (vTyStateProtoChar32*)( & stateUTF32_254 ) },
-		{ 0x0e000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_254 ) }
+		{ 0x0e000, 0x0fffd, (vTyStateProtoChar32*)( & stateUTF32_254 ) },
+		{ 0x010000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_254 ) }
 	} };
 
 typedef _l_state< char32_t, 7, true, false, 0, 0 > _TystateUTF32255;
@@ -5542,35 +5583,41 @@ _TystateUTF32258 stateUTF32_258 = {
 		{ 0x010000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_258 ) }
 	} };
 
-typedef _l_state< char32_t, 4, true, false, 0, 0 > _TystateUTF32259;
+typedef _l_state< char32_t, 7, true, false, 0, 0 > _TystateUTF32259;
 inline
 _TystateUTF32259 startUTF32AttCharDataNoSingleQuote = {
 #ifdef LXOBJ_STATENUMBERS
 	259,
 #endif //LXOBJ_STATENUMBERS
-	4, 0, kucAccept, 0, 
+	7, 0, kucAccept, 0, 
 	offsetof( _TystateUTF32259, m_pmfnAccept ),  0, 2006,
 	{
-		{ 0x01, U'%', (vTyStateProtoChar32*)( & startUTF32AttCharDataNoSingleQuote ) },
+		{ 0x09, 0x0a, (vTyStateProtoChar32*)( & startUTF32AttCharDataNoSingleQuote ) },
+		{ 0x0d, 0x0d, (vTyStateProtoChar32*)( & startUTF32AttCharDataNoSingleQuote ) },
+		{ U' ', U'%', (vTyStateProtoChar32*)( & startUTF32AttCharDataNoSingleQuote ) },
 		{ U'(', U';', (vTyStateProtoChar32*)( & startUTF32AttCharDataNoSingleQuote ) },
 		{ U'=', 0x0d7ff, (vTyStateProtoChar32*)( & startUTF32AttCharDataNoSingleQuote ) },
-		{ 0x0e000, 0x010ffff, (vTyStateProtoChar32*)( & startUTF32AttCharDataNoSingleQuote ) }
+		{ 0x0e000, 0x0fffd, (vTyStateProtoChar32*)( & startUTF32AttCharDataNoSingleQuote ) },
+		{ 0x010000, 0x010ffff, (vTyStateProtoChar32*)( & startUTF32AttCharDataNoSingleQuote ) }
 	}, nullptr /* ActionToken2006 */ };
 
-typedef _l_state< char32_t, 5, true, false, 0, 0 > _TystateUTF32260;
+typedef _l_state< char32_t, 8, true, false, 0, 0 > _TystateUTF32260;
 inline
 _TystateUTF32260 startUTF32AttCharDataNoDoubleQuote = {
 #ifdef LXOBJ_STATENUMBERS
 	260,
 #endif //LXOBJ_STATENUMBERS
-	5, 0, kucAccept, 0, 
+	8, 0, kucAccept, 0, 
 	offsetof( _TystateUTF32260, m_pmfnAccept ),  0, 2005,
 	{
-		{ 0x01, U'!', (vTyStateProtoChar32*)( & startUTF32AttCharDataNoDoubleQuote ) },
+		{ 0x09, 0x0a, (vTyStateProtoChar32*)( & startUTF32AttCharDataNoDoubleQuote ) },
+		{ 0x0d, 0x0d, (vTyStateProtoChar32*)( & startUTF32AttCharDataNoDoubleQuote ) },
+		{ U' ', U'!', (vTyStateProtoChar32*)( & startUTF32AttCharDataNoDoubleQuote ) },
 		{ U'#', U'%', (vTyStateProtoChar32*)( & startUTF32AttCharDataNoDoubleQuote ) },
 		{ 0x027, U';', (vTyStateProtoChar32*)( & startUTF32AttCharDataNoDoubleQuote ) },
 		{ U'=', 0x0d7ff, (vTyStateProtoChar32*)( & startUTF32AttCharDataNoDoubleQuote ) },
-		{ 0x0e000, 0x010ffff, (vTyStateProtoChar32*)( & startUTF32AttCharDataNoDoubleQuote ) }
+		{ 0x0e000, 0x0fffd, (vTyStateProtoChar32*)( & startUTF32AttCharDataNoDoubleQuote ) },
+		{ 0x010000, 0x010ffff, (vTyStateProtoChar32*)( & startUTF32AttCharDataNoDoubleQuote ) }
 	}, nullptr /* ActionToken2005 */ };
 
 typedef _l_state< char32_t, 16, false, false, 0, 0 > _TystateUTF32261;
@@ -7562,17 +7609,20 @@ _TystateUTF32430 stateUTF32_430 = {
 	{
 	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger17 )
 	} };
-typedef _l_state< char32_t, 3, false, false, 0, 0 > _TystateUTF32431;
+typedef _l_state< char32_t, 6, false, false, 0, 0 > _TystateUTF32431;
 template < class t_TyTraits > inline
 _TystateUTF32431 stateUTF32_431 = {
 #ifdef LXOBJ_STATENUMBERS
 	431,
 #endif //LXOBJ_STATENUMBERS
-	3, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	6, 0, 0, 0, 0, 0, vktidInvalidIdToken,
 	{
-		{ 0x01, U'$', (vTyStateProtoChar32*)( & stateUTF32_436<t_TyTraits> ) },
+		{ 0x09, 0x0a, (vTyStateProtoChar32*)( & stateUTF32_436<t_TyTraits> ) },
+		{ 0x0d, 0x0d, (vTyStateProtoChar32*)( & stateUTF32_436<t_TyTraits> ) },
+		{ U' ', U'$', (vTyStateProtoChar32*)( & stateUTF32_436<t_TyTraits> ) },
 		{ U'(', 0x0d7ff, (vTyStateProtoChar32*)( & stateUTF32_436<t_TyTraits> ) },
-		{ 0x0e000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_436<t_TyTraits> ) }
+		{ 0x0e000, 0x0fffd, (vTyStateProtoChar32*)( & stateUTF32_436<t_TyTraits> ) },
+		{ 0x010000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_436<t_TyTraits> ) }
 	}	};
 typedef _l_state< char32_t, 0, false, false, 0, 1 > _TystateUTF32432;
 template < class t_TyTraits > inline
@@ -7620,17 +7670,20 @@ _TystateUTF32435 stateUTF32_435 = {
 		{ U'%', U'%', (vTyStateProtoChar32*)( & stateUTF32_443<t_TyTraits> ) },
 		{ U'&', U'&', (vTyStateProtoChar32*)( & stateUTF32_442<t_TyTraits> ) }
 	}	};
-typedef _l_state< char32_t, 3, false, false, 0, 0 > _TystateUTF32436;
+typedef _l_state< char32_t, 6, false, false, 0, 0 > _TystateUTF32436;
 template < class t_TyTraits > inline
 _TystateUTF32436 stateUTF32_436 = {
 #ifdef LXOBJ_STATENUMBERS
 	436,
 #endif //LXOBJ_STATENUMBERS
-	3, 0, 0, (vTyStateProtoChar32*)( & stateUTF32_444<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	6, 0, 0, (vTyStateProtoChar32*)( & stateUTF32_444<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
 	{
-		{ 0x01, U'$', (vTyStateProtoChar32*)( & stateUTF32_436<t_TyTraits> ) },
+		{ 0x09, 0x0a, (vTyStateProtoChar32*)( & stateUTF32_436<t_TyTraits> ) },
+		{ 0x0d, 0x0d, (vTyStateProtoChar32*)( & stateUTF32_436<t_TyTraits> ) },
+		{ U' ', U'$', (vTyStateProtoChar32*)( & stateUTF32_436<t_TyTraits> ) },
 		{ U'(', 0x0d7ff, (vTyStateProtoChar32*)( & stateUTF32_436<t_TyTraits> ) },
-		{ 0x0e000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_436<t_TyTraits> ) }
+		{ 0x0e000, 0x0fffd, (vTyStateProtoChar32*)( & stateUTF32_436<t_TyTraits> ) },
+		{ 0x010000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_436<t_TyTraits> ) }
 	}	};
 typedef _l_state< char32_t, 16, false, false, 0, 0 > _TystateUTF32437;
 template < class t_TyTraits > inline
@@ -7818,18 +7871,21 @@ _TystateUTF32448 stateUTF32_448 = {
 		{ 0x0fdf0, 0x0fffd, (vTyStateProtoChar32*)( & stateUTF32_448<t_TyTraits> ) },
 		{ 0x010000, 0x0effff, (vTyStateProtoChar32*)( & stateUTF32_448<t_TyTraits> ) }
 	}	};
-typedef _l_state< char32_t, 4, false, false, 0, 0 > _TystateUTF32449;
+typedef _l_state< char32_t, 7, false, false, 0, 0 > _TystateUTF32449;
 template < class t_TyTraits > inline
 _TystateUTF32449 stateUTF32_449 = {
 #ifdef LXOBJ_STATENUMBERS
 	449,
 #endif //LXOBJ_STATENUMBERS
-	4, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	7, 0, 0, 0, 0, 0, vktidInvalidIdToken,
 	{
-		{ 0x01, U'!', (vTyStateProtoChar32*)( & stateUTF32_457<t_TyTraits> ) },
+		{ 0x09, 0x0a, (vTyStateProtoChar32*)( & stateUTF32_457<t_TyTraits> ) },
+		{ 0x0d, 0x0d, (vTyStateProtoChar32*)( & stateUTF32_457<t_TyTraits> ) },
+		{ U' ', U'!', (vTyStateProtoChar32*)( & stateUTF32_457<t_TyTraits> ) },
 		{ U'#', U'$', (vTyStateProtoChar32*)( & stateUTF32_457<t_TyTraits> ) },
 		{ 0x027, 0x0d7ff, (vTyStateProtoChar32*)( & stateUTF32_457<t_TyTraits> ) },
-		{ 0x0e000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_457<t_TyTraits> ) }
+		{ 0x0e000, 0x0fffd, (vTyStateProtoChar32*)( & stateUTF32_457<t_TyTraits> ) },
+		{ 0x010000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_457<t_TyTraits> ) }
 	}	};
 typedef _l_state< char32_t, 0, false, false, 0, 1 > _TystateUTF32450;
 template < class t_TyTraits > inline
@@ -7911,18 +7967,21 @@ _TystateUTF32456 stateUTF32_456 = {
 	{
 	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger47 )
 	} };
-typedef _l_state< char32_t, 4, false, false, 0, 0 > _TystateUTF32457;
+typedef _l_state< char32_t, 7, false, false, 0, 0 > _TystateUTF32457;
 template < class t_TyTraits > inline
 _TystateUTF32457 stateUTF32_457 = {
 #ifdef LXOBJ_STATENUMBERS
 	457,
 #endif //LXOBJ_STATENUMBERS
-	4, 0, 0, (vTyStateProtoChar32*)( & stateUTF32_465<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	7, 0, 0, (vTyStateProtoChar32*)( & stateUTF32_465<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
 	{
-		{ 0x01, U'!', (vTyStateProtoChar32*)( & stateUTF32_457<t_TyTraits> ) },
+		{ 0x09, 0x0a, (vTyStateProtoChar32*)( & stateUTF32_457<t_TyTraits> ) },
+		{ 0x0d, 0x0d, (vTyStateProtoChar32*)( & stateUTF32_457<t_TyTraits> ) },
+		{ U' ', U'!', (vTyStateProtoChar32*)( & stateUTF32_457<t_TyTraits> ) },
 		{ U'#', U'$', (vTyStateProtoChar32*)( & stateUTF32_457<t_TyTraits> ) },
 		{ 0x027, 0x0d7ff, (vTyStateProtoChar32*)( & stateUTF32_457<t_TyTraits> ) },
-		{ 0x0e000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_457<t_TyTraits> ) }
+		{ 0x0e000, 0x0fffd, (vTyStateProtoChar32*)( & stateUTF32_457<t_TyTraits> ) },
+		{ 0x010000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_457<t_TyTraits> ) }
 	}	};
 typedef _l_state< char32_t, 16, false, false, 0, 0 > _TystateUTF32458;
 template < class t_TyTraits > inline
@@ -8292,22 +8351,21 @@ _TystateUTF32485 stateUTF32_485 = {
 	{
 	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger17 )
 	} };
-typedef _l_state< char32_t, 8, false, false, 0, 0 > _TystateUTF32486;
+typedef _l_state< char32_t, 7, false, false, 0, 0 > _TystateUTF32486;
 template < class t_TyTraits > inline
 _TystateUTF32486 stateUTF32_486 = {
 #ifdef LXOBJ_STATENUMBERS
 	486,
 #endif //LXOBJ_STATENUMBERS
-	8, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	7, 0, 0, 0, 0, 0, vktidInvalidIdToken,
 	{
-		{ 0x01, 0x08, (vTyStateProtoChar32*)( & stateUTF32_490<t_TyTraits> ) },
 		{ 0x09, 0x0a, (vTyStateProtoChar32*)( & stateUTF32_491<t_TyTraits> ) },
-		{ 0x0b, 0x0c, (vTyStateProtoChar32*)( & stateUTF32_490<t_TyTraits> ) },
 		{ 0x0d, 0x0d, (vTyStateProtoChar32*)( & stateUTF32_491<t_TyTraits> ) },
-		{ 0x0e, U'%', (vTyStateProtoChar32*)( & stateUTF32_490<t_TyTraits> ) },
+		{ U' ', U'%', (vTyStateProtoChar32*)( & stateUTF32_490<t_TyTraits> ) },
 		{ U'(', U';', (vTyStateProtoChar32*)( & stateUTF32_490<t_TyTraits> ) },
 		{ U'=', 0x0d7ff, (vTyStateProtoChar32*)( & stateUTF32_490<t_TyTraits> ) },
-		{ 0x0e000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_490<t_TyTraits> ) }
+		{ 0x0e000, 0x0fffd, (vTyStateProtoChar32*)( & stateUTF32_490<t_TyTraits> ) },
+		{ 0x010000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_490<t_TyTraits> ) }
 	}	};
 typedef _l_state< char32_t, 0, false, false, 0, 1 > _TystateUTF32487;
 template < class t_TyTraits > inline
@@ -8342,20 +8400,19 @@ _TystateUTF32489 stateUTF32_489 = {
 		{ U'"', U'"', (vTyStateProtoChar32*)( & stateUTF32_483<t_TyTraits> ) },
 		{ U'&', U'&', (vTyStateProtoChar32*)( & stateUTF32_496<t_TyTraits> ) }
 	}	};
-typedef _l_state< char32_t, 6, false, false, 0, 0 > _TystateUTF32490;
+typedef _l_state< char32_t, 5, false, false, 0, 0 > _TystateUTF32490;
 template < class t_TyTraits > inline
 _TystateUTF32490 stateUTF32_490 = {
 #ifdef LXOBJ_STATENUMBERS
 	490,
 #endif //LXOBJ_STATENUMBERS
-	6, 0, 0, (vTyStateProtoChar32*)( & stateUTF32_497<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	5, 0, 0, (vTyStateProtoChar32*)( & stateUTF32_497<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
 	{
-		{ 0x01, 0x08, (vTyStateProtoChar32*)( & stateUTF32_490<t_TyTraits> ) },
-		{ 0x0b, 0x0c, (vTyStateProtoChar32*)( & stateUTF32_490<t_TyTraits> ) },
-		{ 0x0e, U'%', (vTyStateProtoChar32*)( & stateUTF32_490<t_TyTraits> ) },
+		{ U' ', U'%', (vTyStateProtoChar32*)( & stateUTF32_490<t_TyTraits> ) },
 		{ U'(', U';', (vTyStateProtoChar32*)( & stateUTF32_490<t_TyTraits> ) },
 		{ U'=', 0x0d7ff, (vTyStateProtoChar32*)( & stateUTF32_490<t_TyTraits> ) },
-		{ 0x0e000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_490<t_TyTraits> ) }
+		{ 0x0e000, 0x0fffd, (vTyStateProtoChar32*)( & stateUTF32_490<t_TyTraits> ) },
+		{ 0x010000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_490<t_TyTraits> ) }
 	}	};
 typedef _l_state< char32_t, 2, false, false, 0, 0 > _TystateUTF32491;
 template < class t_TyTraits > inline
@@ -8507,23 +8564,22 @@ _TystateUTF32501 stateUTF32_501 = {
 	{
 	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger15 )
 	} };
-typedef _l_state< char32_t, 9, false, false, 0, 0 > _TystateUTF32502;
+typedef _l_state< char32_t, 8, false, false, 0, 0 > _TystateUTF32502;
 template < class t_TyTraits > inline
 _TystateUTF32502 stateUTF32_502 = {
 #ifdef LXOBJ_STATENUMBERS
 	502,
 #endif //LXOBJ_STATENUMBERS
-	9, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	8, 0, 0, 0, 0, 0, vktidInvalidIdToken,
 	{
-		{ 0x01, 0x08, (vTyStateProtoChar32*)( & stateUTF32_508<t_TyTraits> ) },
 		{ 0x09, 0x0a, (vTyStateProtoChar32*)( & stateUTF32_509<t_TyTraits> ) },
-		{ 0x0b, 0x0c, (vTyStateProtoChar32*)( & stateUTF32_508<t_TyTraits> ) },
 		{ 0x0d, 0x0d, (vTyStateProtoChar32*)( & stateUTF32_509<t_TyTraits> ) },
-		{ 0x0e, U'!', (vTyStateProtoChar32*)( & stateUTF32_508<t_TyTraits> ) },
+		{ U' ', U'!', (vTyStateProtoChar32*)( & stateUTF32_508<t_TyTraits> ) },
 		{ U'#', U'%', (vTyStateProtoChar32*)( & stateUTF32_508<t_TyTraits> ) },
 		{ 0x027, U';', (vTyStateProtoChar32*)( & stateUTF32_508<t_TyTraits> ) },
 		{ U'=', 0x0d7ff, (vTyStateProtoChar32*)( & stateUTF32_508<t_TyTraits> ) },
-		{ 0x0e000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_508<t_TyTraits> ) }
+		{ 0x0e000, 0x0fffd, (vTyStateProtoChar32*)( & stateUTF32_508<t_TyTraits> ) },
+		{ 0x010000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_508<t_TyTraits> ) }
 	}	};
 typedef _l_state< char32_t, 0, false, false, 0, 1 > _TystateUTF32503;
 template < class t_TyTraits > inline
@@ -8581,21 +8637,20 @@ _TystateUTF32507 stateUTF32_507 = {
 		{ U'A', U'F', (vTyStateProtoChar32*)( & stateUTF32_515<t_TyTraits> ) },
 		{ U'a', U'f', (vTyStateProtoChar32*)( & stateUTF32_515<t_TyTraits> ) }
 	}	};
-typedef _l_state< char32_t, 7, false, false, 0, 0 > _TystateUTF32508;
+typedef _l_state< char32_t, 6, false, false, 0, 0 > _TystateUTF32508;
 template < class t_TyTraits > inline
 _TystateUTF32508 stateUTF32_508 = {
 #ifdef LXOBJ_STATENUMBERS
 	508,
 #endif //LXOBJ_STATENUMBERS
-	7, 0, 0, (vTyStateProtoChar32*)( & stateUTF32_516<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	6, 0, 0, (vTyStateProtoChar32*)( & stateUTF32_516<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
 	{
-		{ 0x01, 0x08, (vTyStateProtoChar32*)( & stateUTF32_508<t_TyTraits> ) },
-		{ 0x0b, 0x0c, (vTyStateProtoChar32*)( & stateUTF32_508<t_TyTraits> ) },
-		{ 0x0e, U'!', (vTyStateProtoChar32*)( & stateUTF32_508<t_TyTraits> ) },
+		{ U' ', U'!', (vTyStateProtoChar32*)( & stateUTF32_508<t_TyTraits> ) },
 		{ U'#', U'%', (vTyStateProtoChar32*)( & stateUTF32_508<t_TyTraits> ) },
 		{ 0x027, U';', (vTyStateProtoChar32*)( & stateUTF32_508<t_TyTraits> ) },
 		{ U'=', 0x0d7ff, (vTyStateProtoChar32*)( & stateUTF32_508<t_TyTraits> ) },
-		{ 0x0e000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_508<t_TyTraits> ) }
+		{ 0x0e000, 0x0fffd, (vTyStateProtoChar32*)( & stateUTF32_508<t_TyTraits> ) },
+		{ 0x010000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_508<t_TyTraits> ) }
 	}	};
 typedef _l_state< char32_t, 2, false, false, 0, 0 > _TystateUTF32509;
 template < class t_TyTraits > inline
@@ -8901,29 +8956,35 @@ _TystateUTF32533 stateUTF32_533 = {
 	{
 	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionTrigger37 )
 	} };
-typedef _l_state< char32_t, 3, false, false, 0, 0 > _TystateUTF32534;
+typedef _l_state< char32_t, 6, false, false, 0, 0 > _TystateUTF32534;
 template < class t_TyTraits > inline
 _TystateUTF32534 stateUTF32_534 = {
 #ifdef LXOBJ_STATENUMBERS
 	534,
 #endif //LXOBJ_STATENUMBERS
-	3, 0, 0, (vTyStateProtoChar32*)( & stateUTF32_536<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	6, 0, 0, (vTyStateProtoChar32*)( & stateUTF32_536<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
 	{
-		{ 0x01, U'&', (vTyStateProtoChar32*)( & stateUTF32_534<t_TyTraits> ) },
+		{ 0x09, 0x0a, (vTyStateProtoChar32*)( & stateUTF32_534<t_TyTraits> ) },
+		{ 0x0d, 0x0d, (vTyStateProtoChar32*)( & stateUTF32_534<t_TyTraits> ) },
+		{ U' ', U'&', (vTyStateProtoChar32*)( & stateUTF32_534<t_TyTraits> ) },
 		{ U'(', 0x0d7ff, (vTyStateProtoChar32*)( & stateUTF32_534<t_TyTraits> ) },
-		{ 0x0e000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_534<t_TyTraits> ) }
+		{ 0x0e000, 0x0fffd, (vTyStateProtoChar32*)( & stateUTF32_534<t_TyTraits> ) },
+		{ 0x010000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_534<t_TyTraits> ) }
 	}	};
-typedef _l_state< char32_t, 3, false, false, 0, 0 > _TystateUTF32535;
+typedef _l_state< char32_t, 6, false, false, 0, 0 > _TystateUTF32535;
 template < class t_TyTraits > inline
 _TystateUTF32535 stateUTF32_535 = {
 #ifdef LXOBJ_STATENUMBERS
 	535,
 #endif //LXOBJ_STATENUMBERS
-	3, 0, 0, (vTyStateProtoChar32*)( & stateUTF32_537<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
+	6, 0, 0, (vTyStateProtoChar32*)( & stateUTF32_537<t_TyTraits> ), 0, 0, vktidInvalidIdToken,
 	{
-		{ 0x01, U'!', (vTyStateProtoChar32*)( & stateUTF32_535<t_TyTraits> ) },
+		{ 0x09, 0x0a, (vTyStateProtoChar32*)( & stateUTF32_535<t_TyTraits> ) },
+		{ 0x0d, 0x0d, (vTyStateProtoChar32*)( & stateUTF32_535<t_TyTraits> ) },
+		{ U' ', U'!', (vTyStateProtoChar32*)( & stateUTF32_535<t_TyTraits> ) },
 		{ U'#', 0x0d7ff, (vTyStateProtoChar32*)( & stateUTF32_535<t_TyTraits> ) },
-		{ 0x0e000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_535<t_TyTraits> ) }
+		{ 0x0e000, 0x0fffd, (vTyStateProtoChar32*)( & stateUTF32_535<t_TyTraits> ) },
+		{ 0x010000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_535<t_TyTraits> ) }
 	}	};
 typedef _l_state< char32_t, 0, false, false, 0, 1 > _TystateUTF32536;
 template < class t_TyTraits > inline
@@ -10346,34 +10407,40 @@ _TystateUTF32654 stateUTF32_654 = {
 		{ 0x010000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_652<t_TyTraits> ) }
 	}	};
 
-typedef _l_state< char32_t, 6, false, false, 0, 0 > _TystateUTF32655;
+typedef _l_state< char32_t, 9, false, false, 0, 0 > _TystateUTF32655;
 template < class t_TyTraits > inline
 _TystateUTF32655 startUTF32DtdIgnore = {
 #ifdef LXOBJ_STATENUMBERS
 	655,
 #endif //LXOBJ_STATENUMBERS
-	6, 0, 0, 0, 0, 0, vktidInvalidIdToken,
+	9, 0, 0, 0, 0, 0, vktidInvalidIdToken,
 	{
-		{ 0x01, U';', (vTyStateProtoChar32*)( & stateUTF32_656<t_TyTraits> ) },
+		{ 0x09, 0x0a, (vTyStateProtoChar32*)( & stateUTF32_656<t_TyTraits> ) },
+		{ 0x0d, 0x0d, (vTyStateProtoChar32*)( & stateUTF32_656<t_TyTraits> ) },
+		{ U' ', U';', (vTyStateProtoChar32*)( & stateUTF32_656<t_TyTraits> ) },
 		{ U'<', U'<', (vTyStateProtoChar32*)( & stateUTF32_658<t_TyTraits> ) },
 		{ U'=', 0x05c, (vTyStateProtoChar32*)( & stateUTF32_656<t_TyTraits> ) },
 		{ U']', U']', (vTyStateProtoChar32*)( & stateUTF32_657<t_TyTraits> ) },
 		{ U'^', 0x0d7ff, (vTyStateProtoChar32*)( & stateUTF32_656<t_TyTraits> ) },
-		{ 0x0e000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_656<t_TyTraits> ) }
+		{ 0x0e000, 0x0fffd, (vTyStateProtoChar32*)( & stateUTF32_656<t_TyTraits> ) },
+		{ 0x010000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_656<t_TyTraits> ) }
 	}	};
-typedef _l_state< char32_t, 4, true, false, 0, 0 > _TystateUTF32656;
+typedef _l_state< char32_t, 7, true, false, 0, 0 > _TystateUTF32656;
 template < class t_TyTraits > inline
 _TystateUTF32656 stateUTF32_656 = {
 #ifdef LXOBJ_STATENUMBERS
 	656,
 #endif //LXOBJ_STATENUMBERS
-	4, 0, kucAccept, 0, 
+	7, 0, kucAccept, 0, 
 	offsetof( _TystateUTF32656, m_pmfnAccept ),  0, 4046,
 	{
-		{ 0x01, U';', (vTyStateProtoChar32*)( & stateUTF32_656<t_TyTraits> ) },
+		{ 0x09, 0x0a, (vTyStateProtoChar32*)( & stateUTF32_656<t_TyTraits> ) },
+		{ 0x0d, 0x0d, (vTyStateProtoChar32*)( & stateUTF32_656<t_TyTraits> ) },
+		{ U' ', U';', (vTyStateProtoChar32*)( & stateUTF32_656<t_TyTraits> ) },
 		{ U'=', 0x05c, (vTyStateProtoChar32*)( & stateUTF32_656<t_TyTraits> ) },
 		{ U'^', 0x0d7ff, (vTyStateProtoChar32*)( & stateUTF32_656<t_TyTraits> ) },
-		{ 0x0e000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_656<t_TyTraits> ) }
+		{ 0x0e000, 0x0fffd, (vTyStateProtoChar32*)( & stateUTF32_656<t_TyTraits> ) },
+		{ 0x010000, 0x010ffff, (vTyStateProtoChar32*)( & stateUTF32_656<t_TyTraits> ) }
 	}, 
 	static_cast< typename TGetAnalyzerBase<t_TyTraits>::_TyPMFnAccept >( &TGetLexicalAnalyzer<t_TyTraits>::ActionToken4046 ) };
 typedef _l_state< char32_t, 1, true, false, 0, 0 > _TystateUTF32657;

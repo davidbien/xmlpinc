@@ -57,6 +57,29 @@ inline constexpr vtyDataType DtGetType( vtyDataType _dt )
   return _dt & ~( s_kdtfAttrTokenized | s_kdtfLiteralLineEnds | s_kdtfEntityRefInAttrValue );
 }
 
+// xml_dtd_limits:
+// What a document may have the parser do by its document type declaration. The DTD is the document's own: it says
+//  what its entities stand for - and a reference stands for all of that each time it is written, references within
+//  it and all. So a small document can stand for more text than there is memory ( "a billion laughs" ), and it takes
+//  no more than a DTD to do it. These are the limits which the parser holds a document to - an error as one of
+//  well-formedness when one is passed. See xml_parser<>::SetDtdLimits(). A limit of zero is no limit.
+struct xml_dtd_limits
+{
+  // Whether a document may have a document type declaration at all: if not then one which has is an error. ( XML
+  //  traits which don't support the DTD never accept one: this is for those which do. )
+  bool m_fAllowDoctypeDecl{ true };
+  // How deep references to entities may be within the text of entities.
+  size_t m_nMaxEntityDepth{ 64 };
+  // The most characters which one entity may stand for - once the references within its text are replaced - and the
+  //  most which the literal value of one may have once the parameter entities within it are.
+  size_t m_nMaxEntityText{ 1024 * 1024 };
+  // The most characters which the references to entities of one document may stand for in all - those of its content
+  //  and of the values of its attributes, and those to parameter entities in its DTD.
+  size_t m_nMaxEntityExpansion{ 16 * 1024 * 1024 };
+  // The most characters which one external entity may have.
+  size_t m_nMaxExternalEntity{ 64 * 1024 * 1024 };
+};
+
 // 2.11 End-of-Line Handling: each #xD #xA and each #xD which is not followed by #xA is a single #xA. In place: returns
 //  the count of characters which are left.
 template < class t_TyChar >

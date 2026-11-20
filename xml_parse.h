@@ -107,6 +107,24 @@ public:
     m_resolverExternalEntities.swap( _r.m_resolverExternalEntities );
     m_strBaseLocation.swap( _r.m_strBaseLocation );
     std::swap( m_fUseXMLNamespaces, _r.m_fUseXMLNamespaces );
+    std::swap( m_limitsDtd, _r.m_limitsDtd );
+  }
+
+// What a document may have the parser do by its document type declaration - see xml_dtd_limits in xml_types.h: whether
+//  it may have one at all, and how much its entities may stand for. To be set before the document is opened.
+  void SetDtdLimits( xml_dtd_limits const & _rlimits )
+  {
+    m_limitsDtd = _rlimits;
+  }
+  xml_dtd_limits const & GetDtdLimits() const
+  {
+    return m_limitsDtd;
+  }
+  // A document which has a document type declaration is an error: for documents from who is not trusted when the
+  //  XML traits support the DTD.
+  void SetAllowDoctypeDecl( bool _fAllowDoctypeDecl = true )
+  {
+    m_limitsDtd.m_fAllowDoctypeDecl = _fAllowDoctypeDecl;
   }
 
 // Namespaces in XML: whether the document is read as one which uses them - which is so unless this says not.
@@ -138,13 +156,19 @@ public:
   {
     return m_resolverExternalEntities;
   }
-  // The external entities are files: their system identifiers are paths - see FReadExternalEntityFile() in xml_external.h.
+  // The external entities are files: their system identifiers are paths - see xml_file_entity_resolver in xml_external.h.
+  // Only files which are in the directory of the document or below it are read, none which is on another machine and
+  //  none which is larger than a limit - unless the options say otherwise: see xml_file_entity_options.
   void SetReadExternalEntityFiles( bool _fReadExternalEntityFiles = true )
   {
     if ( _fReadExternalEntityFiles )
-      m_resolverExternalEntities = &FReadExternalEntityFile< _TyChar >;
+      m_resolverExternalEntities = xml_file_entity_resolver< _TyChar >();
     else
       m_resolverExternalEntities = nullptr;
+  }
+  void SetReadExternalEntityFiles( xml_file_entity_options const & _roptions )
+  {
+    m_resolverExternalEntities = xml_file_entity_resolver< _TyChar >( _roptions );
   }
   // The location of the document: what the system identifier of its external subset - and those of the entities which
   //  its internal subset declares - are relative to. If this isn't set it is the name of the file which is opened - and
@@ -479,6 +503,7 @@ protected:
   _TyExternalEntityResolver m_resolverExternalEntities; // See SetExternalEntityResolver().
   _TyStdStr m_strBaseLocation; // See SetBaseLocation().
   bool m_fUseXMLNamespaces{ true }; // See SetUseXMLNamespaces().
+  xml_dtd_limits m_limitsDtd; // See SetDtdLimits().
 };
 
 // The implementation currently assumes that if you are using a xml_parser_var with three character types and sharing the switch-endian stuff as below as in _xml_var_get_var_transport.
@@ -542,10 +567,29 @@ public:
   }
 // External entities - as xml_parser<>: they are read only if this parser is told to. The type of character of the
 //  document is not known until it is opened, so what is said here is said for whichever it is.
-  // The external entities are files: their system identifiers are paths - see FReadExternalEntityFile() in xml_external.h.
+  // The external entities are files: their system identifiers are paths - see xml_parser<>::SetReadExternalEntityFiles().
   void SetReadExternalEntityFiles( bool _fReadExternalEntityFiles = true )
   {
     m_fReadExternalEntityFiles = _fReadExternalEntityFiles;
+    m_optFileEntityOptions.reset();
+  }
+  void SetReadExternalEntityFiles( xml_file_entity_options const & _roptions )
+  {
+    m_fReadExternalEntityFiles = true;
+    m_optFileEntityOptions = _roptions;
+  }
+  // What a document may have the parser do by its document type declaration - see xml_parser<>::SetDtdLimits().
+  void SetDtdLimits( xml_dtd_limits const & _rlimits )
+  {
+    m_limitsDtd = _rlimits;
+  }
+  xml_dtd_limits const & GetDtdLimits() const
+  {
+    return m_limitsDtd;
+  }
+  void SetAllowDoctypeDecl( bool _fAllowDoctypeDecl = true )
+  {
+    m_limitsDtd.m_fAllowDoctypeDecl = _fAllowDoctypeDecl;
   }
   // A resolver for each of the types of character whose documents are to have their external entities read: this is
   //  kept for the documents of that type.
@@ -620,12 +664,18 @@ protected:
   {
     typedef typename t_TyParser::_TyChar _TyCharParser;
     _rParser.SetUseXMLNamespaces( m_fUseXMLNamespaces );
+    _rParser.SetDtdLimits( m_limitsDtd );
     xml_external_entity_resolver< _TyCharParser > const & rresolver = std::get< xml_external_entity_resolver< _TyCharParser > >( m_tpResolvers );
     if ( !!rresolver )
       _rParser.SetExternalEntityResolver( rresolver );
     else
     if ( m_fReadExternalEntityFiles )
-      _rParser.SetReadExternalEntityFiles( true );
+    {
+      if ( m_optFileEntityOptions.has_value() )
+        _rParser.SetReadExternalEntityFiles( *m_optFileEntityOptions );
+      else
+        _rParser.SetReadExternalEntityFiles( true );
+    }
     basic_string< _TyCharParser > strBaseLocation;
     if ( !m_strBaseLocation.empty() )
       ConvertString( strBaseLocation, m_strBaseLocation );
@@ -942,7 +992,9 @@ protected:
   _TyParserVariant m_varParser;
   // See SetReadExternalEntityFiles(), SetExternalEntityResolver() and SetBaseLocation().
   bool m_fReadExternalEntityFiles{ false };
+  optional< xml_file_entity_options > m_optFileEntityOptions;
   bool m_fUseXMLNamespaces{ true };
+  xml_dtd_limits m_limitsDtd;
   tuple< xml_external_entity_resolver< char8_t >, xml_external_entity_resolver< char16_t >, xml_external_entity_resolver< char32_t > > m_tpResolvers;
   string m_strBaseLocation;
 };

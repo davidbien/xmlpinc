@@ -878,6 +878,7 @@ protected:
     m_fEntitiesAreContent = false;
     m_fDtdDeclaresEntities = false;
     m_fTokenLiteralLineEnds = false;
+    m_nchEntityExpansion = 0;
     m_rgfFilteredWhiteSpace.clear();
     m_spDtd.reset();
   }
@@ -1018,14 +1019,19 @@ protected:
       }
     );
     auto const & rmapEntities = m_pXp->GetUserObj().GetEntityMap();
+    size_t nchEntityText = 0; // What the references which remain pieces of this character data stand for.
     for ( size_t nPiece = 0; nPiece < rgdtr.size(); ++nPiece )
     {
       if ( rgdtr[nPiece].FIsNull() || ( s_kdtEntityRef != DtGetType( rgdtr[nPiece].type() ) ) )
         continue;
       _TyStrView svName;
       _rpltok->KGetStringView( svName, rgdtr[nPiece].GetRangeBase() );
-      if ( rmapEntities.end() != rmapEntities.find( svName ) )
+      auto citEntityOfMap = rmapEntities.find( svName );
+      if ( rmapEntities.end() != citEntityOfMap )
+      {
+        nchEntityText += citEntityOfMap->second.length();
         continue; // Text alone: the reference remains a piece of the character data.
+      }
       const xml_dtd_entity< _TyChar > * pEntity = m_spDtd->PGetGeneralEntity( svName );
       if ( !pEntity )
         continue; // Not declared: whoever asks for the string of the character data is told.
@@ -1043,7 +1049,11 @@ protected:
       for ( auto const & rupFrame : m_rgupEntityFrames )
         if ( _TyStrView( rupFrame->m_strName ) == svName )
           THROWXMLPARSEEXCEPTION( "The entity [%s] contains a reference to itself.", strName.c_str() );
-      VerifyThrowSz( m_rgupEntityFrames.size() < s_knMaxEntityDepth, "Entities are within each other more than [%zu] deep.", s_knMaxEntityDepth );
+      {//B
+        const size_t knMaxDepth = !m_pXp->GetDtdLimits().m_nMaxEntityDepth ? s_knMaxEntityDepth : m_pXp->GetDtdLimits().m_nMaxEntityDepth;
+        VerifyThrowSz( m_rgupEntityFrames.size() < knMaxDepth, "Entities are within each other more than [%zu] deep.", knMaxDepth );
+      }//EB
+      _AccountEntityExpansion( svText.length() ); // The text which is read in place of the reference.
       if constexpr ( _TyXmlTraits::s_kfValidating )
       {
         // VC: Standalone Document Declaration [32].
@@ -1105,7 +1115,17 @@ protected:
         m_dqPendingTokens.push_front( std::move( pltokBefore ) );
       return true;
     }
+    // The token is given as it is: what its references stand for is counted - once, here. ( What is taken apart above
+    //  comes here again as the tokens which were made of it. )
+    _AccountEntityExpansion( nchEntityText );
     return false;
+  }
+  // What the references to entities of the document have stood for so far - held to xml_dtd_limits::m_nMaxEntityExpansion.
+  void _AccountEntityExpansion( size_t _nch )
+  {
+    m_nchEntityExpansion += _nch;
+    const size_t knMax = m_pXp->GetDtdLimits().m_nMaxEntityExpansion;
+    VerifyThrowSz( !knMax || ( m_nchEntityExpansion <= knMax ), "The references to entities of the document stand for more text than a document's entities may: more than [%zu] characters.", knMax );
   }
   // The text of the entity is all read: what follows is its mark and then what followed the reference to it.
   void _EndEntityFrame()
@@ -1145,6 +1165,8 @@ protected:
       _TyStdStr strText, strLocation;
       if ( !m_pXp->GetExternalEntityResolver()( _rentity.m_externalId, _rentity.m_strBase, strText, strLocation ) )
         return false;
+      VerifyThrowSz( !m_pXp->GetDtdLimits().m_nMaxExternalEntity || ( strText.length() <= m_pXp->GetDtdLimits().m_nMaxExternalEntity ),
+        "An external entity has more than the [%zu] characters which one may have.", m_pXp->GetDtdLimits().m_nMaxExternalEntity );
       xml_dtd_parser< _TyChar >::StripTextDecl( strText ); // The text declaration [77] is not part of the replacement text ( 4.3.1 ).
       NormalizeLineEnds( strText ); // 2.11: the text is ours.
       cit = rmapExternalEntityText.emplace( _rentity.m_strName, std::move( strText ) ).first;
@@ -1210,12 +1232,15 @@ protected:
     }
     if ( s_knTokenDtdDoctypeBegin != pltokDoctype->GetTokenId() )
       THROWXMLPARSEEXCEPTION( "Found markup in the prolog which is neither a document type declaration nor the document's element." );
+    // A document may be one which is not to have a DTD at all - see xml_dtd_limits: then this is an error.
+    VerifyThrowSz( m_pXp->GetDtdLimits().m_fAllowDoctypeDecl, "The document has a document type declaration and the parser was told to accept none." );
     m_spDtd = make_shared< _TyDtd >();
     _TyStdStr strDoctypeText;
     xml_dtd_parser< _TyChar > dtdParser( *m_spDtd );
     // Standalone only if the XML declaration says so: m_fStandalone is true as well when it says nothing.
     dtdParser.SetStandalone( m_XMLDeclProperties.m_fHasStandalone && m_XMLDeclProperties.m_fStandalone );
     dtdParser.SetUseXMLNamespaces( m_fUseXMLNamespaces );
+    dtdParser.SetLimits( m_pXp->GetDtdLimits() );
     dtdParser.SetKeepDoctypeText( &strDoctypeText );
     // The external subset and the external parameter entities are read if the parser has been given the means.
     if ( !!m_pXp->GetExternalEntityResolver() )
@@ -1629,10 +1654,12 @@ protected:
               continue;
             _TyStrView svName;
             _rltok.KGetStringView( svName, _pdtrBegin->GetRangeBase() );
-            if ( rmapEntities.end() != rmapEntities.find( svName ) )
+            auto citEntityOfMap = rmapEntities.find( svName );
+            if ( rmapEntities.end() != citEntityOfMap )
             {
               if ( !rmapEntitiesAttrValues.empty() && ( rmapEntitiesAttrValues.end() != rmapEntitiesAttrValues.find( svName ) ) )
                 _pdtrBegin->m_nType |= s_kdtfEntityRefInAttrValue;
+              _AccountEntityExpansion( citEntityOfMap->second.length() );
               continue;
             }
             const xml_dtd_entity< _TyChar > * pEntity = m_spDtd->PGetGeneralEntity( svName );
@@ -1658,6 +1685,9 @@ protected:
               break;
               case exdeNotDeclared:
                 THROWXMLPARSEEXCEPTION( "The entity [%s] - which the value of an attribute refers to - refers to an entity which is not declared.", strName.c_str() );
+              break;
+              case exdeLimit:
+                THROWXMLPARSEEXCEPTION( "The entity [%s] - which the value of an attribute refers to - stands for more text, or for entities deeper within each other, than is allowed.", strName.c_str() );
               break;
               default:
                 THROWXMLPARSEEXCEPTION( "The replacement text of the entity [%s] - which the value of an attribute refers to - is not well formed.", strName.c_str() );
@@ -1726,8 +1756,11 @@ protected:
   //  declaration of the default namespace.
   void _CheckReservedNamespace( _TyStrView const & _rsvPrefix, _TyStrView const & _rsvUri ) const
   {
-    const _TyStrView svXmlUri( str_array_cast< _TyChar >( "http://www.w3.org/XML/1998/namespace" ) );
-    const _TyStrView svXmlnsUri( str_array_cast< _TyChar >( "http://www.w3.org/2000/xmlns/" ) );
+    // ( The arrays are what the views are of: they are to be here for as long as the views are. )
+    static constexpr auto s_krgchXmlUri = str_array_cast< _TyChar >( "http://www.w3.org/XML/1998/namespace" );
+    static constexpr auto s_krgchXmlnsUri = str_array_cast< _TyChar >( "http://www.w3.org/2000/xmlns/" );
+    const _TyStrView svXmlUri( s_krgchXmlUri.c_str() );
+    const _TyStrView svXmlnsUri( s_krgchXmlnsUri.c_str() );
     if ( _rsvPrefix == _TyStrView( str_array_cast< _TyChar >( "xmlns" ) ) )
       THROWXMLPARSEEXCEPTION( "The document is not namespace-well-formed: the prefix xmlns is declared." );
     if ( _rsvUri == svXmlnsUri )
@@ -2252,6 +2285,7 @@ protected:
   _TyRgEntityFrames m_rgupEntityFrames; // The entities whose text we are within: the last is the one being read.
   deque< unique_ptr< _TyLexToken > > m_dqPendingTokens; // Tokens which are ours to give before the lexical analyzer is asked again.
   size_t m_nLexDepth{ 0 }; // How many elements the lexical analyzer is within.
+  size_t m_nchEntityExpansion{ 0 }; // See _AccountEntityExpansion().
   bool m_fEntitiesAreContent{ false }; // The DTD declares entities whose text is read as content - see _SkipOrReadToEndCurrentContext().
   bool m_fDtdDeclaresEntities{ false }; // It declares general entities at all - see _ProcessEntityReferencesOfAttrValues().
   bool m_fTokenLiteralLineEnds{ false }; // The token which was last had is of text which is flagged s_kdtfLiteralLineEnds.

@@ -158,6 +158,7 @@ enum EXmlDtdExpand : uint8_t
   exdeMarkup, // A '<' in the replacement text of an entity.
   exdeRecursive, // An entity which refers to itself.
   exdeNotWellFormed, // An '&' which is not a reference, a character reference to what is not a character.
+  exdeLimit, // More text - or entities deeper within entities - than the parser allows: see xml_dtd_limits.
   exdeEXmlDtdExpandCount
 };
 // ExternalID [75] and PublicID [83].
@@ -234,6 +235,8 @@ public:
   // The internal subset has a reference to a parameter entity. Then - as when there is an external subset - an entity
   //  which is referenced and not declared is a matter of validity and not of well-formedness ( 4.1 WFC: Entity Declared ).
   bool m_fHasParameterEntityReferences{ false };
+  // What the entities which are declared may come to - see xml_dtd_limits: the parser of the DTD sets these.
+  xml_dtd_limits m_limits;
   // The external subset [30] was read - see xml_dtd_parser<>::SetExternalEntityResolver(): if the document type
   //  declaration has an external identifier and this is false then not all of the declarations are known.
   bool m_fExternalSubsetRead{ false };
@@ -341,13 +344,22 @@ public:
   template < class t_TyEntityMap >
   void AddGeneralEntitiesTo( t_TyEntityMap & _rmap, bool _fInternalOnly = false ) const
   {
+    // ( An entity whose text is more than may be - see xml_dtd_limits - is not text alone as far as this goes: it is not
+    //  added, and a reference to it is then read as content is - or is an error in the value of an attribute. And all
+    //  of the text which is added here is within what the entities of a document may stand for in all. )
     _TyStdStr strText;
+    size_t nchTotal = 0;
     for ( typename _TyMapEntities::value_type const & rvt : m_mapGeneralEntities )
     {
       if ( _fInternalOnly && rvt.second.m_fDeclaredExternally )
         continue;
       if ( ( _rmap.end() == _rmap.find( rvt.first ) ) && FGetGeneralEntityText( rvt.first, strText ) )
+      {
+        nchTotal += strText.length();
+        VerifyThrowSz( !m_limits.m_nMaxEntityExpansion || ( nchTotal <= m_limits.m_nMaxEntityExpansion ),
+          "The entities which the DTD declares stand for more text than a document's entities may: more than [%zu] characters.", m_limits.m_nMaxEntityExpansion );
         _rmap.emplace( rvt.first, strText );
+      }
     }
   }
   // Add to _rmapAttrValues the general entities which stand for other text within the value of an attribute than
@@ -547,6 +559,8 @@ protected:
       return exdeExternal;
     if ( _rrgsvActive.end() != std::find( _rrgsvActive.begin(), _rrgsvActive.end(), _svName ) )
       return exdeRecursive; // WFC: No Recursion - an error only if it is referenced.
+    if ( !!m_limits.m_nMaxEntityDepth && ( _rrgsvActive.size() >= m_limits.m_nMaxEntityDepth ) )
+      return exdeLimit;
     _rrgsvActive.push_back( _svName );
     const EXmlDtdExpand exde = _EExpandText( pentity->m_strValue, _rstrText, _rrgsvActive, _fAttributeValue );
     _rrgsvActive.pop_back();
@@ -557,6 +571,8 @@ protected:
   {
     for ( size_t n = 0; n < svValue.length(); ++n )
     {
+      if ( !!m_limits.m_nMaxEntityText && ( _rstrText.length() > m_limits.m_nMaxEntityText ) )
+        return exdeLimit;
       const _TyChar ch = svValue[ n ];
       if ( _TyChar( '<' ) == ch )
         return exdeMarkup;
@@ -610,7 +626,7 @@ protected:
       ConvertString( strChar, &ch32, 1 );
       _rstrText += strChar;
     }
-    return exdeOk;
+    return ( !!m_limits.m_nMaxEntityText && ( _rstrText.length() > m_limits.m_nMaxEntityText ) ) ? exdeLimit : exdeOk;
   }
 };
 
@@ -818,6 +834,11 @@ public:
   void SetStandalone( bool _fStandalone )
   {
     m_fStandalone = _fStandalone;
+  }
+  // What the entities of the DTD may come to - see xml_dtd_limits. To be set before anything is parsed.
+  void SetLimits( xml_dtd_limits const & _rlimits )
+  {
+    m_rdtd.m_limits = _rlimits;
   }
   // The document is read with Namespaces in XML: then the name of an entity or of a notation and the target of a
   //  processing instruction have no colon - a document which has one is not namespace-well-formed, which is an error.
@@ -1142,6 +1163,9 @@ public:
           break;
           case exdeRecursive: // WFC: No Recursion.
             THROWXMLPARSEEXCEPTION( "The DTD is not well formed: the default value of attribute [%s] refers to an entity which contains a reference to itself.", strName.c_str() );
+          break;
+          case exdeLimit:
+            THROWXMLPARSEEXCEPTION( "The default value of attribute [%s] refers to entities which stand for more text - or are deeper within each other - than is allowed.", strName.c_str() );
           break;
           default:
             THROWXMLPARSEEXCEPTION( "The DTD is not well formed: the default value of attribute [%s] is not well formed once its references are replaced.", strName.c_str() );
@@ -1490,7 +1514,7 @@ protected:
       // WFC: No Recursion.
       if ( m_rparser.m_setParameterEntitiesActive.contains( _svName ) )
         THROWXMLPARSEEXCEPTION( "The DTD is not well formed: the parameter entity [%s] contains a reference to itself.", strName.c_str() );
-      VerifyThrowSz( m_rparser.m_nParameterEntityDepth < s_knMaxParameterEntityDepth, "Parameter entities are within each other more than [%zu] deep.", s_knMaxParameterEntityDepth );
+      m_rparser._CheckParameterEntityDepth();
       unique_ptr< _TyTextFrame > upFrame = make_unique< _TyTextFrame >();
       _TyStdStr strLocation;
       if ( pentity->m_fInternal )
@@ -1502,6 +1526,7 @@ protected:
         _StripTextDecl( upFrame->m_strText );
         upFrame->m_fExternalEntity = true;
       }
+      m_rparser._AccountEntityExpansion( upFrame->m_strText.length() );
       upFrame->m_strText.insert( upFrame->m_strText.begin(), _TyChar( ' ' ) );
       upFrame->m_strText += _TyChar( ' ' );
       upFrame->m_svText = upFrame->m_strText;
@@ -1631,10 +1656,16 @@ protected:
                 if ( !_FGetExternalEntityText( *pentity, strText, strLocation ) )
                   THROWXMLPARSEEXCEPTION( "The external parameter entity [%s] is referenced within an entity value and is not read: the value can't be had.", StrConvertString< char >( sv ).c_str() );
                 _StripTextDecl( strText );
+                _AccountEntityExpansion( strText.length() );
                 _rstr += strText;
               }
               else
+              {
+                _AccountEntityExpansion( pentity->m_strValue.length() );
                 _rstr += pentity->m_strValue;
+              }
+              VerifyThrowSz( !m_rdtd.m_limits.m_nMaxEntityText || ( _rstr.length() <= m_rdtd.m_limits.m_nMaxEntityText ),
+                "The literal value of an entity is - with the parameter entities which it refers to - more than [%zu] characters.", m_rdtd.m_limits.m_nMaxEntityText );
             }
             break;
             default:
@@ -1656,7 +1687,7 @@ protected:
     // WFC: No Recursion.
     if ( m_setParameterEntitiesActive.contains( _rstrName ) )
       THROWXMLPARSEEXCEPTION( "The DTD is not well formed: the parameter entity [%s] contains a reference to itself.", StrConvertString< char >( _rstrName ).c_str() );
-    VerifyThrowSz( m_nParameterEntityDepth < s_knMaxParameterEntityDepth, "Parameter entities are within each other more than [%zu] deep.", s_knMaxParameterEntityDepth );
+    _CheckParameterEntityDepth();
     // The text is copied: declarations within it may add entities and the map may then move this one. Never mind speed here.
     const bool kfExternalEntity = !pentity->m_fInternal;
     _TyStdStr strText, strLocation;
@@ -1669,6 +1700,7 @@ protected:
       m_rdtd.m_fStoppedProcessingDeclarations = true;
       return;
     }
+    _AccountEntityExpansion( strText.length() );
     m_setParameterEntitiesActive.insert( _rstrName );
     ++m_nParameterEntityDepth;
     const bool kfExternalSave = m_fExternal;
@@ -1696,6 +1728,24 @@ protected:
     } leave{ *this, _rstrName, kfExternalEntity, kfExternalSave };
     // An external entity may begin with a text declaration - as the external subset may: [78], [30].
     _ParseText( strText, kfExternalEntity ? ns_xmlpdtd::s_knEntry_extSubset : ns_xmlpdtd::s_knEntry_extSubsetDecl );
+  }
+  // What a document may have us do by its DTD - see xml_dtd_limits: how deep parameter entities are within each other,
+  //  and how much text the references to them stand for in all.
+  void _CheckParameterEntityDepth() const
+  {
+    const size_t knMaxDepth = !m_rdtd.m_limits.m_nMaxEntityDepth ? s_knMaxParameterEntityDepth : m_rdtd.m_limits.m_nMaxEntityDepth;
+    VerifyThrowSz( m_nParameterEntityDepth < knMaxDepth, "Parameter entities are within each other more than [%zu] deep.", knMaxDepth );
+  }
+  void _AccountEntityExpansion( size_t _nch )
+  {
+    m_nchEntityExpansion += _nch;
+    VerifyThrowSz( !m_rdtd.m_limits.m_nMaxEntityExpansion || ( m_nchEntityExpansion <= m_rdtd.m_limits.m_nMaxEntityExpansion ),
+      "The references to parameter entities of the DTD stand for more text than a document's entities may: more than [%zu] characters.", m_rdtd.m_limits.m_nMaxEntityExpansion );
+  }
+  void _CheckExternalEntitySize( size_t _nch ) const
+  {
+    VerifyThrowSz( !m_rdtd.m_limits.m_nMaxExternalEntity || ( _nch <= m_rdtd.m_limits.m_nMaxExternalEntity ),
+      "An external entity of the DTD has more than the [%zu] characters which one may have.", m_rdtd.m_limits.m_nMaxExternalEntity );
   }
   // A reference to a parameter entity which isn't declared - 4.1: Entity Declared.
   // For a standalone document this is not well formed - unless a parameter entity wasn't read, since it may be declared there.
@@ -1777,9 +1827,10 @@ protected:
       return;
     _TyStdStr strText, strLocation;
     const bool kfGotText = m_resolver( *m_rdtd.m_optExternalId, _SvBase(), strText, strLocation );
-    NormalizeLineEnds( strText ); // 2.11: the text is ours.
     if ( !kfGotText )
       return;
+    _CheckExternalEntitySize( strText.length() );
+    NormalizeLineEnds( strText ); // 2.11: the text is ours.
     m_rgstrBase.push_back( std::move( strLocation ) );
     struct _Leave
     {
@@ -1804,6 +1855,7 @@ protected:
     Assert( !_rentity.m_fInternal );
     if ( !m_resolver || !m_resolver( _rentity.m_externalId, _rentity.m_strBase, _rstrText, _rstrLocation ) )
       return false;
+    _CheckExternalEntitySize( _rstrText.length() );
     NormalizeLineEnds( _rstrText );
     return true;
   }
@@ -1925,6 +1977,7 @@ protected:
   bool m_fUseXMLNamespaces{ false }; // See SetUseXMLNamespaces().
   bool m_fExternal{ false }; // Parsing the external subset or an external parameter entity.
   size_t m_nParameterEntityDepth{ 0 }; // Within the replacement text of this many parameter entities.
+  size_t m_nchEntityExpansion{ 0 }; // The characters which the references to parameter entities have stood for so far - see _AccountEntityExpansion().
   string m_strAttributeOfUndeclaredEntity; // An attribute of the internal subset whose default refers to an entity which is not declared - see _EndOfDeclarations().
   _TyStdStr * m_pstrDoctypeText{ nullptr }; // See SetKeepDoctypeText().
   _TyExternalEntityResolver m_resolver; // See SetExternalEntityResolver().
