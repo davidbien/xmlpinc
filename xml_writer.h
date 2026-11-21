@@ -41,6 +41,7 @@
 #include "xml_output_tokens.h"
 #include "xml_attr_default.h"
 #include "xml_dtd.h"
+#include "xml_validate.h"
 #include "_l_match.h"
 
 __XMLP_BEGIN_NAMESPACE
@@ -561,10 +562,62 @@ public:
     _TyStdStr str;
     ConvertString( str, _rdtd.m_strDoctypeText );
     m_optstrDoctypeDeclToWrite.emplace( std::move( str ) );
+    m_fnValidatorOfDoctypeDeclToWrite = _FnValidatorOfDtd( make_shared< const xml_dtd< t_TyCharDtd > >( _rdtd ) );
   }
   void ClearDoctypeDeclToWrite()
   {
     m_optstrDoctypeDeclToWrite.reset();
+    m_fnValidatorOfDoctypeDeclToWrite = nullptr;
+  }
+  // Validation of what is written: it is checked against the DTD of the document type declaration which is written - as
+  //  a validating read cursor checks what it reads ( see xml_validator ). The DTD is all of it when it is given -
+  //  WriteDoctypeDecl( xml_dtd ), SetDoctypeDeclToWrite(), or the DTD of a read cursor which has one and from which the
+  //  declaration is written: see NWriteFromReadCursor() - and otherwise that of the text of the declaration alone,
+  //  whose external subset isn't read. Without a document type declaration the document isn't valid.
+  // A violation is recorded - RgValidityErrors() - and isn't an error: what violates is written. Unless
+  //  SetThrowOnValidityError(): then it is thrown when it is found, and the document is not to be written further.
+  // To be set before the document type declaration is written - and before the first tag.
+  void SetValidate( bool _fValidate = true )
+  {
+    VerifyThrowSz( ( _fValidate == m_fValidate ) || ( !m_fWroteDoctypeDecl && !m_fWroteFirstTag ), "Validation is set before the document type declaration and the first tag are written." );
+    m_fValidate = _fValidate;
+  }
+  bool FGetValidate() const
+  {
+    return m_fValidate;
+  }
+  void SetThrowOnValidityError( bool _fThrowOnValidityError = true )
+  {
+    m_fThrowOnValidityError = _fThrowOnValidityError;
+    if ( !!m_upValidator )
+      m_upValidator->SetThrowOnError( _fThrowOnValidityError );
+  }
+  bool FGetThrowOnValidityError() const
+  {
+    return m_fThrowOnValidityError;
+  }
+  // Whether what has been written is valid - with the declarations of its DTD. False if validation isn't set or no
+  //  document type declaration was written.
+  bool FIsValid() const
+  {
+    return !!m_upValidator && m_upValidator->FIsValid();
+  }
+  // What has been written violates - not what the declarations of its DTD do: see RgValidityErrorsOfDtd().
+  vector< string > const & RgValidityErrors() const
+  {
+    static const vector< string > s_rgstrNone;
+    return !m_upValidator ? s_rgstrNone : m_upValidator->RgErrors();
+  }
+  vector< string > const & RgValidityErrorsOfDtd() const
+  {
+    static const vector< string > s_rgstrNone;
+    return !m_upValidator ? s_rgstrNone : m_upValidator->RgErrorsOfDtd();
+  }
+  // Not all of what has been written could be validated: not all of the declarations of the DTD are known - it has an
+  //  external subset which wasn't read, say - or content is in an entity whose text has markup or is external.
+  bool FValidationIncomplete() const
+  {
+    return !!m_upValidator && m_upValidator->FIncomplete();
   }
   // Whether to write the attributes which a tag didn't have and which the DTD gave it when it was read - those whose
   //  value is an xml_attr_default_value.
@@ -680,6 +733,24 @@ public:
   {
     // If the following statement throws then you are mixing "including prefixes" and this isn't supported (currrently).
     SetIncludePrefixesInAttrNames( _rxrc.GetIncludePrefixesInAttrNames() );
+    // The DTD of the cursor - all of it, as it was read - is what what is written is validated against if the document
+    //  type declaration of the cursor is written: see SetValidate().
+    struct _TyClearValidatorOfToken
+    {
+      _TyThis & m_r;
+      ~_TyClearValidatorOfToken()
+      {
+        m_r.m_fnValidatorOfDoctypeToken = nullptr;
+      }
+    } clearValidatorOfToken{ *this };
+    if constexpr ( requires { _rxrc.FHasDtd(); _rxrc.GetDtd(); } )
+    {
+      if ( m_fValidate && !m_fWroteDoctypeDecl && _rxrc.FHasDtd() )
+      {
+        auto const * pdtdCursor = &_rxrc.GetDtd();
+        m_fnValidatorOfDoctypeToken = [this,pdtdCursor]() { return _FnValidatorOfDtd( make_shared< const remove_cvref_t< decltype( *pdtdCursor ) > >( *pdtdCursor ) )(); };
+      }
+    }
 
     if ( _nNextTags > 0 )
       _nNextTags = FInProlog() ? 1 : ( FInEpilog() ? 0 : _nNextTags );
@@ -760,6 +831,24 @@ public:
   {
     // If the following statement throws then you are mixing "including prefixes" and this isn't supported (currrently).
     SetIncludePrefixesInAttrNames( _rxrc.GetIncludePrefixesInAttrNames() );
+    // The DTD of the cursor - all of it, as it was read - is what what is written is validated against if the document
+    //  type declaration of the cursor is written: see SetValidate().
+    struct _TyClearValidatorOfToken
+    {
+      _TyThis & m_r;
+      ~_TyClearValidatorOfToken()
+      {
+        m_r.m_fnValidatorOfDoctypeToken = nullptr;
+      }
+    } clearValidatorOfToken{ *this };
+    if constexpr ( requires { _rxrc.FHasDtd(); _rxrc.GetDtd(); } )
+    {
+      if ( m_fValidate && !m_fWroteDoctypeDecl && _rxrc.FHasDtd() )
+      {
+        auto const * pdtdCursor = &_rxrc.GetDtd();
+        m_fnValidatorOfDoctypeToken = [this,pdtdCursor]() { return _FnValidatorOfDtd( make_shared< const remove_cvref_t< decltype( *pdtdCursor ) > >( *pdtdCursor ) )(); };
+      }
+    }
 
     _rfSkippedSomething = false; // Set this to true if we end up skipping something.
 
@@ -938,6 +1027,7 @@ public:
         _WriteCharAndAttrString< TGetCharDataStart >( sv.data(), sv.data() + sv.length(), edrNoReferences );
       } );
     _MarkMixed();
+    _ValidateCharacterData( _FIsWhiteSpaceAsWritten( sv.data(), sv.data() + sv.length() ) );
   }
   // A reference to the general entity _rName: one of the five which XML predefines ( 4.6 ), or one which the document type
   //  declaration which was written declares - or may declare, if it has an external subset or a reference to a parameter
@@ -965,6 +1055,8 @@ public:
     _WriteTransportRaw( strName.data(), strName.length() );
     _WriteTransportRaw( _TyMarkupTraits::s_kszReferenceEnd, StaticStringLen( _TyMarkupTraits::s_kszReferenceEnd ) );
     _MarkMixed();
+    if ( !!m_upValidator )
+      m_upValidator->CharacterData( m_upValidator->FEntityReferenceIsWhiteSpace( strName ) );
   }
   // A reference to the character _ucChar: &#xhhhh; - it is to be a Char [2]. Within the document element.
   void WriteCharReference( char32_t _ucChar )
@@ -983,6 +1075,7 @@ public:
     }
     _WriteTransportRaw( _TyMarkupTraits::s_kszReferenceEnd, StaticStringLen( _TyMarkupTraits::s_kszReferenceEnd ) );
     _MarkMixed();
+    _ValidateCharacterData( false ); // A reference to a character isn't white space among elements, whatever the character.
   }
   // <!--text--> - the text hasn't "--" and doesn't end with '-' ( [15] ).
   template < class t_TyStr >
@@ -999,6 +1092,7 @@ public:
         _WriteTransportRaw( _TyMarkupTraits::s_kszCommentEnd, StaticStringLen( _TyMarkupTraits::s_kszCommentEnd ) );
         _FormatAfterTopLevel();
       } );
+    _ValidateCommentOrProcessingInstruction();
   }
   // <?target data?> - or <?target?> if the data is empty ( [16] ). The target is a name and not "xml" in any case; the
   //  data hasn't "?>".
@@ -1030,6 +1124,7 @@ public:
         _WriteTransportRaw( _TyMarkupTraits::s_kszProcessingInstructionEnd, StaticStringLen( _TyMarkupTraits::s_kszProcessingInstructionEnd ) );
         _FormatAfterTopLevel();
       } );
+    _ValidateCommentOrProcessingInstruction();
   }
   // <![CDATA[text]]> - a "]]>" of the text is written in two sections, as is a #xD. Within the document element.
   template < class t_TyStr >
@@ -1046,6 +1141,7 @@ public:
         _WriteTransportRaw( _TyMarkupTraits::s_kszCDataSectionEnd, StaticStringLen( _TyMarkupTraits::s_kszCDataSectionEnd ) );
       } );
     _MarkMixed();
+    _ValidateCharacterData( false ); // A CDATA section is not white space among elements whatever is in it.
   }
   // The document type declaration - all of its text, from its "<!DOCTYPE" through its '>': it is parsed as that of a
   //  document is - nothing external is read - and the general entities which it declares may then be referred to. Once,
@@ -1054,11 +1150,19 @@ public:
   void WriteDoctypeDecl( t_TyStr const & _rStr )
     requires( CXmlStrArg< t_TyStr > )
   {
+    _WriteDoctypeDeclText( SvXmlStrArg( _rStr ), nullptr );
+  }
+protected:
+  // _pfnValidator: makes the validator of what is written - see SetValidate() - if it is to be of another DTD than that of
+  //  the text: one which has all of the declarations.
+  template < class t_TyCharDtd >
+  void _WriteDoctypeDeclText( basic_string_view< t_TyCharDtd > _sv, const std::function< unique_ptr< _xml_write_validator_base< _TyChar > >() > * _pfnValidator )
+  {
     _CheckNotEnded();
     VerifyThrowSz( FInProlog(), "The document type declaration may only be written before the first tag." );
     VerifyThrowSz( !m_fWroteDoctypeDecl, "A document type declaration has already been written - there may be only one." );
-    auto sv = SvXmlStrArg( _rStr );
-    typedef typename decltype( sv )::value_type _TyCharDtd;
+    auto sv = _sv;
+    typedef t_TyCharDtd _TyCharDtd;
     xml_dtd< _TyCharDtd > dtd;
     xml_dtd_parser< _TyCharDtd >::CheckDoctypeDeclText( sv, dtd );
     // The entities which it declares - all of them, unless there are declarations which weren't read.
@@ -1074,14 +1178,20 @@ public:
     _WriteTransportRaw( sv.data(), sv.length() );
     m_fWroteDoctypeDecl = true;
     _FormatAfterTopLevel();
+    if ( m_fValidate )
+      _SetValidator( ( !!_pfnValidator && !!*_pfnValidator ) ? (*_pfnValidator)() : _FnValidatorOfDtd( make_shared< const xml_dtd< _TyCharDtd > >( std::move( dtd ) ) )() );
   }
+public:
   // The document type declaration of _rdtd - its text as it is now: see xml_dtd<>::m_strDoctypeText. A DTD which was read,
   //  edited or made - see xml_dtd<>::Edit().
   template < class t_TyCharDtd >
   void WriteDoctypeDecl( xml_dtd< t_TyCharDtd > const & _rdtd )
   {
     VerifyThrowSz( !_rdtd.m_strDoctypeText.empty(), "The DTD has no document type declaration - see xml_dtd<>::SetRootName()." );
-    WriteDoctypeDecl( _rdtd.m_strDoctypeText );
+    std::function< unique_ptr< _TyValidatorBase >() > fnValidator;
+    if ( m_fValidate )
+      fnValidator = _FnValidatorOfDtd( make_shared< const xml_dtd< t_TyCharDtd > >( _rdtd ) );
+    _WriteDoctypeDeclText( basic_string_view< t_TyCharDtd >( _rdtd.m_strDoctypeText ), &fnValidator );
   }
   // <!DOCTYPE name PUBLIC "publicId" "systemId" [internalSubset]> - an empty string is one which isn't given: there is a
   //  system identifier if there is a public one. A literal is in '"' unless it has one.
@@ -1315,6 +1425,12 @@ public:
         _WriteTransportRaw( _pwcxEnd->RStrEndTagSpace().data(), _pwcxEnd->RStrEndTagSpace().length() );
       _WriteTransportRaw( _TyMarkupTraits::s_kszTagEnd, StaticStringLen( _TyMarkupTraits::s_kszTagEnd ) );
     }
+    // The validator was told of the tag when it was committed - see _ValidateStartTag().
+    if ( !!m_upValidator && ( m_lContexts.size() - 1 == m_nValidatedDepth ) )
+    {
+      --m_nValidatedDepth;
+      m_upValidator->EndTag();
+    }
     m_lContexts.pop_back();
     _FormatAfterTopLevel(); // The document element was ended.
   }
@@ -1336,9 +1452,11 @@ public:
       break;
       case s_knTokenComment:
         _WriteComment( _rtok );
+        _ValidateCommentOrProcessingInstruction();
       break;
       case s_knTokenCDataSection:
         _WriteCDataSection( _rtok );
+        _ValidateCharacterData( false );
       break;
       case s_knTokenCharData:
       {
@@ -1348,10 +1466,12 @@ public:
         _CheckCommitCur();
         _WriteCharAndAttrData< TGetCharDataStart >( _rtok, _rtok.GetValue() );
         _MarkMixed();
+        _ValidateCharacterDataToken( _rtok, _rtok.GetValue() );
       }
       break;
       case s_knTokenProcessingInstruction:
         _WriteProcessingInstruction( _rtok );
+        _ValidateCommentOrProcessingInstruction();
       break;
       case s_knTokenDoctypeDecl:
         _WriteDoctypeDecl( _rtok );
@@ -1394,6 +1514,8 @@ protected:
     m_fWroteFirstTag = false;
     m_fWroteDoctypeDecl = false;
     m_fEndedDocument = false;
+    m_upValidator.reset();
+    m_nValidatedDepth = 0;
     m_setDeclaredEntities.clear();
     m_fDeclaredEntitiesComplete = false;
     m_nWithinEntityReference = 0;
@@ -1576,6 +1698,166 @@ protected:
         _rwcx.SetPreserveSpace( false );
     }
   }
+// Validation - see SetValidate():
+  typedef _xml_write_validator_base< _TyChar > _TyValidatorBase;
+  typedef typename _TyValidatorBase::_TyAttr _TyValidatorAttr;
+  // The characters of a DTD of the size of ours.
+  typedef conditional_t< sizeof( _TyChar ) == sizeof( char8_t ), char8_t, conditional_t< sizeof( _TyChar ) == sizeof( char16_t ), char16_t, char32_t > > _TyCharDtdOfSize;
+  // What makes a validator of the DTD.
+  template < class t_TyCharDtd >
+  static std::function< unique_ptr< _TyValidatorBase >() > _FnValidatorOfDtd( shared_ptr< const xml_dtd< t_TyCharDtd > > const & _rspDtd )
+  {
+    return [_rspDtd]() -> unique_ptr< _TyValidatorBase >
+    {
+      return make_unique< _xml_write_validator< _TyChar, t_TyCharDtd > >( _rspDtd );
+    };
+  }
+  void _SetValidator( unique_ptr< _TyValidatorBase > && _rrupValidator )
+  {
+    m_upValidator = std::move( _rrupValidator );
+    m_upValidator->SetThrowOnError( m_fThrowOnValidityError );
+    _TyXMLDeclProperties const & rxdp = m_xdcxtDocumentContext.GetXMLDeclProperties();
+    m_upValidator->SetStandalone( rxdp.m_fHasStandalone && rxdp.m_fStandalone );
+    m_upValidator->SetUseXMLNamespaces( m_fUseNamespaces );
+    m_nValidatedDepth = 0;
+  }
+  // The name as it is written - the DTD knows the names so: prefix and all.
+  template < class t_TyXmlToken >
+  void _GetNameAsWritten( t_TyXmlToken const & _rtok, typename t_TyXmlToken::_TyLexValue const & _rvalRgName, _TyStdStr & _rstrName ) const
+  {
+    typedef typename t_TyXmlToken::_TyLexValue _TyLexValue;
+    _rstrName.clear();
+    const _TyLexValue & rvalName = _rvalRgName[vknNameIdx];
+    const _TyLexValue & rvalNS = _rvalRgName[vknNamespaceIdx];
+    if ( !rvalNS.FIsBool() && !m_xdcxtDocumentContext.FIncludePrefixesInAttrNames() ) // As _WriteName() writes it.
+    {
+      const _TyXmlNamespaceValueWrap & rxnvw = rvalNS.template GetVal< _TyXmlNamespaceValueWrap >();
+      if ( !rxnvw.FIsAttributeNamespaceDeclaration() && !rxnvw.RStringPrefix().empty() )
+      {
+        _rstrName += rxnvw.RStringPrefix();
+        _rstrName += _TyChar( ':' );
+      }
+    }
+    basic_string_view< _TyChar > sv;
+    _TyStdStr str;
+    (void)_rtok.GetLexToken().FGetStringViewOrString( sv, str, rvalName );
+    _rstrName += sv;
+  }
+  // The tag is committed: the validator is told of it with the attributes which are written.
+  template < class t_TyXmlToken >
+  void _ValidateStartTag( t_TyXmlToken const & _rtok )
+  {
+    typedef typename t_TyXmlToken::_TyLexValue _TyLexValue;
+    if ( !m_upValidator ) // No document type declaration was written: nothing is valid.
+      _SetValidator( make_unique< _xml_write_validator< _TyChar, _TyCharDtdOfSize > >( nullptr ) );
+    const _TyLexValue & rvalRoot = _rtok.GetValue();
+    _GetNameAsWritten( _rtok, rvalRoot[vknTagNameIdx], m_strValidateName );
+    const _TyLexValue & rrgAttrs = rvalRoot[vknAttributesIdx];
+    const size_t knAttrs = rrgAttrs.GetSize();
+    // The strings are all there before any view of one is had.
+    if ( m_rgstrValidate.size() < 2 * knAttrs )
+      m_rgstrValidate.resize( 2 * knAttrs );
+    m_rgValidateAttrs.clear();
+    for ( size_t nAttr = 0; nAttr < knAttrs; ++nAttr )
+    {
+      const _TyLexValue & rvalAttr = rrgAttrs[nAttr];
+      const _TyLexValue & rvalValue = rvalAttr[vknAttr_ValueIdx];
+      const bool kfAttrDefaultValue = FIsAttrDefaultValue( rvalValue );
+      if ( kfAttrDefaultValue && !FWriteDefaultedAttributes() )
+        continue; // Not written: whoever reads what we write has it from the DTD.
+      _TyValidatorAttr & rattr = m_rgValidateAttrs.emplace_back();
+      _TyStdStr & rstrName = m_rgstrValidate[ 2 * nAttr ];
+      _GetNameAsWritten( _rtok, rvalAttr, rstrName );
+      rattr.m_svName = rstrName;
+      _TyStdStr & rstrValue = m_rgstrValidate[ 2 * nAttr + 1 ];
+      rstrValue.clear();
+      basic_string_view< _TyChar > svValue;
+      if ( kfAttrDefaultValue )
+        rstrValue = rvalValue.template GetVal< xml_attr_default_value< typename t_TyXmlToken::_TyChar > >().SvValue();
+      else
+      if ( _rtok.GetLexToken().FGetStringViewOrString( svValue, rstrValue, rvalValue ) )
+        rstrValue = svValue;
+      rattr.m_svValue = rstrValue;
+      // A string is read as it is - but for the normalization by the type of the attribute; what was read is that already.
+      rattr.m_fNormalizeByType = rvalValue.FIsString();
+    }
+    m_upValidator->StartTag( m_strValidateName, m_rgValidateAttrs.data(), m_rgValidateAttrs.data() + m_rgValidateAttrs.size() );
+    m_nValidatedDepth = m_lContexts.size() - 1;
+  }
+  void _ValidateCharacterData( bool _fWhiteSpace )
+  {
+    if ( !!m_upValidator && FInsideDocumentTag() )
+      m_upValidator->CharacterData( _fWhiteSpace );
+  }
+  void _ValidateCommentOrProcessingInstruction()
+  {
+    if ( !!m_upValidator && FInsideDocumentTag() )
+      m_upValidator->CommentOrProcessingInstruction();
+  }
+  // Character data which is a string is white space - which matches S [3] - when it is read if each character is a
+  //  space, a tab or a #xA: a #xD is written as a reference to it.
+  template < class t_TyCharStr >
+  static bool _FIsWhiteSpaceAsWritten( const t_TyCharStr * _pcBegin, const t_TyCharStr * const _pcEnd )
+  {
+    for ( ; _pcEnd != _pcBegin; ++_pcBegin )
+      if ( !( ( t_TyCharStr( 0x20 ) == *_pcBegin ) || ( t_TyCharStr( 0x9 ) == *_pcBegin ) || ( t_TyCharStr( 0xa ) == *_pcBegin ) ) )
+        return false;
+    return true;
+  }
+  // Character data of a token: a string - or the text of a document, which is white space where it is and where the
+  //  references are to entities whose text is. A reference to a character is not.
+  template < class t_TyXmlToken >
+  void _ValidateCharacterDataToken( t_TyXmlToken const & _rtok, typename t_TyXmlToken::_TyLexValue const & _rval )
+  {
+    if ( !m_upValidator || !FInsideDocumentTag() )
+      return;
+    if ( !_rval.FHasTypedData() )
+    {
+      bool fWhiteSpace = true;
+      _rval.ApplyString(
+        [&fWhiteSpace]< typename t_TyCharStr >( const t_TyCharStr * _pcBegin, const t_TyCharStr * const _pcEnd )
+        {
+          fWhiteSpace = _FIsWhiteSpaceAsWritten( _pcBegin, _pcEnd );
+        }
+      );
+      m_upValidator->CharacterData( fWhiteSpace );
+      return;
+    }
+    bool fWhiteSpace = true;
+    _l_data<> const & krdt = _rval.GetTypedData();
+    if ( !krdt.FIsNull() )
+    {
+      krdt.Apply(
+        [this,&_rtok,&fWhiteSpace]( const _l_data_typed_range * _pdtrBegin, const _l_data_typed_range * _pdtrEnd )
+        {
+          // ( Each reference to an entity is looked at: what it refers to may be not known. )
+          for ( const _l_data_typed_range * pdtrCur = _pdtrBegin; _pdtrEnd != pdtrCur; ++pdtrCur )
+          {
+            if ( pdtrCur->FIsNull() )
+              continue;
+            const vtyDataType kdt = DtGetType( pdtrCur->type() );
+            if ( ( s_kdtEntityRef != kdt ) && !fWhiteSpace )
+              continue;
+            basic_string_view< typename t_TyXmlToken::_TyChar > sv;
+            _rtok.GetLexToken().KGetStringView( sv, pdtrCur->GetRangeBase() );
+            if ( s_kdtPlainText == kdt )
+              fWhiteSpace = _FIsWhiteSpace( sv.data(), sv.data() + sv.length() );
+            else
+            if ( s_kdtEntityRef == kdt )
+            {
+              _TyStdStr strName;
+              ConvertString( strName, sv.data(), sv.length() );
+              if ( !m_upValidator->FEntityReferenceIsWhiteSpace( strName ) )
+                fWhiteSpace = false;
+            }
+            else
+              fWhiteSpace = false;
+          }
+        }
+      );
+    }
+    m_upValidator->CharacterData( fWhiteSpace );
+  }
   void _CheckNotEnded() const
   {
     VerifyThrowSz( !m_fEndedDocument, "The document was ended - see EndDocument()." );
@@ -1726,6 +2008,8 @@ protected:
           _WriteCharAndAttrData< TGetAttCharDataNoSingleQuoteStart >( _rtok, rvalValue, _edrDetectReferences );
       }
     }
+    if ( m_fValidate )
+      _ValidateStartTag( _rtok );
     // Pretty printing: the tag is on a line of its own within an element which is indented - and xml:space of the tag is
     //  had for what is within it. ( The tag which is committed is the current one. )
     if ( m_fPrettyPrint )
@@ -2135,7 +2419,7 @@ protected:
       return;
     if ( m_optstrDoctypeDeclToWrite.has_value() ) // See SetDoctypeDeclToWrite().
     {
-      WriteDoctypeDecl( *m_optstrDoctypeDeclToWrite );
+      _WriteDoctypeDeclText( basic_string_view< _TyChar >( *m_optstrDoctypeDeclToWrite ), &m_fnValidatorOfDoctypeDeclToWrite );
       return;
     }
     VerifyThrowSz( FInProlog(), "The document type declaration may only be written before the first tag." );
@@ -2151,8 +2435,12 @@ protected:
         {
           // The parser is that of the type of character of this size.
           typedef conditional_t< sizeof( t_TyChar ) == sizeof( char8_t ), char8_t, conditional_t< sizeof( t_TyChar ) == sizeof( char16_t ), char16_t, char32_t > > _TyCharDtd;
-          xml_dtd_parser< _TyCharDtd >::CheckDoctypeDeclText( basic_string_view< _TyCharDtd >( (const _TyCharDtd *)_pcBegin, size_t( _pcEnd - _pcBegin ) ) );
+          xml_dtd< _TyCharDtd > dtd;
+          xml_dtd_parser< _TyCharDtd >::CheckDoctypeDeclText( basic_string_view< _TyCharDtd >( (const _TyCharDtd *)_pcBegin, size_t( _pcEnd - _pcBegin ) ), dtd );
           _WriteTransportRaw( _pcBegin, _pcEnd );
+          // The DTD of the cursor which the token is from - or else that of the text: see SetValidate().
+          if ( m_fValidate )
+            _SetValidator( !!m_fnValidatorOfDoctypeToken ? m_fnValidatorOfDoctypeToken() : _FnValidatorOfDtd( make_shared< const xml_dtd< _TyCharDtd > >( std::move( dtd ) ) )() );
         }
       );
     }
@@ -2537,6 +2825,15 @@ protected:
   bool m_fUseNamespaces{true}; // Using namespaces?
   bool m_fWriteDoctypeDecl{true}; // Write the document type declaration when its token is written.
   optional< _TyStdStr > m_optstrDoctypeDeclToWrite; // See SetDoctypeDeclToWrite().
+  std::function< unique_ptr< _xml_write_validator_base< _TyChar > >() > m_fnValidatorOfDoctypeDeclToWrite; // Of its DTD - see SetValidate().
+  bool m_fValidate{false}; // See SetValidate().
+  bool m_fThrowOnValidityError{false};
+  unique_ptr< _xml_write_validator_base< _TyChar > > m_upValidator; // Once the document type declaration - or the first tag - is written.
+  size_t m_nValidatedDepth{0}; // The depth of the last tag of which the validator was told - see _ValidateStartTag().
+  std::function< unique_ptr< _xml_write_validator_base< _TyChar > >() > m_fnValidatorOfDoctypeToken; // Of the DTD of the read cursor being written - see NWriteFromReadCursor().
+  _TyStdStr m_strValidateName;
+  vector< _TyStdStr > m_rgstrValidate; // The names and values of the attributes of a tag.
+  vector< typename _xml_write_validator_base< _TyChar >::_TyAttr > m_rgValidateAttrs;
   optional< bool > m_optfWriteDefaultedAttributes; // Write the attributes which the DTD gave a tag - see SetWriteDefaultedAttributes().
 // state:
   bool m_fWroteFirstTag{false};

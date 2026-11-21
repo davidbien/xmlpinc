@@ -12,7 +12,8 @@
 
 // xml_validator is told of a document as it is read - the start of each tag with its attributes, what is within it and
 //  its end - and checks it against an xml_dtd. A read cursor whose XML traits are validating
-//  ( xml_traits< transport, true, true > ) has one and tells it: see xml_read_cursor<>::FIsValid().
+//  ( xml_traits< transport, true, true > ) has one and tells it: see xml_read_cursor<>::FIsValid(). So does a writer
+//  which is to validate what it writes - see xml_writer<>::SetValidate() and _xml_write_validator below.
 // The validity constraints ( VC ) which are checked - the declarations themselves are checked when they are read, see
 //  xml_dtd<>::m_rgstrValidityErrors:
 //  - VC: Root Element Type [28]: the document's element is of the type which the document type declaration names.
@@ -42,6 +43,7 @@
 #include <string>
 #include <string_view>
 #include <vector>
+#include <memory>
 #include "_strutil.h"
 #include "xml_ns.h"
 #include "xml_types.h"
@@ -693,6 +695,204 @@ protected:
   bool m_fStandalone{ false };
   bool m_fUseXMLNamespaces{ false };
   bool m_fDocumentElementEnded{ false };
+};
+
+// The validation of what a writer writes - see xml_writer<>::SetValidate(). The writer's characters may be of another
+//  type than those of the DTD of what it writes: the writer has a _xml_write_validator_base of its type of character
+//  and _xml_write_validator converts what it is told to that of the DTD.
+template < class t_TyChar >
+class _xml_write_validator_base
+{
+public:
+  typedef basic_string_view< t_TyChar > _TyStrView;
+  // An attribute as it is written: its name as it is written and its value as whoever reads it has it - but for
+  //  m_fNormalizeByType: a value which is a string is normalized by the declared type of the attribute here ( 3.3.3 ).
+  struct _TyAttr
+  {
+    _TyStrView m_svName;
+    _TyStrView m_svValue;
+    bool m_fNormalizeByType{ false };
+  };
+  virtual ~_xml_write_validator_base() = default;
+  virtual void SetThrowOnError( bool _fThrowOnError ) = 0;
+  virtual void SetStandalone( bool _fStandalone ) = 0;
+  virtual void SetUseXMLNamespaces( bool _fUseXMLNamespaces ) = 0;
+  // As xml_validator<> has them.
+  virtual void StartTag( _TyStrView _svName, const _TyAttr * _pattrBegin, const _TyAttr * _pattrEnd ) = 0;
+  virtual void CharacterData( bool _fWhiteSpace ) = 0;
+  virtual void CommentOrProcessingInstruction() = 0;
+  virtual void EndTag() = 0;
+  // A reference to the general entity _svName within content: whether what it stands for is white space which matches S
+  //  [3] - which may be among the elements of element content. If what it stands for isn't known - it has markup or is
+  //  external - then nothing more is said of the content of the element: see FIncomplete(). VC: Entity Declared and VC:
+  //  Standalone Document Declaration are checked.
+  virtual bool FEntityReferenceIsWhiteSpace( _TyStrView _svName ) = 0;
+  virtual vector< string > const & RgErrors() const = 0;
+  virtual vector< string > const & RgErrorsOfDtd() const = 0;
+  virtual bool FIsValid() const = 0;
+  // Not all which was written could be validated: not all of the declarations of the DTD are known, or content is in
+  //  an entity whose text isn't known.
+  virtual bool FIncomplete() const = 0;
+};
+template < class t_TyChar, class t_TyCharDtd >
+class _xml_write_validator : public _xml_write_validator_base< t_TyChar >
+{
+  typedef _xml_write_validator _TyThis;
+  typedef _xml_write_validator_base< t_TyChar > _TyBase;
+public:
+  typedef typename _TyBase::_TyStrView _TyStrView;
+  typedef typename _TyBase::_TyAttr _TyAttr;
+  typedef basic_string< t_TyCharDtd > _TyStdStrDtd;
+  typedef basic_string_view< t_TyCharDtd > _TyStrViewDtd;
+  typedef xml_dtd< t_TyCharDtd > _TyDtd;
+  typedef xml_validator< t_TyCharDtd > _TyValidator;
+
+  // _rspDtd: the DTD of the document type declaration which was written - null if none was: then the document isn't valid.
+  explicit _xml_write_validator( shared_ptr< const _TyDtd > const & _rspDtd )
+    : m_spDtd( _rspDtd ),
+      m_validator( _rspDtd.get() )
+  {
+  }
+  void SetThrowOnError( bool _fThrowOnError ) override
+  {
+    m_validator.SetThrowOnError( _fThrowOnError );
+  }
+  void SetStandalone( bool _fStandalone ) override
+  {
+    m_validator.SetStandalone( _fStandalone && !!m_spDtd );
+  }
+  void SetUseXMLNamespaces( bool _fUseXMLNamespaces ) override
+  {
+    m_validator.SetUseXMLNamespaces( _fUseXMLNamespaces );
+  }
+  void StartTag( _TyStrView _svName, const _TyAttr * _pattrBegin, const _TyAttr * _pattrEnd ) override
+  {
+    const size_t knAttrs = size_t( _pattrEnd - _pattrBegin );
+    // The strings are all there before any view of one is had: none moves after.
+    if ( m_rgstrNames.size() < knAttrs )
+      m_rgstrNames.resize( knAttrs );
+    if ( m_rgstrValues.size() < knAttrs )
+      m_rgstrValues.resize( knAttrs );
+    m_rgAttrs.resize( knAttrs );
+    const _TyStrViewDtd ksvElement = _SvDtd( _svName, m_strElement );
+    for ( size_t nAttr = 0; nAttr < knAttrs; ++nAttr )
+    {
+      _TyAttr const & rattr = _pattrBegin[ nAttr ];
+      xml_validate_attr< t_TyCharDtd > & rattrDtd = m_rgAttrs[ nAttr ];
+      rattrDtd.m_svName = _SvDtd( rattr.m_svName, m_rgstrNames[ nAttr ] );
+      rattrDtd.m_svValue = _SvDtd( rattr.m_svValue, m_rgstrValues[ nAttr ] );
+      if ( !rattr.m_fNormalizeByType || !m_spDtd )
+        continue;
+      const xml_dtd_attdef< t_TyCharDtd > * pAttDef = m_spDtd->PGetAttDef( ksvElement, rattrDtd.m_svName );
+      if ( !pAttDef || ( exdatCDATA == pAttDef->m_eType ) )
+        continue;
+      // Leading and trailing spaces are removed and spaces in a row are one ( 3.3.3 ). ( A tab, a #xD or a #xA in the
+      //  string is written as a reference to it: it is what it is when it is read. )
+      _TyStdStrDtd & rstrValue = m_rgstrValues[ nAttr ];
+      if ( rattrDtd.m_svValue.data() != rstrValue.data() )
+        rstrValue.assign( rattrDtd.m_svValue );
+      size_t nchTo = 0;
+      for ( size_t nchFrom = 0; nchFrom < rstrValue.length(); ++nchFrom )
+      {
+        const t_TyCharDtd ch = rstrValue[ nchFrom ];
+        if ( ( t_TyCharDtd( ' ' ) == ch ) && ( !nchTo || ( t_TyCharDtd( ' ' ) == rstrValue[ nchTo - 1 ] ) ) )
+          continue;
+        rstrValue[ nchTo++ ] = ch;
+      }
+      if ( !!nchTo && ( t_TyCharDtd( ' ' ) == rstrValue[ nchTo - 1 ] ) )
+        --nchTo;
+      rstrValue.resize( nchTo );
+      rattrDtd.m_svValue = rstrValue;
+    }
+    m_validator.StartTag( ksvElement, m_rgAttrs.data(), m_rgAttrs.data() + knAttrs );
+  }
+  void CharacterData( bool _fWhiteSpace ) override
+  {
+    m_validator.CharacterData( _fWhiteSpace );
+  }
+  void CommentOrProcessingInstruction() override
+  {
+    m_validator.CommentOrProcessingInstruction();
+  }
+  void EndTag() override
+  {
+    m_validator.EndTag();
+  }
+  bool FEntityReferenceIsWhiteSpace( _TyStrView _svName ) override
+  {
+    _TyStdStrDtd strName;
+    const _TyStrViewDtd ksvName = _SvDtd( _svName, strName );
+    // The predefined entities ( 4.6 ) are each a character which isn't white space.
+    static const char * const s_rgpszPredefined[] = { "lt", "gt", "amp", "apos", "quot" };
+    for ( const char * pszPredefined : s_rgpszPredefined )
+    {
+      if ( ( ksvName.length() == strlen( pszPredefined ) ) && std::equal( ksvName.begin(), ksvName.end(), pszPredefined,
+             []( t_TyCharDtd _ch, char _chPredefined ) { return _ch == t_TyCharDtd( _chPredefined ); } ) )
+        return false;
+    }
+    if ( !m_spDtd )
+      return false; // Nothing is valid.
+    const xml_dtd_entity< t_TyCharDtd > * pEntity = m_spDtd->PGetGeneralEntity( ksvName );
+    if ( !pEntity )
+    {
+      m_validator.EntityNotDeclared( ksvName );
+      m_validator.ContentNotKnown();
+      return false;
+    }
+    if ( m_validator.FGetStandalone() && pEntity->m_fDeclaredExternally )
+      m_validator.StandaloneViolation( "refers to the entity", ksvName );
+    _TyStdStrDtd strText;
+    if ( !pEntity->m_fInternal || pEntity->FIsUnparsed() || !m_spDtd->FGetGeneralEntityText( ksvName, strText ) )
+    {
+      // Its text has markup, or is external: what is within the element is not known from here on.
+      m_fContentNotKnown = true;
+      m_validator.ContentNotKnown();
+      return false;
+    }
+    // White space as it is in the replacement text - not white space which a character reference within it stands for.
+    for ( t_TyCharDtd ch : pEntity->m_strValue )
+      if ( !( ( t_TyCharDtd( 0x20 ) == ch ) || ( t_TyCharDtd( 0x9 ) == ch ) || ( t_TyCharDtd( 0xd ) == ch ) || ( t_TyCharDtd( 0xa ) == ch ) ) )
+        return false;
+    return true;
+  }
+  vector< string > const & RgErrors() const override
+  {
+    return m_validator.RgErrors();
+  }
+  vector< string > const & RgErrorsOfDtd() const override
+  {
+    static const vector< string > s_rgstrNone;
+    return !m_spDtd ? s_rgstrNone : m_spDtd->m_rgstrValidityErrors;
+  }
+  bool FIsValid() const override
+  {
+    return m_validator.FIsValid();
+  }
+  bool FIncomplete() const override
+  {
+    return m_fContentNotKnown || ( !!m_spDtd && !m_spDtd->FAllDeclarationsRead() );
+  }
+protected:
+  // The characters of the writer as those of the DTD: as they are when they are of the same size - the same encoding.
+  static _TyStrViewDtd _SvDtd( _TyStrView _sv, _TyStdStrDtd & _rstrConverted )
+  {
+    if constexpr ( sizeof( t_TyChar ) == sizeof( t_TyCharDtd ) )
+      return _TyStrViewDtd( (const t_TyCharDtd *)_sv.data(), _sv.length() );
+    else
+    {
+      _rstrConverted.clear();
+      if ( !_sv.empty() )
+        ConvertString( _rstrConverted, _sv.data(), _sv.length() );
+      return _TyStrViewDtd( _rstrConverted );
+    }
+  }
+  shared_ptr< const _TyDtd > m_spDtd;
+  _TyValidator m_validator;
+  bool m_fContentNotKnown{ false };
+  _TyStdStrDtd m_strElement;
+  vector< _TyStdStrDtd > m_rgstrNames;
+  vector< _TyStdStrDtd > m_rgstrValues;
+  vector< xml_validate_attr< t_TyCharDtd > > m_rgAttrs;
 };
 
 __XMLP_END_NAMESPACE
