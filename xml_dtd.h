@@ -35,9 +35,10 @@
 //    SetStandalone() - and otherwise a validity constraint ( 4.1: Entity Declared ).
 //  - Validity constraints which can be seen in the declarations alone - an element type or a notation declared twice,
 //    the same name twice in mixed content - are recorded and don't throw: see RgValidityErrors().
-// What isn't done yet: reading the external subset and external parameter entities from where they are, references to
-//  parameter entities within declarations ( external subset only ), normalizing the values of the attributes of a tag
-//  according to their declared types, and validating a document.
+// A DTD which was read may be edited - and one may be made: see xml_dtd<>::Edit(). Its items ( xml_dtd<>::m_rgItems ) each
+//  have what they declare; an edit changes them and the DTD is read again from the text of its document type declaration,
+//  in which each item which isn't changed is the text which it was - so the declaration is written as it was read, but
+//  for what was edited. Only the internal subset is edited.
 //
 // The cursor ( xml_cursor.h ) reads the document type declaration of a document when the XML traits support the DTD
 //  ( xml_traits< ..., true, ... > ): the xml_dtd is then the cursor's - GetDtd() - and the general entities which it
@@ -254,6 +255,9 @@ struct xml_dtd_notation
   xml_dtd_external_id< t_TyChar > m_externalId;
 };
 
+template < class t_TyChar >
+class xml_dtd_parser;
+
 // What an item of a DTD is - see xml_dtd_item.
 enum EXmlDtdItem : uint8_t
 {
@@ -293,9 +297,87 @@ struct xml_dtd_item
   //  ends in the text of another entity than it begins in ( which is not valid ) has a length of zero.
   size_t m_nPos{ 0 };
   size_t m_nLength{ 0 };
+  // What the item declares as it declares it - whether or not it is the declaration which binds: exdiElementDecl an
+  //  xml_dtd_element, exdiAttlistDecl the definitions of the attributes in the order in which it has them,
+  //  exdiEntityDecl an xml_dtd_entity, exdiNotationDecl an xml_dtd_notation. Nothing for the other items.
+  typedef xml_dtd_element< t_TyChar > _TyElement;
+  typedef xml_dtd_attdef< t_TyChar > _TyAttDef;
+  typedef xml_dtd_entity< t_TyChar > _TyEntity;
+  typedef xml_dtd_notation< t_TyChar > _TyNotation;
+  typedef variant< monostate, _TyElement, vector< _TyAttDef >, _TyEntity, _TyNotation > _TyDeclaration;
+  _TyDeclaration m_declaration;
+  // Editing - see xml_dtd<>::Edit(): an item which is edited is written from what it declares and not as the text which
+  //  it was; one which is new is edited and has no text ( m_nPos is npos ); one which is removed is not written. Once
+  //  the edit is done the DTD is read again from its text: then its items are as they are read.
+  bool m_fEdited{ false };
+  bool m_fRemoved{ false };
   bool FInDocument() const
   {
     return m_strEntity.empty() && !m_fExternalSubset;
+  }
+  bool FIsNew() const
+  {
+    return size_t( -1 ) == m_nPos;
+  }
+
+  // Items with which a DTD is edited - see xml_dtd<>::InsertItem() and ReplaceItem().
+  static xml_dtd_item ElementDecl( _TyElement _element )
+  {
+    xml_dtd_item item;
+    item.m_eItem = exdiElementDecl;
+    item.m_strName = _element.m_strName;
+    item.m_declaration.template emplace< _TyElement >( std::move( _element ) );
+    return item;
+  }
+  static xml_dtd_item AttlistDecl( basic_string_view< t_TyChar > _svElement, vector< _TyAttDef > _rgAttDefs )
+  {
+    xml_dtd_item item;
+    item.m_eItem = exdiAttlistDecl;
+    item.m_strName = _svElement;
+    item.m_declaration.template emplace< vector< _TyAttDef > >( std::move( _rgAttDefs ) );
+    return item;
+  }
+  static xml_dtd_item EntityDecl( _TyEntity _entity )
+  {
+    xml_dtd_item item;
+    item.m_eItem = exdiEntityDecl;
+    item.m_strName = _entity.m_strName;
+    item.m_fParameterEntity = _entity.m_fParameter;
+    item.m_declaration.template emplace< _TyEntity >( std::move( _entity ) );
+    return item;
+  }
+  static xml_dtd_item NotationDecl( _TyNotation _notation )
+  {
+    xml_dtd_item item;
+    item.m_eItem = exdiNotationDecl;
+    item.m_strName = _notation.m_strName;
+    item.m_declaration.template emplace< _TyNotation >( std::move( _notation ) );
+    return item;
+  }
+  // <?_svTarget _svData?> - with no data: <?_svTarget?>.
+  static xml_dtd_item ProcessingInstruction( basic_string_view< t_TyChar > _svTarget, basic_string_view< t_TyChar > _svData = basic_string_view< t_TyChar >() )
+  {
+    xml_dtd_item item;
+    item.m_eItem = exdiProcessingInstruction;
+    item.m_strName = _svTarget;
+    item.m_strData = _svData;
+    return item;
+  }
+  // <!--_svData-->
+  static xml_dtd_item Comment( basic_string_view< t_TyChar > _svData )
+  {
+    xml_dtd_item item;
+    item.m_eItem = exdiComment;
+    item.m_strData = _svData;
+    return item;
+  }
+  // %_svName; - between declarations.
+  static xml_dtd_item ParameterEntityReference( basic_string_view< t_TyChar > _svName )
+  {
+    xml_dtd_item item;
+    item.m_eItem = exdiParameterEntityReference;
+    item.m_strName = _svName;
+    return item;
   }
 };
 
@@ -317,6 +399,7 @@ public:
   typedef map< _TyStdStr, vector< _TyAttDef >, less<> > _TyMapAttLists; // By element type: the attributes in the order declared.
   typedef map< _TyStdStr, _TyEntity, less<> > _TyMapEntities;
   typedef map< _TyStdStr, _TyNotation, less<> > _TyMapNotations;
+  typedef xml_dtd_item< _TyChar > _TyItem;
 
   // The document type declaration [28]:
   _TyStdStr m_strRootName; // The name of the document's element type.
@@ -344,6 +427,30 @@ public:
   // The external subset [30] was read - see xml_dtd_parser<>::SetExternalEntityResolver(): if the document type
   //  declaration has an external identifier and this is false then not all of the declarations are known.
   bool m_fExternalSubsetRead{ false };
+  // The text of the document type declaration - from its "<!DOCTYPE" through its '>' - as it was read, and once the
+  //  DTD has been edited as it is now. The positions of the items which are in the document are in it - see
+  //  xml_dtd_item<>::m_nPos. Empty for a DTD which wasn't read: an edit then makes one - see SetRootName().
+  _TyStdStr m_strDoctypeText;
+  // How the DTD was read - it is read so again when it is edited: see xml_dtd_parser<>::SetStandalone(),
+  //  SetUseXMLNamespaces(), SetExternalEntityResolver().
+  bool m_fStandalone{ false };
+  bool m_fUseXMLNamespaces{ false };
+  _TyStdStr m_strBaseLocation; // The location of the document: the base of its external subset.
+  // The external entities which were read - the external subset and the external parameter entities: each with its
+  //  text as the resolver gave it. When the DTD is read again - when it is edited - they are read from here.
+  struct _TyExternalText
+  {
+    _TyExternalId m_externalId;
+    _TyStdStr m_strBase;
+    _TyStdStr m_strText;
+    _TyStdStr m_strLocation;
+    bool FIsOf( _TyExternalId const & _rexternalId, _TyStrView _svBase ) const
+    {
+      return ( m_externalId.m_optstrPublic == _rexternalId.m_optstrPublic ) && ( m_externalId.m_optstrSystem == _rexternalId.m_optstrSystem ) &&
+             ( _TyStrView( m_strBase ) == _svBase );
+    }
+  };
+  vector< _TyExternalText > m_rgExternalTexts;
   // Whether every declaration of the DTD was read.
   bool FAllDeclarationsRead() const
   {
@@ -550,6 +657,454 @@ public:
     }
   }
 
+// Editing.
+// Only the internal subset of the document is edited: the declarations of the external subset and those which are
+//  in the text of a parameter entity are as they are - a declaration there may be overridden by one in the internal
+//  subset before the reference to the entity, since the first declaration binds.
+// An edit changes the items - m_rgItems - and the DTD is then read again from its text: in that each item which wasn't
+//  changed is the text which it was, and each which was is written from what it declares - see AppendItem(). What the
+//  DTD declares - the maps, the validity errors - is then that of what it has become, and it is as well formed as any
+//  DTD which is read. An edit which would make it not well formed throws and the DTD is as it was. So does an edit which
+//  leaves a reference to a parameter entity which is not declared before it - or not read.
+// The DTD is read again as it was read: standalone or not, with namespaces or without, and with the external entities
+//  which were read then: see m_rgExternalTexts. One which wasn't read then isn't read.
+// Several edits at once: Edit( [&]( xml_dtd & _rdtd ) { ... } ) - the DTD is read again once, after the last of them, and
+//  if anything throws it is as it was before. Within it the maps are as they were before it - the items are what is
+//  edited - and the indices of the items are those of m_rgItems as it is then.
+  template < class t_TyFtor >
+  void Edit( t_TyFtor && _rrftor )
+  {
+    if ( !m_nEditDepth )
+      m_optEditSave.emplace( _TyEditSave{ m_rgItems, m_strRootName, m_optExternalId, m_fHeaderEdited } );
+    ++m_nEditDepth;
+    try
+    {
+      std::forward< t_TyFtor >( _rrftor )( *this );
+    }
+    catch ( ... )
+    {
+      if ( !--m_nEditDepth )
+        _EditRestore();
+      throw;
+    }
+    if ( --m_nEditDepth )
+      return;
+    try
+    {
+      _ReadEdited();
+    }
+    catch ( ... )
+    {
+      _EditRestore();
+      throw;
+    }
+  }
+  // Insert _item before the item _nBefore - which is in the document - or at the end of the internal subset if _nBefore
+  //  is npos. See xml_dtd_item<>::ElementDecl() and the others for items.
+  void InsertItem( size_t _nBefore, _TyItem _item )
+  {
+    Edit( [&]( _TyThis & )
+      {
+        _CheckItemToWrite( _item );
+        size_t nAt = _NEndOfInternalSubset();
+        if ( size_t( -1 ) != _nBefore )
+        {
+          _CheckItemToEdit( _nBefore );
+          nAt = _nBefore;
+        }
+        _item.m_nPos = size_t( -1 );
+        _item.m_nLength = 0;
+        _item.m_strEntity.clear();
+        _item.m_fExternalSubset = false;
+        _item.m_fEdited = true;
+        _item.m_fRemoved = false;
+        m_rgItems.insert( m_rgItems.begin() + nAt, std::move( _item ) );
+      } );
+  }
+  // The item _nItem - which is in the document - is _item: it is written in its place.
+  void ReplaceItem( size_t _nItem, _TyItem _item )
+  {
+    Edit( [&]( _TyThis & )
+      {
+        _CheckItemToEdit( _nItem );
+        _CheckItemToWrite( _item );
+        _TyItem & ritem = m_rgItems[ _nItem ];
+        _item.m_nPos = ritem.m_nPos;
+        _item.m_nLength = ritem.m_nLength;
+        _item.m_strEntity.clear();
+        _item.m_fExternalSubset = false;
+        _item.m_fEdited = true;
+        _item.m_fRemoved = false;
+        ritem = std::move( _item );
+      } );
+  }
+  // Remove the item _nItem - which is in the document. ( Not the declarations in the text of a parameter entity which
+  //  a reference removes: the reference is the item. )
+  void RemoveItem( size_t _nItem )
+  {
+    Edit( [&]( _TyThis & )
+      {
+        _CheckItemToEdit( _nItem );
+        if ( m_rgItems[ _nItem ].FIsNew() )
+          m_rgItems.erase( m_rgItems.begin() + _nItem );
+        else
+          m_rgItems[ _nItem ].m_fRemoved = true;
+      } );
+  }
+  // The item of the declaration which binds - the first which declares it: npos if there is none. An element type, an
+  //  attribute-list declaration of an element type, an entity - general or parameter - or a notation.
+  size_t NFindDeclaration( EXmlDtdItem _eItem, _TyStrView _svName, bool _fParameterEntity = false ) const
+  {
+    for ( size_t nItem = 0; nItem < m_rgItems.size(); ++nItem )
+    {
+      _TyItem const & ritem = m_rgItems[ nItem ];
+      if ( !ritem.m_fRemoved && ( _eItem == ritem.m_eItem ) && ( _TyStrView( ritem.m_strName ) == _svName ) &&
+           ( ( exdiEntityDecl != _eItem ) || ( ritem.m_fParameterEntity == _fParameterEntity ) ) )
+        return nItem;
+    }
+    return size_t( -1 );
+  }
+  // The item of the attribute-list declaration which declares the attribute _svAttribute of the element type
+  //  _svElement first - npos if none does.
+  size_t NFindAttDef( _TyStrView _svElement, _TyStrView _svAttribute ) const
+  {
+    for ( size_t nItem = 0; nItem < m_rgItems.size(); ++nItem )
+    {
+      _TyItem const & ritem = m_rgItems[ nItem ];
+      if ( ritem.m_fRemoved || ( exdiAttlistDecl != ritem.m_eItem ) || ( _TyStrView( ritem.m_strName ) != _svElement ) )
+        continue;
+      const vector< _TyAttDef > * prgAttDefs = get_if< vector< _TyAttDef > >( &ritem.m_declaration );
+      if ( !!prgAttDefs )
+        for ( _TyAttDef const & rad : *prgAttDefs )
+          if ( _TyStrView( rad.m_strName ) == _svAttribute )
+            return nItem;
+    }
+    return size_t( -1 );
+  }
+  // Declare the element type: its declaration replaces the one which binds or is added at the end of the internal subset.
+  void SetElementDecl( _TyElement const & _relement )
+  {
+    _SetDeclaration( NFindDeclaration( exdiElementDecl, _relement.m_strName ), _TyItem::ElementDecl( _relement ) );
+  }
+  // Remove the declaration of the element type which binds. Returns false if it isn't declared.
+  bool FRemoveElementDecl( _TyStrView _svName )
+  {
+    return _FRemoveDeclaration( NFindDeclaration( exdiElementDecl, _svName ) );
+  }
+  // Declare the attribute of the element type: its definition replaces the one which binds within the attribute-list
+  //  declaration which has it - which is written again with it - or an attribute-list declaration with it alone is added.
+  void SetAttDef( _TyStrView _svElement, _TyAttDef const & _rattdef )
+  {
+    Edit( [&]( _TyThis & )
+      {
+        const size_t knItem = NFindAttDef( _svElement, _rattdef.m_strName );
+        if ( size_t( -1 ) == knItem )
+        {
+          InsertItem( size_t( -1 ), _TyItem::AttlistDecl( _svElement, vector< _TyAttDef >{ _rattdef } ) );
+          return;
+        }
+        _CheckItemToEdit( knItem );
+        _TyItem & ritem = m_rgItems[ knItem ];
+        for ( _TyAttDef & rad : _RgAttDefsOfItem( ritem ) )
+        {
+          if ( rad.m_strName == _rattdef.m_strName )
+          {
+            rad = _rattdef;
+            break;
+          }
+        }
+        ritem.m_fEdited = true;
+      } );
+  }
+  // Remove the definition of the attribute which binds from its attribute-list declaration - and that if it has no
+  //  other. Returns false if there is none.
+  bool FRemoveAttDef( _TyStrView _svElement, _TyStrView _svAttribute )
+  {
+    const size_t knItem = NFindAttDef( _svElement, _svAttribute );
+    if ( size_t( -1 ) == knItem )
+      return false;
+    Edit( [&]( _TyThis & )
+      {
+        _CheckItemToEdit( knItem );
+        _TyItem & ritem = m_rgItems[ knItem ];
+        vector< _TyAttDef > & rrgAttDefs = _RgAttDefsOfItem( ritem );
+        for ( size_t nAttDef = 0; nAttDef < rrgAttDefs.size(); ++nAttDef )
+        {
+          if ( _TyStrView( rrgAttDefs[ nAttDef ].m_strName ) == _svAttribute )
+          {
+            rrgAttDefs.erase( rrgAttDefs.begin() + nAttDef );
+            break;
+          }
+        }
+        if ( rrgAttDefs.empty() )
+          RemoveItem( knItem );
+        else
+          ritem.m_fEdited = true;
+      } );
+    return true;
+  }
+  // Declare the entity - general or parameter as _rentity.m_fParameter says.
+  void SetEntityDecl( _TyEntity const & _rentity )
+  {
+    _SetDeclaration( NFindDeclaration( exdiEntityDecl, _rentity.m_strName, _rentity.m_fParameter ), _TyItem::EntityDecl( _rentity ) );
+  }
+  bool FRemoveEntityDecl( _TyStrView _svName, bool _fParameter = false )
+  {
+    return _FRemoveDeclaration( NFindDeclaration( exdiEntityDecl, _svName, _fParameter ) );
+  }
+  void SetNotationDecl( _TyNotation const & _rnotation )
+  {
+    _SetDeclaration( NFindDeclaration( exdiNotationDecl, _rnotation.m_strName ), _TyItem::NotationDecl( _rnotation ) );
+  }
+  bool FRemoveNotationDecl( _TyStrView _svName )
+  {
+    return _FRemoveDeclaration( NFindDeclaration( exdiNotationDecl, _svName ) );
+  }
+  // The name of the document's element type and the external subset: the declaration's "<!DOCTYPE" Name ExternalID?
+  //  is written again. A DTD which wasn't read is begun so: <!DOCTYPE name>.
+  // ( The external subset of another external identifier isn't read - see above. )
+  void SetRootName( _TyStrView _svName )
+  {
+    Edit( [&]( _TyThis & )
+      {
+        m_strRootName = _svName;
+        m_fHeaderEdited = true;
+      } );
+  }
+  void SetExternalId( optional< _TyExternalId > const & _roptExternalId )
+  {
+    Edit( [&]( _TyThis & )
+      {
+        m_optExternalId = _roptExternalId;
+        m_fHeaderEdited = true;
+      } );
+  }
+
+// The text of declarations - as an edited item is written. A literal is in '"' unless it has one: then in '\'' - unless
+//  it has that as well, and then each '"' is a reference to it.
+  // Any item: as AppendElementDecl() and those below.
+  static void AppendItem( _TyStdStr & _rstr, _TyItem const & _ritem )
+  {
+    switch ( _ritem.m_eItem )
+    {
+      case exdiElementDecl:
+        AppendElementDecl( _rstr, _GetDeclaration< _TyElement >( _ritem ) );
+      break;
+      case exdiAttlistDecl:
+        AppendAttlistDecl( _rstr, _ritem.m_strName, _GetDeclaration< vector< _TyAttDef > >( _ritem ) );
+      break;
+      case exdiEntityDecl:
+        AppendEntityDecl( _rstr, _GetDeclaration< _TyEntity >( _ritem ) );
+      break;
+      case exdiNotationDecl:
+        AppendNotationDecl( _rstr, _GetDeclaration< _TyNotation >( _ritem ) );
+      break;
+      case exdiProcessingInstruction:
+        _AppendAscii( _rstr, "<?" );
+        _rstr += _ritem.m_strName;
+        if ( !_ritem.m_strData.empty() )
+        {
+          _rstr += _TyChar( ' ' );
+          _rstr += _ritem.m_strData;
+        }
+        _AppendAscii( _rstr, "?>" );
+      break;
+      case exdiComment:
+        _AppendAscii( _rstr, "<!--" );
+        _rstr += _ritem.m_strData;
+        _AppendAscii( _rstr, "-->" );
+      break;
+      case exdiParameterEntityReference:
+        _rstr += _TyChar( '%' );
+        _rstr += _ritem.m_strName;
+        _rstr += _TyChar( ';' );
+      break;
+      default:
+        VerifyThrowSz( false, "Not an item of a DTD: [%d].", int( _ritem.m_eItem ) );
+      break;
+    }
+  }
+  // [45] <!ELEMENT name contentspec>
+  static void AppendElementDecl( _TyStdStr & _rstr, _TyElement const & _relement )
+  {
+    _AppendAscii( _rstr, "<!ELEMENT " );
+    _rstr += _relement.m_strName;
+    _rstr += _TyChar( ' ' );
+    switch ( _relement.m_eContent )
+    {
+      case exdcEmpty:
+        _AppendAscii( _rstr, "EMPTY" );
+      break;
+      case exdcAny:
+        _AppendAscii( _rstr, "ANY" );
+      break;
+      case exdcMixed: // [51]
+        _AppendAscii( _rstr, "(#PCDATA" );
+        for ( _TyStdStr const & rstrName : _relement.m_rgstrMixedNames )
+        {
+          _rstr += _TyChar( '|' );
+          _rstr += rstrName;
+        }
+        _AppendAscii( _rstr, _relement.m_rgstrMixedNames.empty() ? ")" : ")*" );
+      break;
+      case exdcChildren: // [47]
+        AppendContentParticle( _rstr, _relement.m_cpChildren );
+      break;
+      default:
+        VerifyThrowSz( false, "Not a content specification: [%d].", int( _relement.m_eContent ) );
+      break;
+    }
+    _rstr += _TyChar( '>' );
+  }
+  // [47] children: a choice or a sequence - and what is within it. As deep as it is: there is a stack of the groups
+  //  which are being written - see xml_dtd_content_particle.
+  static void AppendContentParticle( _TyStdStr & _rstr, xml_dtd_content_particle< _TyChar > const & _rcp )
+  {
+    typedef xml_dtd_content_particle< _TyChar > _TyContentParticle;
+    VerifyThrowSz( exdpName != _rcp.m_eParticle, "The content model of an element type with element content is a choice or a sequence ( [47] )." );
+    struct _TyGroup
+    {
+      const _TyContentParticle * m_pcp;
+      size_t m_nNext;
+    };
+    vector< _TyGroup > rgGroups{ { &_rcp, 0 } };
+    _rstr += _TyChar( '(' );
+    while ( !rgGroups.empty() )
+    {
+      const _TyContentParticle * const pcpGroup = rgGroups.back().m_pcp;
+      const size_t knNext = rgGroups.back().m_nNext;
+      if ( knNext < pcpGroup->m_rgChildren.size() )
+      {
+        ++rgGroups.back().m_nNext;
+        if ( !!knNext )
+          _rstr += _TyChar( ( exdpChoice == pcpGroup->m_eParticle ) ? '|' : ',' );
+        _TyContentParticle const & rcpChild = pcpGroup->m_rgChildren[ knNext ];
+        if ( exdpName == rcpChild.m_eParticle )
+        {
+          _rstr += rcpChild.m_strName;
+          _AppendOccurrence( _rstr, rcpChild.m_eOccurrence );
+        }
+        else
+        {
+          _rstr += _TyChar( '(' );
+          rgGroups.push_back( _TyGroup{ &rcpChild, 0 } );
+        }
+      }
+      else
+      {
+        _rstr += _TyChar( ')' );
+        _AppendOccurrence( _rstr, pcpGroup->m_eOccurrence );
+        rgGroups.pop_back();
+      }
+    }
+  }
+  // [52] <!ATTLIST element AttDef*>
+  static void AppendAttlistDecl( _TyStdStr & _rstr, _TyStrView _svElement, vector< _TyAttDef > const & _rrgAttDefs )
+  {
+    _AppendAscii( _rstr, "<!ATTLIST " );
+    _rstr += _svElement;
+    for ( _TyAttDef const & rad : _rrgAttDefs )
+    {
+      _rstr += _TyChar( ' ' );
+      AppendAttDef( _rstr, rad );
+    }
+    _rstr += _TyChar( '>' );
+  }
+  // [53] name AttType DefaultDecl - the default as its literal is: xml_dtd_attdef<>::m_strDefault.
+  static void AppendAttDef( _TyStdStr & _rstr, _TyAttDef const & _rattdef )
+  {
+    static const char * const s_rgpszTypes[] = { "CDATA", "ID", "IDREF", "IDREFS", "ENTITY", "ENTITIES", "NMTOKEN", "NMTOKENS" };
+    _rstr += _rattdef.m_strName;
+    _rstr += _TyChar( ' ' );
+    if ( ( exdatNOTATION == _rattdef.m_eType ) || ( exdatEnumeration == _rattdef.m_eType ) ) // [58], [59]
+    {
+      if ( exdatNOTATION == _rattdef.m_eType )
+        _AppendAscii( _rstr, "NOTATION " );
+      _rstr += _TyChar( '(' );
+      for ( size_t nName = 0; nName < _rattdef.m_rgstrEnumeration.size(); ++nName )
+      {
+        if ( !!nName )
+          _rstr += _TyChar( '|' );
+        _rstr += _rattdef.m_rgstrEnumeration[ nName ];
+      }
+      _rstr += _TyChar( ')' );
+    }
+    else
+    {
+      VerifyThrowSz( size_t( _rattdef.m_eType ) < std::size( s_rgpszTypes ), "Not the type of an attribute: [%d].", int( _rattdef.m_eType ) );
+      _AppendAscii( _rstr, s_rgpszTypes[ _rattdef.m_eType ] );
+    }
+    _rstr += _TyChar( ' ' );
+    switch ( _rattdef.m_eDefault ) // [60]
+    {
+      case exdadRequired:
+        _AppendAscii( _rstr, "#REQUIRED" );
+      break;
+      case exdadImplied:
+        _AppendAscii( _rstr, "#IMPLIED" );
+      break;
+      case exdadFixed:
+        _AppendAscii( _rstr, "#FIXED " );
+        [[fallthrough]];
+      case exdadDefault:
+        _AppendLiteral( _rstr, _rattdef.m_strDefault, "&quot;" );
+      break;
+      default:
+        VerifyThrowSz( false, "Not the default of an attribute: [%d].", int( _rattdef.m_eDefault ) );
+      break;
+    }
+  }
+  // [70] <!ENTITY name EntityDef> or <!ENTITY % name PEDef>. The literal of an internal entity is made from its
+  //  replacement text - see _AppendEntityValue().
+  static void AppendEntityDecl( _TyStdStr & _rstr, _TyEntity const & _rentity )
+  {
+    _AppendAscii( _rstr, _rentity.m_fParameter ? "<!ENTITY % " : "<!ENTITY " );
+    _rstr += _rentity.m_strName;
+    _rstr += _TyChar( ' ' );
+    if ( _rentity.m_fInternal )
+      _AppendEntityValue( _rstr, _rentity.m_strValue );
+    else
+    {
+      AppendExternalId( _rstr, _rentity.m_externalId, false );
+      if ( _rentity.FIsUnparsed() ) // [76]
+      {
+        _AppendAscii( _rstr, " NDATA " );
+        _rstr += _rentity.m_strNotation;
+      }
+    }
+    _rstr += _TyChar( '>' );
+  }
+  // [82] <!NOTATION name ( ExternalID | PublicID )>
+  static void AppendNotationDecl( _TyStdStr & _rstr, _TyNotation const & _rnotation )
+  {
+    _AppendAscii( _rstr, "<!NOTATION " );
+    _rstr += _rnotation.m_strName;
+    _rstr += _TyChar( ' ' );
+    AppendExternalId( _rstr, _rnotation.m_externalId, true );
+    _rstr += _TyChar( '>' );
+  }
+  // [75] ExternalID - or with _fPublicIdAlone [83] PublicID, which a notation may have.
+  static void AppendExternalId( _TyStdStr & _rstr, _TyExternalId const & _rexternalId, bool _fPublicIdAlone )
+  {
+    if ( _rexternalId.m_optstrPublic.has_value() )
+    {
+      _AppendAscii( _rstr, "PUBLIC " );
+      _AppendLiteral( _rstr, *_rexternalId.m_optstrPublic, nullptr );
+      if ( !_rexternalId.m_optstrSystem.has_value() )
+      {
+        VerifyThrowSz( _fPublicIdAlone, "An external identifier with a public identifier has a system identifier as well ( [75] )." );
+        return;
+      }
+      _rstr += _TyChar( ' ' );
+    }
+    else
+    {
+      VerifyThrowSz( _rexternalId.m_optstrSystem.has_value(), "An external identifier has a system identifier ( [75] )." );
+      _AppendAscii( _rstr, "SYSTEM " );
+    }
+    _AppendLiteral( _rstr, *_rexternalId.m_optstrSystem, nullptr );
+  }
+
   // The validity constraints on the declarations which can be checked only once all of the declarations have been read:
   //  what one of them refers to may be declared after it. What isn't met is added to m_rgstrValidityErrors.
   //  - VC: ID Attribute Default [56]: an attribute of type ID is declared #IMPLIED or #REQUIRED.
@@ -633,6 +1188,324 @@ public:
     }
   }
 protected:
+  // Editing - see Edit():
+  struct _TyEditSave
+  {
+    vector< _TyItem > m_rgItems;
+    _TyStdStr m_strRootName;
+    optional< _TyExternalId > m_optExternalId;
+    bool m_fHeaderEdited;
+  };
+  size_t m_nEditDepth{ 0 };
+  optional< _TyEditSave > m_optEditSave; // What the DTD was before the edit.
+  bool m_fHeaderEdited{ false }; // The name of the document's element type or the external identifier was set.
+
+  void _EditRestore()
+  {
+    Assert( m_optEditSave.has_value() );
+    if ( !m_optEditSave.has_value() )
+      return;
+    m_rgItems = std::move( m_optEditSave->m_rgItems );
+    m_strRootName = std::move( m_optEditSave->m_strRootName );
+    m_optExternalId = std::move( m_optEditSave->m_optExternalId );
+    m_fHeaderEdited = m_optEditSave->m_fHeaderEdited;
+    m_optEditSave.reset();
+  }
+  // The edit is done: read the DTD again from its text as it now is - see Edit().
+  void _ReadEdited()
+  {
+    const _TyStdStr kstrText = _StrEditedText();
+    _TyThis dtd;
+    xml_dtd_parser< _TyChar >::ParseEditedDoctypeDecl( *this, kstrText, dtd );
+    VerifyThrowSz( m_fStoppedProcessingDeclarations || !dtd.m_fStoppedProcessingDeclarations,
+      "The DTD as edited has a reference to a parameter entity which is not declared before it - or which is not read: the declarations after it are not processed." );
+    *this = std::move( dtd );
+  }
+  // An item which may be edited: one of the document which is there.
+  void _CheckItemToEdit( size_t _nItem ) const
+  {
+    VerifyThrowSz( _nItem < m_rgItems.size(), "There is no item [%zu] of the DTD - it has [%zu].", _nItem, m_rgItems.size() );
+    _TyItem const & ritem = m_rgItems[ _nItem ];
+    VerifyThrowSz( !ritem.m_fRemoved, "The item [%zu] of the DTD has been removed.", _nItem );
+    if ( !ritem.FInDocument() )
+    {
+      const string kstrWhere = ritem.m_strEntity.empty() ? string( "the external subset" ) : ( "the text of the parameter entity [" + StrConvertString< char >( ritem.m_strEntity ) + "]" );
+      VerifyThrowSz( false, "The item [%zu] of the DTD is in %s - only the internal subset of the document is edited.", _nItem, kstrWhere.c_str() );
+    }
+  }
+  // An item which may be written: what it declares is had.
+  static void _CheckItemToWrite( _TyItem & _ritem )
+  {
+    switch ( _ritem.m_eItem )
+    {
+      case exdiElementDecl:
+        _ritem.m_strName = _GetDeclaration< _TyElement >( _ritem ).m_strName;
+      break;
+      case exdiAttlistDecl:
+        (void)_GetDeclaration< vector< _TyAttDef > >( _ritem );
+      break;
+      case exdiEntityDecl:
+        _ritem.m_strName = _GetDeclaration< _TyEntity >( _ritem ).m_strName;
+        _ritem.m_fParameterEntity = _GetDeclaration< _TyEntity >( _ritem ).m_fParameter;
+      break;
+      case exdiNotationDecl:
+        _ritem.m_strName = _GetDeclaration< _TyNotation >( _ritem ).m_strName;
+      break;
+      case exdiProcessingInstruction:
+      case exdiComment:
+      case exdiParameterEntityReference:
+      break;
+      default:
+        VerifyThrowSz( false, "Not an item of a DTD: [%d].", int( _ritem.m_eItem ) );
+      break;
+    }
+  }
+  static vector< _TyAttDef > & _RgAttDefsOfItem( _TyItem & _ritem )
+  {
+    vector< _TyAttDef > * prgAttDefs = get_if< vector< _TyAttDef > >( &_ritem.m_declaration );
+    VerifyThrowSz( !!prgAttDefs, "The item of the DTD doesn't have what it declares." );
+    return *prgAttDefs;
+  }
+  template < class t_TyDeclaration >
+  static t_TyDeclaration const & _GetDeclaration( _TyItem const & _ritem )
+  {
+    const t_TyDeclaration * pt = get_if< t_TyDeclaration >( &_ritem.m_declaration );
+    VerifyThrowSz( !!pt, "The item of the DTD doesn't have what it declares." );
+    return *pt;
+  }
+  // Where an item is put at the end of the internal subset: before the items of the external subset.
+  size_t _NEndOfInternalSubset() const
+  {
+    for ( size_t nItem = 0; nItem < m_rgItems.size(); ++nItem )
+      if ( m_rgItems[ nItem ].m_fExternalSubset )
+        return nItem;
+    return m_rgItems.size();
+  }
+  void _SetDeclaration( size_t _nItem, _TyItem && _ritem )
+  {
+    if ( size_t( -1 ) == _nItem )
+      InsertItem( size_t( -1 ), std::move( _ritem ) );
+    else
+      ReplaceItem( _nItem, std::move( _ritem ) );
+  }
+  bool _FRemoveDeclaration( size_t _nItem )
+  {
+    if ( size_t( -1 ) == _nItem )
+      return false;
+    RemoveItem( _nItem );
+    return true;
+  }
+  static bool _FIsS( _TyChar _ch )
+  {
+    return ( _TyChar( 0x20 ) == _ch ) || ( _TyChar( 0x9 ) == _ch ) || ( _TyChar( 0xd ) == _ch ) || ( _TyChar( 0xa ) == _ch );
+  }
+  static void _AppendAscii( _TyStdStr & _rstr, const char * _psz )
+  {
+    for ( ; !!*_psz; ++_psz )
+      _rstr += _TyChar( *_psz );
+  }
+  static void _AppendOccurrence( _TyStdStr & _rstr, EXmlDtdOccurrence _eOccurrence )
+  {
+    switch ( _eOccurrence )
+    {
+      case exdoOptional: _rstr += _TyChar( '?' ); break;
+      case exdoZeroOrMore: _rstr += _TyChar( '*' ); break;
+      case exdoOneOrMore: _rstr += _TyChar( '+' ); break;
+      default: break;
+    }
+  }
+  // A literal: in '"' unless it has one - then in '\'' unless it has that as well, and then each '"' is _pszQuote -
+  //  nullptr: it may not have both ( a system literal [11], a public identifier [12] ).
+  static void _AppendLiteral( _TyStdStr & _rstr, _TyStrView _sv, const char * _pszQuote )
+  {
+    const bool kfDouble = _TyStrView::npos != _sv.find( _TyChar( '"' ) );
+    const bool kfSingle = _TyStrView::npos != _sv.find( _TyChar( '\'' ) );
+    VerifyThrowSz( !kfDouble || !kfSingle || !!_pszQuote, "A system literal or a public identifier may not have both '\"' and '\\'' ( [11], [12] )." );
+    const _TyChar kchQuote = _TyChar( ( kfDouble && !kfSingle ) ? '\'' : '"' );
+    _rstr += kchQuote;
+    for ( _TyChar ch : _sv )
+    {
+      if ( ch == kchQuote )
+        _AppendAscii( _rstr, _pszQuote );
+      else
+        _rstr += ch;
+    }
+    _rstr += kchQuote;
+  }
+  // [9] EntityValue from the replacement text of an internal entity - which is what the literal is once its character
+  //  references and its references to parameter entities are replaced ( 4.5 ): so a '%' is written "&#37;", an '&' which
+  //  doesn't begin a reference to a general entity "&#38;" - one which begins a character reference as well: the
+  //  replacement text has that reference - and a #xD "&#13;", since a #xD in a literal would be an end of a line ( 2.11 ).
+  static void _AppendEntityValue( _TyStdStr & _rstr, _TyStrView _svText )
+  {
+    const bool kfDouble = _TyStrView::npos != _svText.find( _TyChar( '"' ) );
+    const bool kfSingle = _TyStrView::npos != _svText.find( _TyChar( '\'' ) );
+    const _TyChar kchQuote = _TyChar( ( kfDouble && !kfSingle ) ? '\'' : '"' );
+    _rstr += kchQuote;
+    for ( size_t nch = 0; nch < _svText.length(); ++nch )
+    {
+      const _TyChar ch = _svText[ nch ];
+      if ( _TyChar( '&' ) == ch )
+      {
+        // A reference to a general entity - '&' Name ';' - is as it is: it is bypassed ( 4.4.7 ).
+        const size_t knPosEnd = _svText.find( _TyChar( ';' ), nch + 1 );
+        const bool kfReference = ( _TyStrView::npos != knPosEnd ) && FIsName( _svText.substr( nch + 1, knPosEnd - nch - 1 ) );
+        if ( kfReference )
+          _rstr += ch;
+        else
+          _AppendAscii( _rstr, "&#38;" );
+      }
+      else
+      if ( _TyChar( '%' ) == ch )
+        _AppendAscii( _rstr, "&#37;" );
+      else
+      if ( _TyChar( 0xd ) == ch )
+        _AppendAscii( _rstr, "&#13;" );
+      else
+      if ( ch == kchQuote )
+        _AppendAscii( _rstr, "&#34;" );
+      else
+        _rstr += ch;
+    }
+    _rstr += kchQuote;
+  }
+  // "<!DOCTYPE" S Name ( S ExternalID )?
+  void _AppendDoctypeHeader( _TyStdStr & _rstr ) const
+  {
+    VerifyThrowSz( !m_strRootName.empty(), "A document type declaration has the name of the document's element type - see SetRootName()." );
+    _AppendAscii( _rstr, "<!DOCTYPE " );
+    _rstr += m_strRootName;
+    if ( m_optExternalId.has_value() )
+    {
+      _rstr += _TyChar( ' ' );
+      AppendExternalId( _rstr, *m_optExternalId, false );
+    }
+  }
+  // Where the internal subset of a document type declaration begins - its '[': npos if it has none.
+  static size_t _NPosInternalSubset( _TyStrView _svText )
+  {
+    for ( size_t nch = StaticStringLen( "<!DOCTYPE" ); nch < _svText.length(); ++nch )
+    {
+      const _TyChar ch = _svText[ nch ];
+      if ( ( _TyChar( '"' ) == ch ) || ( _TyChar( '\'' ) == ch ) )
+      {
+        nch = _svText.find( ch, nch + 1 );
+        if ( _TyStrView::npos == nch )
+          return _TyStrView::npos;
+      }
+      else
+      if ( _TyChar( '[' ) == ch )
+        return nch;
+      else
+      if ( _TyChar( '>' ) == ch )
+        return _TyStrView::npos;
+    }
+    return _TyStrView::npos;
+  }
+  // The text of the document type declaration as edited: each item of the document which wasn't edited is the text
+  //  which it was - and so is what is between the items. One which was edited is written in its place, one which is
+  //  removed isn't - nor the white space before it - and one which is new is where it was inserted, with the white
+  //  space before it which there is before the item before it: as the declarations around it are indented.
+  _TyStdStr _StrEditedText() const
+  {
+    _TyStdStr strWas = m_strDoctypeText;
+    if ( strWas.empty() )
+    {
+      _AppendDoctypeHeader( strWas );
+      strWas += _TyChar( '>' );
+    }
+    VerifyThrowSz( _TyChar( '>' ) == strWas.back(), "The text of the document type declaration doesn't end with its '>'." );
+    const size_t knPosGreater = strWas.length() - 1;
+    const size_t knPosBracket = _NPosInternalSubset( strWas );
+    // The header is what is before the '[' - or with no internal subset what is before the white space before the '>'.
+    size_t nPosHeaderEnd = knPosBracket;
+    if ( _TyStdStr::npos == knPosBracket )
+    {
+      nPosHeaderEnd = knPosGreater;
+      while ( _FIsS( strWas[ nPosHeaderEnd - 1 ] ) )
+        --nPosHeaderEnd;
+    }
+    const size_t knPosHeaderEnd = nPosHeaderEnd;
+    _TyStdStr str;
+    if ( m_fHeaderEdited )
+    {
+      _AppendDoctypeHeader( str );
+      if ( _TyStdStr::npos != knPosBracket )
+        str += _TyChar( ' ' );
+    }
+    else
+      str.append( strWas, 0, knPosHeaderEnd );
+    size_t nPosCopied = knPosHeaderEnd;
+    _TyStdStr strSeparator( 1, _TyChar( '\n' ) );
+    bool fWroteItemWas = false; // An item which was there before has been written.
+    vector< const _TyItem * > rgpitemNew; // Those which are before the next item which was there before.
+    for ( _TyItem const & ritem : m_rgItems )
+    {
+      if ( !ritem.FInDocument() )
+        continue;
+      if ( ritem.FIsNew() )
+      {
+        rgpitemNew.push_back( &ritem );
+        continue;
+      }
+      VerifyThrowSz( ( ritem.m_nPos >= nPosCopied ) && ( ritem.m_nPos + ritem.m_nLength <= knPosGreater ), "An item of the DTD isn't where it is in the text of the document type declaration." );
+      const _TyStrView svBetween( strWas.data() + nPosCopied, ritem.m_nPos - nPosCopied );
+      size_t nPosS = svBetween.length(); // The white space at the end of what is between.
+      while ( !!nPosS && _FIsS( svBetween[ nPosS - 1 ] ) )
+        --nPosS;
+      if ( ritem.m_fRemoved )
+        str += svBetween.substr( 0, nPosS );
+      else
+      {
+        if ( nPosS < svBetween.length() )
+          strSeparator = svBetween.substr( nPosS );
+        str += svBetween;
+        for ( const _TyItem * pitem : rgpitemNew )
+        {
+          AppendItem( str, *pitem );
+          str += strSeparator;
+        }
+        rgpitemNew.clear();
+        if ( ritem.m_fEdited )
+          AppendItem( str, ritem );
+        else
+          str.append( strWas, ritem.m_nPos, ritem.m_nLength );
+        fWroteItemWas = true;
+      }
+      nPosCopied = ritem.m_nPos + ritem.m_nLength;
+    }
+    if ( !rgpitemNew.empty() )
+    {
+      if ( _TyStdStr::npos == knPosBracket )
+      {
+        // No internal subset: one is made - after the header, before the white space before the '>'.
+        _AppendAscii( str, " [" );
+        for ( const _TyItem * pitem : rgpitemNew )
+        {
+          str += _TyChar( '\n' );
+          AppendItem( str, *pitem );
+        }
+        _AppendAscii( str, "\n]" );
+      }
+      else
+      {
+        if ( !fWroteItemWas && ( nPosCopied <= knPosBracket ) )
+        {
+          str.append( strWas, nPosCopied, knPosBracket + 1 - nPosCopied ); // Through the '['.
+          nPosCopied = knPosBracket + 1;
+        }
+        for ( const _TyItem * pitem : rgpitemNew )
+        {
+          str += strSeparator;
+          AppendItem( str, *pitem );
+        }
+        if ( !fWroteItemWas && ( _TyChar( ']' ) == strWas[ nPosCopied ] ) )
+          str += _TyChar( '\n' ); // The subset was empty: "[]" is then "[\n...\n]".
+      }
+    }
+    str.append( strWas, nPosCopied );
+    return str;
+  }
   static bool _FIsName( _TyStrView _sv, const char * _psz )
   {
     for ( _TyChar ch : _sv )
@@ -950,14 +1823,6 @@ public:
   {
     m_fUseXMLNamespaces = _fUseXMLNamespaces;
   }
-  // Keep the text of the document type declaration as it is read by ParseDoctypeDecl(): each of its tokens - white space,
-  //  comments and all - is added to *_pstrText as the parser takes it, so afterwards that is the declaration from its
-  //  "<!DOCTYPE" through its '>' just as it was. ( Not what is read within it from elsewhere: the replacement text of
-  //  a parameter entity. ) nullptr: don't.
-  void SetKeepDoctypeText( _TyStdStr * _pstrText )
-  {
-    m_pstrDoctypeText = _pstrText;
-  }
   // Read the external entities of the DTD with _rresolver: after the document type declaration its external subset is
   //  read - if it has one - and a reference to an external parameter entity is replaced by the text of the entity.
   // Without this - or where the resolver doesn't give the text - they are not read: see xml_dtd<>::FAllDeclarationsRead().
@@ -973,13 +1838,14 @@ public:
   // Parse the document type declaration [28] of a document. The lexical analyzer is at its "<!DOCTYPE" and is left after
   //  its '>': nothing of the document after it is read.
   // Throws an xml_parse_exception if it isn't well formed.
+  // The text of the declaration is kept in the DTD as it is read - xml_dtd<>::m_strDoctypeText: each of its tokens -
+  //  white space, comments and all - is added to it as the parser takes it, so afterwards that is the declaration from
+  //  its "<!DOCTYPE" through its '>' just as it was. ( Not what is read within it from elsewhere: the replacement text
+  //  of a parameter entity. ) And so is how it is read: see xml_dtd<>::Edit().
   template < class t_TyAnalyzer >
   void ParseDoctypeDecl( t_TyAnalyzer & _rAnalyzer )
   {
-    m_fExternal = false;
-    _Parse( _rAnalyzer, ns_xmlpdtd::s_knEntry_doctypedecl, unique_ptr< typename t_TyAnalyzer::_TyToken >() );
-    _ReadExternalSubset();
-    _EndOfDeclarations();
+    _ParseDoctypeDecl( _rAnalyzer, unique_ptr< typename t_TyAnalyzer::_TyToken >() );
   }
   // The same when the "<!DOCTYPE" has been read already: _rrupTokenDoctype is its token - the lexical analyzer is after it.
   // ( The cursor finds a document type declaration by reading that token. )
@@ -987,10 +1853,39 @@ public:
   void ParseDoctypeDecl( t_TyAnalyzer & _rAnalyzer, unique_ptr< typename t_TyAnalyzer::_TyToken > && _rrupTokenDoctype )
   {
     VerifyThrowSz( !!_rrupTokenDoctype && ( s_knTokenDtdDoctypeBegin == _rrupTokenDoctype->GetTokenId() ), "Not the token which begins a document type declaration." );
-    m_fExternal = false;
-    _Parse( _rAnalyzer, ns_xmlpdtd::s_knEntry_doctypedecl, std::move( _rrupTokenDoctype ) );
-    _ReadExternalSubset();
-    _EndOfDeclarations();
+    _ParseDoctypeDecl( _rAnalyzer, std::move( _rrupTokenDoctype ) );
+  }
+  // Read again the text of a document type declaration which is _rdtdFrom's as it was edited - see xml_dtd<>::Edit(): as
+  //  _rdtdFrom was read, with the external entities which were read then. Into _rdtd - which is to be empty.
+  static void ParseEditedDoctypeDecl( _TyDtd const & _rdtdFrom, _TyStrView _svText, _TyDtd & _rdtd )
+  {
+    _rdtd.m_rgExternalTexts = _rdtdFrom.m_rgExternalTexts;
+    _TyThis dtdParser( _rdtd );
+    dtdParser.SetStandalone( _rdtdFrom.m_fStandalone );
+    dtdParser.SetUseXMLNamespaces( _rdtdFrom.m_fUseXMLNamespaces );
+    dtdParser.SetLimits( _rdtdFrom.m_limits );
+    _TyExternalEntityResolver resolver;
+    if ( !_rdtdFrom.m_rgExternalTexts.empty() )
+    {
+      resolver = [prgTexts = &_rdtdFrom.m_rgExternalTexts]( _TyExternalId const & _rexternalId, _TyStrView _svBase, _TyStdStr & _rstrText, _TyStdStr & _rstrLocation ) -> bool
+      {
+        for ( auto const & rtext : *prgTexts )
+        {
+          if ( rtext.FIsOf( _rexternalId, _svBase ) )
+          {
+            _rstrText = rtext.m_strText;
+            _rstrLocation = rtext.m_strLocation;
+            return true;
+          }
+        }
+        return false;
+      };
+    }
+    dtdParser.SetExternalEntityResolver( resolver, _rdtdFrom.m_strBaseLocation );
+    _TyAnalyzerMemory analyzer;
+    analyzer.emplaceTransport( _svText.data(), _svText.length() );
+    dtdParser.ParseDoctypeDecl( analyzer );
+    VerifyThrowSz( size_t( analyzer.GetStream().PosTokenStart() ) == _svText.length(), "There is text after the '>' which ends the document type declaration." );
   }
   // Parse an external subset [30] - or an external parameter entity [79] - which is in memory.
   void ParseExternalSubset( _TyStrView _svText )
@@ -1006,8 +1901,8 @@ public:
   template < class t_TyLexToken >
   _TyValue OnShift( unique_ptr< t_TyLexToken > && _rrupToken, PGENOBJ_NAMESPACE vtyParseTerminal )
   {
-    if ( !!m_pstrDoctypeText && !m_fExternal && !m_nParameterEntityDepth )
-      *m_pstrDoctypeText += _SvTokenText( *_rrupToken ); // See SetKeepDoctypeText().
+    if ( m_fKeepDoctypeText && !m_fExternal && !m_nParameterEntityDepth )
+      m_rdtd.m_strDoctypeText += _SvTokenText( *_rrupToken ); // See ParseDoctypeDecl().
     _RecordItem( *_rrupToken );
     _TyValueToken vtok;
     vtok.m_tid = _rrupToken->GetTokenId();
@@ -1122,6 +2017,7 @@ public:
       element.m_eContent = _rvContentSpec.FIsToken( s_knTokenDtdEMPTY ) ? exdcEmpty : exdcAny;
     element.m_strName = std::move( _rvName.StrToken() );
     element.m_fDeclaredExternally = m_fExternal || !!m_nParameterEntityDepth;
+    _SetItemDeclaration( exdiElementDecl, element );
     if ( m_rdtd.m_mapElements.contains( element.m_strName ) )
       _ValidityError( "Element type [%s] is declared more than once.", element.m_strName ); // VC: Unique Element Type Declaration.
     else
@@ -1188,6 +2084,15 @@ public:
   // [52] AttlistDecl ::= '<!ATTLIST' S Name AttDef* S? '>'
   _TyValue AttlistDecl( _TyValue &, _TyValue &, _TyValue & _rvName, _TyValue & _rvAttDefs, _TyValue &, _TyValue & )
   {
+    {//B
+      vector< _TyAttDef > rgAttDefsOfItem;
+      for ( _TyValue & rvAttDef : _rvAttDefs.template Get< _TyValueArray >() )
+      {
+        rgAttDefsOfItem.push_back( rvAttDef.template Get< _TyAttDef >() );
+        rgAttDefsOfItem.back().m_fDeclaredExternally = m_fExternal || !!m_nParameterEntityDepth;
+      }
+      _SetItemDeclaration( exdiAttlistDecl, std::move( rgAttDefsOfItem ) );
+    }//EB
     if ( m_rdtd.m_fStoppedProcessingDeclarations )
       return _TyValue();
     vector< _TyAttDef > & rrgAttDefs = m_rdtd.m_mapAttLists[ _rvName.StrToken() ];
@@ -1373,6 +2278,7 @@ public:
     notation.m_strName = std::move( _rvName.StrToken() );
     _CheckNoColon( notation.m_strName, "the name of a notation" );
     notation.m_externalId = std::move( _rvId[0].template Get< _TyExternalId >() );
+    _SetItemDeclaration( exdiNotationDecl, notation );
     if ( m_rdtd.m_mapNotations.contains( notation.m_strName ) )
       _ValidityError( "Notation [%s] is declared more than once.", notation.m_strName ); // VC: Unique Notation Name.
     else
@@ -1874,10 +2780,11 @@ protected:
   void _DeclareEntity( typename _TyDtd::_TyMapEntities & _rmap, _TyEntity & _rentity )
   {
     _CheckNoColon( _rentity.m_strName, "the name of an entity" );
-    if ( m_rdtd.m_fStoppedProcessingDeclarations || _rmap.contains( _rentity.m_strName ) )
-      return;
     _rentity.m_fDeclaredExternally = m_fExternal || !!m_nParameterEntityDepth;
     _rentity.m_strBase = _SvBase();
+    _SetItemDeclaration( exdiEntityDecl, _rentity );
+    if ( m_rdtd.m_fStoppedProcessingDeclarations || _rmap.contains( _rentity.m_strName ) )
+      return;
     _TyStdStr strName = _rentity.m_strName;
     _rmap.emplace( std::move( strName ), std::move( _rentity ) );
   }
@@ -1937,6 +2844,7 @@ protected:
     const bool kfGotText = m_resolver( *m_rdtd.m_optExternalId, _SvBase(), strText, strLocation );
     if ( !kfGotText )
       return;
+    _RecordExternalText( *m_rdtd.m_optExternalId, _SvBase(), strText, strLocation );
     _CheckExternalEntitySize( strText.length() );
     NormalizeLineEnds( strText ); // 2.11: the text is ours.
     m_rgstrBase.push_back( std::move( strLocation ) );
@@ -1963,6 +2871,7 @@ protected:
     Assert( !_rentity.m_fInternal );
     if ( !m_resolver || !m_resolver( _rentity.m_externalId, _rentity.m_strBase, _rstrText, _rstrLocation ) )
       return false;
+    _RecordExternalText( _rentity.m_externalId, _rentity.m_strBase, _rstrText, _rstrLocation );
     _CheckExternalEntitySize( _rstrText.length() );
     NormalizeLineEnds( _rstrText );
     return true;
@@ -2079,6 +2988,36 @@ protected:
     VerifyThrowSz( nPos == sv.length(), "The text declaration of an external entity is not well formed: it has more than a version and an encoding." );
     _rstrText.erase( 0, knPosEnd + 2 );
   }
+  // The document type declaration - see ParseDoctypeDecl().
+  template < class t_TyAnalyzer >
+  void _ParseDoctypeDecl( t_TyAnalyzer & _rAnalyzer, unique_ptr< typename t_TyAnalyzer::_TyToken > && _rrupTokenDoctype )
+  {
+    m_fExternal = false;
+    m_rdtd.m_strDoctypeText.clear();
+    m_rdtd.m_fStandalone = m_fStandalone;
+    m_rdtd.m_fUseXMLNamespaces = m_fUseXMLNamespaces;
+    m_rdtd.m_strBaseLocation = m_rgstrBase.empty() ? _TyStdStr() : m_rgstrBase.front();
+    m_fKeepDoctypeText = true;
+    _Parse( _rAnalyzer, ns_xmlpdtd::s_knEntry_doctypedecl, std::move( _rrupTokenDoctype ) );
+    m_fKeepDoctypeText = false;
+    _ReadExternalSubset();
+    _EndOfDeclarations();
+  }
+  // What the declaration which was just read declares - as its item has it: see xml_dtd_item<>::m_declaration.
+  template < class t_TyDeclaration >
+  void _SetItemDeclaration( EXmlDtdItem _eItem, t_TyDeclaration _declaration )
+  {
+    if ( ( m_nItemDeclarationLast < m_rdtd.m_rgItems.size() ) && ( _eItem == m_rdtd.m_rgItems[ m_nItemDeclarationLast ].m_eItem ) )
+      m_rdtd.m_rgItems[ m_nItemDeclarationLast ].m_declaration.template emplace< t_TyDeclaration >( std::move( _declaration ) );
+  }
+  // An external entity whose text was had - see xml_dtd<>::m_rgExternalTexts.
+  void _RecordExternalText( _TyExternalId const & _rexternalId, _TyStrView _svBase, _TyStdStr const & _rstrText, _TyStdStr const & _rstrLocation )
+  {
+    for ( auto const & rtext : m_rdtd.m_rgExternalTexts )
+      if ( rtext.FIsOf( _rexternalId, _svBase ) )
+        return;
+    m_rdtd.m_rgExternalTexts.push_back( typename _TyDtd::_TyExternalText{ _rexternalId, _TyStdStr( _svBase ), _rstrText, _rstrLocation } );
+  }
   void _ValidityError( const char * _pszFormat, _TyStdStr const & _rstrName )
   {
     string str;
@@ -2185,6 +3124,7 @@ protected:
       break;
       default:
         m_nItemDeclaration = m_rdtd.m_rgItems.size() - 1;
+        m_nItemDeclarationLast = m_nItemDeclaration;
         m_nItemTextDeclaration = _NItemText();
       break;
     }
@@ -2242,7 +3182,7 @@ protected:
   size_t m_nParameterEntityDepth{ 0 }; // Within the replacement text of this many parameter entities.
   size_t m_nchEntityExpansion{ 0 }; // The characters which the references to parameter entities have stood for so far - see _AccountEntityExpansion().
   string m_strAttributeOfUndeclaredEntity; // An attribute of the internal subset whose default refers to an entity which is not declared - see _EndOfDeclarations().
-  _TyStdStr * m_pstrDoctypeText{ nullptr }; // See SetKeepDoctypeText().
+  bool m_fKeepDoctypeText{ false }; // The text of the document type declaration is being read - see ParseDoctypeDecl().
   _TyExternalEntityResolver m_resolver; // See SetExternalEntityResolver().
   vector< _TyStdStr > m_rgstrBase; // The locations of the entities which we are within - the document first: the last is the base.
   set< _TyStdStr, less<> > m_setParameterEntitiesActive; // Those whose replacement text is being parsed.
@@ -2251,6 +3191,7 @@ protected:
   size_t m_nItemTextsEntered{ 0 }; // How many texts have been entered: each has a number.
   vtyDataPosition m_posDoctype{ 0 }; // The position of the "<!DOCTYPE" of the document.
   size_t m_nItemDeclaration{ size_t( -1 ) }; // The item of the declaration which is being read - none if none is.
+  size_t m_nItemDeclarationLast{ size_t( -1 ) }; // The item of the declaration which was begun last - see _SetItemDeclaration().
   size_t m_nItemTextDeclaration{ 0 }; // The text in which that declaration began.
 };
 

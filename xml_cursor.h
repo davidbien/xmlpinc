@@ -1263,13 +1263,11 @@ protected:
     // A document may be one which is not to have a DTD at all - see xml_dtd_limits: then this is an error.
     VerifyThrowSz( m_pXp->GetDtdLimits().m_fAllowDoctypeDecl, "The document has a document type declaration and the parser was told to accept none." );
     m_spDtd = make_shared< _TyDtd >();
-    _TyStdStr strDoctypeText;
     xml_dtd_parser< _TyChar > dtdParser( *m_spDtd );
     // Standalone only if the XML declaration says so: m_fStandalone is true as well when it says nothing.
     dtdParser.SetStandalone( m_XMLDeclProperties.m_fHasStandalone && m_XMLDeclProperties.m_fStandalone );
     dtdParser.SetUseXMLNamespaces( m_fUseXMLNamespaces );
     dtdParser.SetLimits( m_pXp->GetDtdLimits() );
-    dtdParser.SetKeepDoctypeText( &strDoctypeText );
     // The external subset and the external parameter entities are read if the parser has been given the means.
     if ( !!m_pXp->GetExternalEntityResolver() )
       dtdParser.SetExternalEntityResolver( m_pXp->GetExternalEntityResolver(), m_pXp->StrBaseLocation() );
@@ -1305,9 +1303,9 @@ protected:
       }
     }
     // The token of the declaration. It was read as many tokens of the DTD so its text is not a piece of the document
-    //  which a token of ours refers to: the value is a string.
+    //  which a token of ours refers to: the value is a string - the text which the DTD has kept of it.
     _rpltok = make_unique< _TyLexToken >( m_pXp->GetUserObj(), s_knTokenDoctypeDecl );
-    _rpltok->template emplaceValue< _TyStdStr >( std::move( strDoctypeText ) );
+    _rpltok->template emplaceValue< _TyStdStr >( m_spDtd->m_strDoctypeText );
     return true;
   }
   bool _FIsContentToken( vtyTokenIdent _tid ) const

@@ -551,6 +551,21 @@ public:
   {
     return m_fWroteDoctypeDecl;
   }
+  // When the token of a document type declaration is written - as when a document is written from a read cursor - write
+  //  that of _rdtd in its place: its text as it is now - one which was edited, say ( see xml_dtd<>::Edit() ). The text is
+  //  copied: _rdtd may be edited after.
+  template < class t_TyCharDtd >
+  void SetDoctypeDeclToWrite( xml_dtd< t_TyCharDtd > const & _rdtd )
+  {
+    VerifyThrowSz( !_rdtd.m_strDoctypeText.empty(), "The DTD has no document type declaration - see xml_dtd<>::SetRootName()." );
+    _TyStdStr str;
+    ConvertString( str, _rdtd.m_strDoctypeText );
+    m_optstrDoctypeDeclToWrite.emplace( std::move( str ) );
+  }
+  void ClearDoctypeDeclToWrite()
+  {
+    m_optstrDoctypeDeclToWrite.reset();
+  }
   // Whether to write the attributes which a tag didn't have and which the DTD gave it when it was read - those whose
   //  value is an xml_attr_default_value.
   // By default this follows the document type declaration: if it has been written then they are not - whoever reads
@@ -1059,6 +1074,14 @@ public:
     _WriteTransportRaw( sv.data(), sv.length() );
     m_fWroteDoctypeDecl = true;
     _FormatAfterTopLevel();
+  }
+  // The document type declaration of _rdtd - its text as it is now: see xml_dtd<>::m_strDoctypeText. A DTD which was read,
+  //  edited or made - see xml_dtd<>::Edit().
+  template < class t_TyCharDtd >
+  void WriteDoctypeDecl( xml_dtd< t_TyCharDtd > const & _rdtd )
+  {
+    VerifyThrowSz( !_rdtd.m_strDoctypeText.empty(), "The DTD has no document type declaration - see xml_dtd<>::SetRootName()." );
+    WriteDoctypeDecl( _rdtd.m_strDoctypeText );
   }
   // <!DOCTYPE name PUBLIC "publicId" "systemId" [internalSubset]> - an empty string is one which isn't given: there is a
   //  system identifier if there is a public one. A literal is in '"' unless it has one.
@@ -2110,6 +2133,11 @@ protected:
     typedef typename t_TyXmlToken::_TyLexValue _TyLexValue;
     if ( !m_fWriteDoctypeDecl )
       return;
+    if ( m_optstrDoctypeDeclToWrite.has_value() ) // See SetDoctypeDeclToWrite().
+    {
+      WriteDoctypeDecl( *m_optstrDoctypeDeclToWrite );
+      return;
+    }
     VerifyThrowSz( FInProlog(), "The document type declaration may only be written before the first tag." );
     VerifyThrowSz( !m_fWroteDoctypeDecl, "A document type declaration has already been written - there may be only one." );
     const _TyLexValue & rval = _rtok.GetValue();
@@ -2508,6 +2536,7 @@ protected:
   bool m_fWriteXMLDecl{true}; // Whether to write an XMLDecl. This is honored in all scenarios.
   bool m_fUseNamespaces{true}; // Using namespaces?
   bool m_fWriteDoctypeDecl{true}; // Write the document type declaration when its token is written.
+  optional< _TyStdStr > m_optstrDoctypeDeclToWrite; // See SetDoctypeDeclToWrite().
   optional< bool > m_optfWriteDefaultedAttributes; // Write the attributes which the DTD gave a tag - see SetWriteDefaultedAttributes().
 // state:
   bool m_fWroteFirstTag{false};
